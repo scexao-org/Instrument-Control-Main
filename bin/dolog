@@ -1,0 +1,16 @@
+#!/bin/bash
+logtime=$(date -u +'%Y/%m/%d %H:%M:%S.%N')
+logdir=/media/data/$(date -u +'%Y%m%d')/logging
+
+if [ -z "$1" ];
+  then
+    echo -e "\n\033[31mdolog \033[34m-s \033[32mkeyword 'comments'\033[0m\nwill log the comment into the 'keyword' log\nif \033[34m-s \033[0mis provided, the folder YYYYMMDD will not be checked/created\n\033[31mThis tool can only safely log up to 250Hz.\033[0m\n"
+  else
+    if [ $1 = '-s' ];
+      then
+        printf "%s %-10s %s\n" "$logtime" "$2" "$3" >> $logdir/$2.log
+      else
+        mkdir -p $logdir
+        printf "%s %-10s %s\n" "$logtime" "$1" "$2" >> $logdir/$1.log
+    fi
+fi

@@ -1,0 +1,133 @@
+#!/bin/bash
+
+echo "Calibration source fiber:"
+src_fib status
+sleep 0.1
+echo "Calibration source type:"
+src_select status
+sleep 0.1
+echo "Calibration source IRND:"
+src_flux irnd status
+sleep 0.1
+echo "Calibration source OPTND:"
+src_flux optnd status
+sleep 0.1
+echo "Calibration source FILTER:"
+src_flux filter status
+sleep 0.1
+echo "OAP1:"
+oap1 status
+sleep 0.1
+echo "Dichroic:"
+dichroic status
+sleep 0.1
+echo "Pupil mask:"
+pupil status
+sleep 0.1
+echo "PIAA lenses #1:"
+piaa1 status
+sleep 0.1
+echo "PIAA lenses #2:"
+piaa2 status
+sleep 0.1
+echo "Focal plane mask:"
+fpm status
+sleep 0.1
+echo "Lyot mask:"
+lyot status
+sleep 0.1
+echo "Inverse PIAA:"
+invpiaa status
+sleep 0.1
+echo "OAP4:"
+oap4 status
+sleep 0.1
+echo "Pt Grey 1 pickoff:"
+PG1_pickoff status
+sleep 0.1
+echo "Integrating sphere pickoff:"
+intsphere status
+sleep 0.1
+echo "CHARIS pickoff:"
+charis_pickoff status
+sleep 0.1
+echo "MKIDS pickoff:"
+mkids_pickoff status
+sleep 0.1
+echo "IR cams filter:"
+ircam_filter status
+sleep 0.1
+echo "IR cams block:"
+ircam_block status
+sleep 0.1
+echo "IR cams focus:"
+ircam_fcs status
+sleep 0.1
+echo "SAPHIRA pickoff:"
+saphira_pickoff status
+sleep 0.1
+echo "Chuck pupil lens focus:"
+chuck_pup_fcs status
+sleep 0.1
+echo "Chuckcam Pupil lens:"
+chuck_pup status
+sleep 0.1
+echo "SAPHIRA pupil lens:"
+saphira_pup status
+sleep 0.1
+echo "LLOWFS block:"
+lowfs_block status
+sleep 0.1
+echo "LLOWFS focus:"
+lowfs_fcs status
+sleep 0.1
+echo "GLINT pickoff:"
+nuller_pickoff status
+sleep 0.1
+echo "Fiber injection pickoff:"
+fibinj_pickoff status
+sleep 0.1
+echo "Fiber injection  position:"
+fibinj_fib status
+sleep 0.1
+echo "Fiber injection  carriage:"
+fibinj_car status
+sleep 0.1
+echo "Pt Grey 2 pickoff:"
+PG2_pickoff status
+sleep 0.1
+echo "Post-coro fiber injection pickoff:"
+pcfi_pickoff status
+sleep 0.1
+echo "Post-coro fiber injection lens:"
+pcfi_len status
+sleep 0.1
+echo "Post-coro fiber injection fiber:"
+#pcfi_fib status
+#sleep 0.1
+echo "Polarizer:"
+polarizer status
+sleep 0.1
+echo "PyWFS pickoff:"
+pywfs_pickoff status
+sleep 0.1
+echo "PyWFS filter:"
+pywfs_filter status
+sleep 0.1
+echo "PyWFS colimating lens:"
+pywfs_col status
+sleep 0.1
+echo "PyWFS focusing lens:"
+pywfs_fcs status
+sleep 0.1
+echo "PyWFS pupil lens:"
+pywfs_pup status
+sleep 0.1
+echo "FIRST pickoff:"
+first_pickoff status
+sleep 0.1
+echo "FIRST photometry 2 pickoff:"
+first_photometry x2 status
+sleep 0.1
+echo "RHEA pickoff:"
+rhea_pickoff status

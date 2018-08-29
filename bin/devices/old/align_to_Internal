@@ -1,0 +1,50 @@
+#!/bin/bash
+
+log Aligning to internal SCExAO source
+
+cal_src in
+sleep 7.0
+
+dmflat
+
+superK irnd 4
+
+superK optnd 5
+
+superK filter 1
+
+oap1 int
+sleep 0.1
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage y push -500
+sleep 0.5
+
+hotspotalign
+ 
+
+echo " oap1 x "
+oap1 x status
+
+echo " oap1 y "
+oap1 y status
+
+
+

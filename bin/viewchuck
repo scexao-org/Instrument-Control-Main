@@ -1,0 +1,4 @@
+#!/bin/bash
+
+shmview /tmp/ircam0_clean.im.shm
+

@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from camera_tools import cam_cmd
+
+
+
+#camid = ""
+#exp = ""
+print sys.argv
+if len(sys.argv) == 3:
+    camid = np.int(sys.argv[1])
+    exp = np.int(sys.argv[2])
+    print camid
+    print exp
+    cam_cmd("tint %d %d" % (camid, exp), False)
+else:
+    print "wrong number of arguments. Usage: ircam_expT <camid> <expT>"

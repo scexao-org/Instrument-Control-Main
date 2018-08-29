@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+
+from   scexao_shm   import shm
+import zernike
+
+hmsg = """ --------------------------------------------------------------
+dm_add_zernike: adds a zernike polynomial to a given channel
+of the deformable mirror.
+
+Command syntax:
+--------------
+
+>> dm_add_zernike index amplitude (chn)
+
+Parameters:
+----------
+- index : index of the Zernike polynomial to apply
+- ampli : amplitude of the Zernike
+- chn   : DM channel (default = 5)
+
+Zernike polynomial list:
+-----------------------
+
+-  1: piston
+-  2: tip
+-  3: tilt
+-  4: focus
+-  5: astig (right)
+-  6: astig (45 deg)
+-  7: coma 1
+-  8: coma 2
+-  9: trefoil 1
+- 10: trefoil 2
+-------------------------------------------------------------- """
+
+dms  = 50
+args = sys.argv[1:]
+
+if args == []: 
+    print(hmsg)
+    sys.exit()
+
+# -----------------------
+
+try:
+    index = int(args[0])
+except:
+    print(hmsg)
+    sys.exit()
+
+# -----------------------
+
+try:
+    ampli = float(args[1])
+except:
+    print(hmsg)
+    sys.exit()
+
+# -----------------------
+
+try:
+    chn = int(args[2])
+except:
+    chn = 5
+
+
+# -----------------------
+dmc  = shm('/tmp/dm00disp%02d.im.shm' % (chn,), verbose=False) # DM channel
+
+pol = ampli * zernike.mkzer1(index, dms, dms/2, limit=True).astype('float32')
+
+disp = dmc.get_data()
+
+dmc.set_data(disp+pol)
+#os.system("imsempost dm00disp%02d"%(chn,))

@@ -1,0 +1,934 @@
+#!/usr/bin/env python
+
+'''--------------------------------------------------------------------------
+20170629:
+--------
+
+First demo of the code to the SCExAO guys. The code includes E.Jeshke's thread
+safe object, and is currently able to determine the location of the origin of
+the speckle field, and to determine the pix2spf matrix.
+
+20170407:
+--------
+
+Initial Qt revisit of the speckle nulling software. Not fully functional
+yet. Can do recenter(), pix2spf() but haven't done the closed loop yet.
+
+20171025:
+--------
+
+Guess I've forgotten to update these comments. I've been able to close the
+loop for a while now, at least on my simulated rig. The only feature that
+is still missing here is the auto-exopsure time feature.
+
+Frantz (frantz.martinache@oca.eu).
+-------------------------------------------------------------------------- '''
+
+from QtMain import QtMain, QApplication
+from PyQt4 import QtCore, QtGui, uic
+from PyQt4.QtCore import QThread
+import threading
+
+import pyqtgraph as pg
+import sys
+import numpy as np
+from numpy.linalg import solve
+import xaosim as xs
+
+from xaosim.zernike import zer_mode_bank_2D
+import xara
+import time
+import os
+
+import matplotlib.cm as cm
+from scipy.interpolate import griddata
+import pyfits as pf
+import commands
+
+from scipy.fftpack import fft2
+simulation = False#True
+
+home = os.getenv('HOME')
+conf_dir = home+'/.config/fpao/whack/'
+if not os.path.exists(conf_dir):
+    os.makedirs(conf_dir)
+
+def cam_get_etime():
+    etime = int(cam.get_expt())
+    return(etime)
+
+if simulation:
+    # ----------------------------------------------------------------------
+    #                           SIMULATED EXPERIMENT
+    # ----------------------------------------------------------------------
+    pscale = 9.0 # plate-scale in mas/pixel
+    wvl = 1.6 # wavelength in microns
+    from xaosim.shmlib import shm
+    cam = shm('/tmp/ircam.im.shm')
+    dmc = shm('/tmp/dmdisp4.im.shm') # probing
+    dmcc = shm('/tmp/dmdisp5.im.shm') # correction
+
+    def cam_get_etime():
+        ''' Fake camera call for simulation'''
+        return(1000)
+
+else:
+    # ----------------------------------------------------------------------
+    #                             THE REAL DEAL
+    # ----------------------------------------------------------------------
+    pscale = 16.7
+    wvl = 1.6
+    from xaosim.shmlib import shm
+    cam  = shm('/tmp/ircam1.im.shm',      verbose=False)
+    drk  = shm('/tmp/ircam1_dark.im.shm', verbose=False)
+    dmc  = shm('/tmp/dm00disp04.im.shm',  verbose=False) # probing
+    dmcc = shm('/tmp/dm00disp05.im.shm', verbose=False)  # correction
+
+    sys.path.append(home+'/src/lib/python')
+    # ----------------------------------------------------------------------
+
+dms        = 50   # DM size
+tdiam      = 7.92 # Telescope diameter (in meters)
+NSS        = 206.265 * wvl / tdiam / pscale # Nyquist-Shannon sampling
+
+sz         = 256
+dz         = sz/2
+
+index      = cam.get_counter()
+(ysz, xsz) = cam.get_data(False, True).shape
+dxsz       = (xsz - sz) / 2
+dysz       = (ysz - sz) / 2
+
+xx, yy = np.meshgrid(np.arange(xsz)-xsz/2, np.arange(ysz)-ysz/2)   # img coords
+xdm, ydm = np.meshgrid(np.arange(dms)-dms/2, np.arange(dms)-dms/2) # DM  coords
+
+erase_map = np.zeros_like(dmc.get_data())
+
+mycmap     = cm.hot#viridis
+from whack_tools import *
+
+
+# =====================================================================
+# =====================================================================
+myqt = 0 # to have myqt as a global variable
+
+def main():
+    global myqt
+    myqt = QtMain()
+    gui = MyWindow()
+    myqt.mainloop()
+    myqt.gui_quit()
+    sys.exit()
+
+# =====================================================================
+#                          Tools 
+# =====================================================================
+def arr2im(arr, vmin=False, vmax=False, pwr=1.0, cmap=None):
+    ''' ------------------------------------------
+    convert numpy array into image for display
+
+    limits dynamic range, power coefficient and
+    applies colormap
+    ------------------------------------------ '''
+    arr2 = arr#.astype('float')
+    if not vmin:
+        mmin,mmax = arr2.min(), arr2.max()
+    else:
+        mmin,mmax = vmin,vmax
+
+    arr2 -= mmin
+    if mmax != mmin:
+        arr2 /= (mmax-mmin)
+
+    arr2 = arr2**pwr
+    if cmap == None:
+        mycmap = cm.jet
+    else:
+        mycmap = cmap
+        
+    return(mycmap(arr2))
+
+# =====================================================================
+#                         Thread specifics
+# =====================================================================
+class GenericThread(QtCore.QThread):
+    ''' ---------------------------------------------------
+    generic thread class used to externalize the execution
+    of a function (calibration, closed-loop) to a separate
+    thread.
+    --------------------------------------------------- '''
+    def __init__(self, function, *args, **kwargs):
+        QtCore.QThread.__init__(self)
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+ 
+    def __del__(self):
+        self.wait()
+ 
+    def run(self):
+        self.function(*self.args,**self.kwargs)
+        return
+ 
+# =====================================================================
+#                     Main GUI object
+# =====================================================================
+
+class MyWindow(QtGui.QMainWindow):
+    ''' ------------------------------------------------------
+    This is the meat of the program: the class that drives
+    the GUI.
+    ------------------------------------------------------ '''
+    def __init__(self):
+        global index
+        
+        super(MyWindow, self).__init__()
+        if not os.path.exists(conf_dir + 'whack.ui'):
+            uic.loadUi('whack.ui', self)
+        else:
+            uic.loadUi(conf_dir + 'whack.ui', self)
+        self.pixmap = QtGui.QPixmap(conf_dir + 'Rambo.png')
+        self.lbl_pixmap.setPixmap(self.pixmap)
+
+        self.pwr = 0.2 # default: non-linear display
+        self.abort_flag = False # generic abort flag
+
+        self.plot_nature = "SCATTER"
+        self.plot_data_x = np.zeros(10)
+        self.plot_data_y = np.zeros(10)
+        
+        # ---------- speckle metrology information ---------
+        self.orix, self.oriy = sz/2, sz/2 #sz/2+4, sz/2 - 6 # deliberately OFF!!
+        self.SPF2PIX = np.array([[208.190, 0.024],
+                                 [-0.049, 208.181]])
+        self.PIX2SPF = np.matrix(self.SPF2PIX).I
+        
+        # ==============================================
+        #        prepare the 3 image displays
+        # ==============================================
+        self.update_dark()
+        self.update_ROI()
+        
+        # --- camera image ---
+        self.gView_ROI.hideAxis('left')
+        self.gView_ROI.hideAxis('bottom')
+
+        self.imv_img = pg.ImageItem()
+        self.gView_ROI.addItem(self.imv_img)
+        self.data_img = cam.get_data(False, True) - self.bias
+        self.data_roi = (self.data_img * self.ROI)[dysz:dysz+sz,dxsz:dxsz+sz]
+        self.refresh_img()
+
+        # --- DM channel display ---
+        self.gView_DMC.hideAxis('left')
+        self.gView_DMC.hideAxis('bottom')
+
+        self.dmc_img = pg.ImageItem()
+        self.gView_DMC.addItem(self.dmc_img)
+        self.data_dmc = dmc.get_data(False, True)
+        self.refresh_dmc()
+
+        # --- plot ---
+        empty_splot = 'self.gView_graph_log.plot([0,0], [0,0], pen=None, symbol="o")'
+        for i in range(10):
+            exec 'self.spmod%d = %s' % (i, empty_splot)
+            exec 'self.spmod%d.clear()' % (i,)
+        self.scatter = self.gView_graph_log.plot([0,0], [0,0], 
+                                                 pen=None, symbol="o")
+        self.lineplot = self.gView_graph_log.plot([0,0], [0,0])
+        self.gView_graph_log.setRange(None, [0,256], [0,256], update=False)
+
+        # ==============================================
+        # top-menu actions
+        # ==============================================
+        self.actionQuit.triggered.connect(sys.exit)
+        self.actionQuit.setShortcut('Ctrl+Q')
+
+        self.action_DM_load.triggered.connect(self.load_dm_map)
+        self.action_DM_save.triggered.connect(self.save_dm_map)
+
+        # ==============================================
+        # GUI widget actions
+        # ==============================================
+        
+        self.cmB_ROI_orientation.addItems(['LEFT', 'UP', 'RIGHT', 'DOWN', 'NONE'])
+        self.cmB_ROI_orientation.activated[str].connect(self.update_ROI)
+        self.cmB_ROI_orientation.setCurrentIndex(2)
+
+        self.spB_ROI_irad.valueChanged[int].connect(self.update_ROI)
+        self.spB_ROI_orad.valueChanged[int].connect(self.update_ROI)
+        
+        self.cmB_etime.addItems(['1000 us', '2000 us', '5000 us'])
+        #self.cmB_etime.activated[str].connect(self.updt_etime)
+        self.cmB_etime.setCurrentIndex(0)
+
+        self.chB_nonlinear.stateChanged[int].connect(self.refresh_img)
+        self.chB_nonlinear.setChecked(True)
+
+        self.pB_recenter.clicked.connect(self.find_origin_call)
+        self.pB_pix2spf.clicked.connect(self.pix2spf_call)
+        self.pB_amp2int.clicked.connect(self.amp_2_int_call)
+
+        self.pB_abort.clicked.connect(self.abort_now)
+        self.pB_memo.clicked.connect(self.memorize_dmc)
+        self.pB_swap.clicked.connect(self.memory_switch)
+        self.pB_erase.clicked.connect(self.erase_channel)
+
+        # ------------ SPECKLE CONTROLS ------------
+        self.target_locked = False
+        self.chB_lock_speckles.stateChanged[int].connect(self.tlock)
+        self.chB_lock_speckles.setChecked(False)
+
+        self.spB_nspk.valueChanged[int].connect(self.updt_target_props)
+        self.updt_target_props(initialize=True)
+
+        self.spB_nsamp.valueChanged[int].connect(self.updt_nsamp)
+        self.updt_nsamp(initialize=True)
+        #self.updt_target_props(initialize=True)
+
+        self.pB_iteration.clicked.connect(self.iteration_call)
+        self.pB_cloop.clicked.connect(self.close_loop_call)
+
+        # ==============================================
+        self.show()
+
+        self.update_ROI()
+        self.log("Ready to whack speckles!")
+
+        self.live_counter = cam.get_counter()
+        
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.refresh_all)
+        self.timer.start(100)
+
+    # =========================================================
+    def closeEvent(self, event):
+        sys.exit()
+
+    # =========================================================
+    #                   delegating calls
+    # =========================================================
+    def find_origin_call(self):
+        self.t = GenericThread(self.find_origin,)
+        self.t.start()
+
+    # =========================================================
+    def pix2spf_call(self):
+        self.t = GenericThread(self.find_pix2spf,)
+        self.t.start()
+
+    # =========================================================
+    def amp_2_int_call(self):
+        self.t = GenericThread(self.amp2int,)
+        self.t.start()
+
+    # =========================================================
+    def iteration_call(self):
+        self.t = GenericThread(self.iteration,)
+        self.t.start()
+
+    # =========================================================
+    def close_loop_call(self):
+        ''' --------------------------------------------------
+        Callback connected to the "Close Loop" button.
+        Starts a new thread that oversees closed-loop operation.
+        -------------------------------------------------- '''
+        self.calThread = GenericThread(self.close_loop)
+        self.calThread.start()
+
+    # =========================================================
+    #                     DM interactions
+    # =========================================================
+    def load_dm_map(self):
+        fname = QtGui.QFileDialog.getOpenFileName(self, 'Load DM map', 
+                                                  home+'/conf/dm_patterns/')
+        dmc.set_data(pf.getdata(str(fname)).astype('float32'))
+        short_name = str(fname).split('/')[-1]
+        self.log("Applying \"%s\" to DM" % (short_name,), "orange")
+
+    # =========================================================
+    def save_dm_map(self):
+        fname = str(QtGui.QFileDialog.getSaveFileName(self, 'Save DM map', 
+                                                      home+'/conf/dm_patterns/'))
+        if fname != "":
+            pf.writeto(fname, dmc.get_data())
+        short_name = str(fname).split('/')[-1]
+        self.log("Saving DM shape to \"%s\"" % (short_name,), "green")
+
+    # =========================================================
+    def add_shape_2_DM(self, dmap, dmch=False):
+        if dmch is False:
+            map0 = dmc.get_data(False, True)
+            dmc.set_data(map0 + dmap.astype('float32'))
+        else:
+            map0 = dmch.get_data(False, True)
+            dmch.set_data(map0 + dmap.astype('float32'))
+    
+    # =========================================================
+    def set_shape_2_DM(self, dmap):
+        dmc.set_data(dmap.astype('float32'))
+    
+    # =========================================================
+    def erase_channel(self):
+        dmc.set_data(erase_map)
+        self.log("DM channel command erased", "orange")
+
+    # =========================================================
+    def memorize_dmc(self):
+        self.memorized_state = dmc.get_data()
+        self.log("Current DM state memorized", "green")
+
+    # =========================================================
+    def memory_switch(self):
+        temp = dmc.get_data()
+        dmc.set_data(self.memorized_state)
+        self.memorized_state = temp
+        self.log("DM state swapped with memorized", "green")
+
+    # =========================================================
+    def amp_xy_evolution(self):
+        self.originThread = GenericThread(self.find_origin,)
+        self.originThread.start()
+
+    # =========================================================
+    def get_active_live(self):
+        data = (cam.get_data(self.live_counter, True) * self.ROI)[dysz:dysz+sz,dxsz:dxsz+sz]
+        self.live_counter = cam.get_counter()
+        return(data)
+
+    # =========================================================
+    def find_pix2spf(self):
+        global myqt
+        skx = [0.3, 0.0, 0.2,  0.15,  0.4]
+        sky = [0.0, 0.3, 0.2, -0.15,  0.1]
+        nspk = np.size(skx)
+
+        self.log("Measuring PIX<->SPF matrices", "orange")
+        
+        memo = myqt.gui_call(self.cmB_ROI_orientation.currentIndex, )
+        myqt.gui_call(self.cmB_ROI_orientation.setCurrentIndex, 4)
+        self.update_ROI()
+
+        tempx, tempy = [], []
+        SPX = np.zeros(nspk)
+        SPY = np.zeros(nspk)
+        AA  = np.transpose([skx,sky])
+        
+        for ii in range(nspk):
+            (spx, spy) = self.probe_and_locate_speckles(2,kx=skx[ii:ii+1],
+                                                        ky=sky[ii:ii+1])
+            msg = "(%+0.2f,%+.02f) - (%+0.2f,%+.02f)" % (
+                spx[0], spy[0], spx[1], spy[1])
+            self.log("%s" % (msg,), "green")
+            
+            tempx = np.append(tempx, spx)
+            tempy = np.append(tempy, spy)
+
+            signx, signy = np.sign(skx[ii]), np.sign(sky[ii])
+            SPX[ii] = signx * np.abs((spx[1]-spx[0])/2.0)
+            SPY[ii] = signy * np.abs((spy[1]-spy[0])/2.0)
+
+        self.plot_data_x = tempx
+        self.plot_data_y = tempy
+        SPF2PIX = np.array([solve(np.dot(AA.T,AA), np.dot(AA.T, SPX)),
+                            solve(np.dot(AA.T,AA), np.dot(AA.T, SPY))])
+        PIX2SPF = np.matrix(SPF2PIX).I
+
+        self.plot_nature = "SCATTER"
+        self.SPF2PIX = SPF2PIX
+        self.PIX2SPF = PIX2SPF
+        
+        self.log("<br>SPF2PIX", "green")
+        self.log("[%+08.3f, %+08.3f]<br>[%+08.3f, %+08.3f]" % (
+            self.SPF2PIX[0,0], self.SPF2PIX[0,1],
+            self.SPF2PIX[1,0], self.SPF2PIX[1,1]))
+
+        # reset orientation to what it was before?
+        myqt.gui_call(self.cmB_ROI_orientation.setCurrentIndex, memo)
+
+    # =========================================================
+    def pos2spf(self, x, y):
+        xy = np.asarray([x-self.orix,y-self.oriy])
+        return(self.PIX2SPF.dot(xy))
+            
+    # =========================================================
+    def spi2amp(self, spi):
+        ''' -------------------------------------------------
+        Converts speckle intensity to DM modulation amplitude
+        using the model I = \beta * amp**2
+        ------------------------------------------------- '''
+        return(np.sqrt(spi / self.beta * 1.05))
+
+    # =========================================================
+    def find_origin(self):
+        global myqt
+        self.log("Measuring position of origin", "orange")
+        memo = myqt.gui_call(self.cmB_ROI_orientation.currentIndex, )
+        self.cmB_ROI_orientation.setCurrentIndex(4)
+        self.update_ROI()
+        (spx, spy) = self.probe_and_locate_speckles(4,kx=[0.2,0.0],ky=[0.0,0.2])
+
+        self.plot_data_x = spx
+        self.plot_data_y = spy
+
+        self.orix = np.mean(spx) # center of field is mean (x,y) 
+        self.oriy = np.mean(spy) # speckle position!
+        self.plot_nature = "SCATTER"
+
+        dmc.set_data(erase_map)
+        self.log("Origin: %.2f, %.2f" % (self.orix, self.oriy), "green")
+        myqt.gui_call(self.cmB_ROI_orientation.setCurrentIndex, memo)
+        self.update_ROI()
+
+    # =========================================================
+    def coadd_acquisitions(self, nim, ave=True):
+        ''' --------------------------------------------------------
+        Simple macro that coadds (or averages) *nim* fresh acquisitions
+        with the speckle camera.
+        -------------------------------------------------------- '''
+        ref0 = self.get_active_live()
+        for i in range(nim-1):
+            ref0 += self.get_active_live()
+        if ave:
+            ref0 /= float(nim)
+        return(ref0)
+
+    # =========================================================
+    def probe_ROI(self, kx=[0.35, 0.0], ky=[0.0, 0.35], spa=None, ref=None, nav=20):
+        ''' -----------------------------------------------------------
+        Generic function that modulates the ROI for the provided 
+        speckle spatial frequencies.
+
+        Parameters:
+        - kx, ky : speckle spatial frequencies
+        - spa    : speckle amplitudes
+
+        Returns:
+        -------
+        - a 3D array of 2D images, reference sutbracted
+        ----------------------------------------------------------- '''
+        nsamp   = self.nsamp #myqt.gui_call(self.spB_nsamp.value,)
+        nprbs   = np.size(kx)
+        a0      = myqt.gui_call(self.dspB_amp0.value,) * 1e-3
+        res     = np.zeros((nsamp, sz, sz))
+
+        # reference image (either provided or re-acquired)
+        if ref is None:
+            ref0 = self.coadd_acquisitions(nav, True)
+        else:
+            ref0 = ref.copy()
+
+        if spa is None:
+            spa = np.zeros(nprbs) + a0 # by default: use a0 amplitude probes
+
+        for ii in range(nsamp):
+            phi = self.dephase[ii]
+            shape = np.zeros_like(erase_map)
+
+            for jj in range(nprbs):
+                shape += spa[jj] * np.sin(2*np.pi*(kx[jj]*xdm+ky[jj]*ydm) + phi)
+
+            self.set_shape_2_DM(shape) # apply the shape to the DM
+
+            time.sleep(0.1)
+
+            myim = self.coadd_acquisitions(nav, True)
+            res[ii] = myim - ref0
+
+        dmc.set_data(erase_map)
+        return(res)
+
+    # =========================================================
+    def amp2int(self):
+        ''' ---------------------------------------------------
+        Determines the relation between a given DM sinusoidal
+        modulation amplitude and a speckle brightness and 
+        contrast.
+
+        Using a theoretical formula:
+        con = (pi * 4 * a_test / lambda)**2 
+        --------------------------------------------------- '''
+        global myqt
+        nav = 5
+
+        #    figure out where to put the speckle
+        # ------------------------------------------
+        orie = str(myqt.gui_call(self.cmB_ROI_orientation.currentText,)).lower()
+        irad = myqt.gui_call(self.spB_ROI_irad.value,)
+        orad = myqt.gui_call(self.spB_ROI_orad.value,)
+
+        sk0 = 0.5 * (irad + orad) * 0.5 / 25.0
+        skx, sky = [0.0], [0.0]
+
+        if (orie == "left") or (orie == "right"):
+            skx = [sk0]
+        elif (orie == "up") or (orie == "down"):
+            sky = [sk0]
+
+        #         speckle modulation!
+        # ------------------------------------------
+        amp      = myqt.gui_call(self.dspB_amp0.value,) # in nm
+        ref0     = self.coadd_acquisitions(nav, True)
+        cmax     = 2.0 * np.max(ref0)
+
+        probe_cube       = self.probe_ROI(kx=skx, ky=sky, ref=ref0, nav=nav)
+        probe_medi       = np.mean(probe_cube, axis=0)
+        (spx, spy, spi)  = locate_speckles(probe_medi, 1, nbit=0)
+        inten            = track_speckle_intensity(probe_cube, spx, spy)
+
+        # share the calibration data with the GUI
+        # ---------------------------------------
+        cont = ((np.pi * 4 * amp * 1e-3) / wvl)**2
+        self.c0 = cont                   # theoretical contrast for this ampli
+        self.I0 = np.median(inten)       # recorded speckle intensity
+        self.a0 = amp                    # in nanometers (for the record)
+        self.beta = self.I0 / self.a0**2 # to be used later for fast computation
+
+        # plot the calibration data
+        # -------------------------
+        self.plot_curve(inten[0])
+
+        # prints a message in the log
+        # ---------------------------
+        self.log("Contrast calibration:", "orange")
+        self.log(" - amplitude = %.1f nm" % (self.a0,), "blue")
+        self.log(" - theo cont = %.4f"    % (self.c0,), "blue")
+        self.log(" - intensity = %.2f"    % (self.I0,), "blue")
+        self.log(" - beta = %.5f"    % (self.beta,), "green")
+        return(0)
+
+    # =========================================================
+    def plot_curve(self, data):
+        self.plot_nature = "CURVE"
+        self.plot_data_x = np.arange(data.size)
+        self.plot_data_y = np.array(data)
+        self.gView_graph_log.setRange(None, xRange=[0, data.size-1],
+                                      yRange=[data.min(), data.max()])
+        
+    # =========================================================
+    def probe_and_locate_speckles(self, ns=4, kx=[0.35, 0.0], ky=[0.0, 0.35], 
+                                  ref=None):
+        ''' --------------------------------------------------------
+        Probe the field for the provided number of speckles.
+
+        Parameters:
+        ----------
+        - ns:  number of speckles to locate
+        - kxy: spatial frequencies to probe simultaneously
+        - ref: reference image... 
+
+        Note:
+        ----
+        ns needs to be specified separately as the ROI can be a 
+        half field only.
+        -------------------------------------------------------- '''
+        global myqt
+        nav     = 5
+        test = self.probe_ROI(kx=kx, ky=ky, ref=None, nav=nav)
+        (spx, spy, spi) = locate_speckles(test.mean(axis=0), ns)
+
+        print np.round(spi, 2)
+        return((spx, spy))
+
+    # =========================================================
+    def print_help(self):
+        help_msg = '''Helpful help menu
+        '''
+        
+        self.myHelp = QtGui.QMessageBox()
+        self.myHelp.setWindowTitle("Help me Obiwan, you are my only hope")
+        self.myHelp.setText(help_msg)
+        self.myHelp.exec_()
+        
+    # =========================================================
+    def tlock(self):
+        self.target_locked = True - self.target_locked
+        print self.target_locked
+        
+    # =========================================================
+    def refresh_img(self):
+        self.pwr = 1.0
+        if self.chB_nonlinear.isChecked():
+            self.pwr = 0.3
+        else:
+            self.pwr = 1.0
+        self.imv_img.setImage(arr2im(self.data_roi.T, pwr=self.pwr,
+                                     cmap=mycmap), border=2)
+            
+    # =========================================================
+    def refresh_dmc(self):
+        self.dmc_img.setImage(arr2im(self.data_dmc.T, vmin=-0.1, vmax=0.1, 
+                                     cmap=mycmap), border=2)
+        
+    # =========================================================
+    def refresh_all(self):
+        ''' ----------------------------------------------------------
+        Refresh the display
+
+        Independently from the "under the hood" engine, the display
+        gets refreshed every now and then, to give visual feedback
+        to the user.
+        ---------------------------------------------------------- '''
+        
+        global index
+
+        # ---  the camera image  ---
+        self.data_img = cam.get_data(False, True) - self.bias
+        self.data_roi = (self.data_img * self.ROI)[dysz:dysz+sz,dxsz:dxsz+sz]
+        self.refresh_img()
+        
+        self.data_dmc = dmc.get_data(False, True)
+        self.refresh_dmc()
+
+        ymin = np.min(self.plot_data_y)
+        ymax = np.max(self.plot_data_y)
+        xmin = np.min(self.plot_data_x)
+        xmax = np.max(self.plot_data_x)
+
+        # refresh the graphical residul log plot
+        if self.plot_nature == "SCATTER":
+            self.gView_graph_log.setRange(None, [0,256], [0,256], update=False)
+            self.scatter.setData(self.plot_data_x, self.plot_data_y)
+            self.gView_graph_log.showGrid(True, True)
+            self.gView_graph_log.setAspectLocked(True, 1)
+            # keep flag to True until another 
+
+        elif self.plot_nature == "CURVE":
+            self.scatter.setData([0,0], [0,0])
+            self.lineplot.setData(self.plot_data_x, self.plot_data_y)
+            self.gView_graph_log.showGrid(True, True)
+            self.gView_graph_log.setAspectLocked(False, 1)
+            # probably another scenario will follow
+            
+        else:
+            print("WTF?")
+
+    # =========================================================
+    def log(self, message="", color="black", crt=True):
+        ''' --------------------------------------------------
+        Convenient logging function.
+
+        Parameter: 
+        - msg   : the string to log (html text)
+        - color : a valid html color name (default "black"
+        - crt   : a flag for carriage return (default: True)
+        
+        For now, this is just printed in the GUI window,
+        but later, this could be also added to a log-file.
+        -------------------------------------------------- '''
+        global myqt
+        myline = "<b><font color='%s'>%s</font></b>" % (color, message)
+        if crt:
+            myline += "<br>"
+        try:
+            myqt.gui_do(self.text_log.insertHtml, myline)
+            #self.text_log.insertHtml(myline)
+        except:
+            print("well, that didn't go through...")
+            pass
+
+        # these two lines scroll the text display down
+        temp = self.text_log.textCursor()
+        myqt.gui_do(self.text_log.setTextCursor, temp)
+
+    # =========================================================
+    def update_ROI(self):
+        orientation = str(self.cmB_ROI_orientation.currentText()).lower()
+        self.ROI = mkROI((ysz, xsz), (self.oriy + dysz, self.orix + dxsz),
+                         ld=NSS,
+                         irad = self.spB_ROI_irad.value(),
+                         orad = self.spB_ROI_orad.value(),
+                         ori  = orientation)
+        self.ROI2 = mkROI((ysz, ysz), (dysz, dxsz),
+                         ld=NSS,
+                         irad = self.spB_ROI_irad.value(),
+                         orad = self.spB_ROI_orad.value(),
+                         ori  = orientation)
+
+        #self.log("ROI updated", "blue")
+
+
+    # =========================================================        
+    def abort_now(self):
+        ''' --------------------------------------------------
+        Callback connected to the "Abort" button.
+        -------------------------------------------------- '''
+        if not self.abort_flag:
+            self.abort_flag = True
+            self.log("Abort!", "red")
+
+    # =========================================================
+    def update_dark(self):
+        ''' --------------------------------------------------
+        Callback connected to the "Dark" button.
+        -------------------------------------------------- '''
+        self.etime = cam_get_etime()
+        if self.etime == -1:
+            time.sleep(2)
+            self.etime = cam_get_etime()
+        if not simulation:
+            bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (self.etime,)
+            self.bias = pf.getdata(bname).astype('float32')
+            #self.bias = drk.get_data(False, True)
+        else:
+            self.bias = np.zeros((ysz, xsz)).astype('float32')
+        self.log("Updated dark", "blue")
+        self.log("exp.time = %d us" % (self.etime,), "blue")
+
+    # =========================================================
+    def close_loop(self):
+        ''' --------------------------------------------------
+        Closed-loop wavefront control
+
+        Passed to a separate thread: repeats wavefont control
+        iteration until the "Abort" button is pressed.
+
+        CODE here is just left-over from the qtzap software,
+        that serves as a place-holder and a memo, in particular
+        the mechanics that turns off a few of the buttons 
+        should be reused in the actual closed-loop
+        -------------------------------------------------- '''
+
+        self.log("Loop closed!", "green")
+        '''self.action_select_LWE.setEnabled(False)
+        self.action_select_ZER.setEnabled(False)
+        self.spinB_nbav.setEnabled(False)
+        self.pB_cloop.setEnabled(False)
+        self.pB_recal.setEnabled(False)'''
+
+        while not self.abort_flag:
+            self.iteration(delay=0.1)#1e-6*self.etime)#0.01)
+
+        '''self.action_select_LWE.setEnabled(True)
+        self.action_select_ZER.setEnabled(True)
+        self.spinB_nbav.setEnabled(True)
+        self.pB_cloop.setEnabled(True)
+        self.pB_recal.setEnabled(True)'''
+        self.abort_flag = False
+        self.log("Loop opened.", "green")
+
+    # =========================================================
+    def iteration(self, delay=0.1):
+        ''' --------------------------------------------------
+        The real body of this code: Speckle nulling iteration
+
+        Parameters:
+        ----------
+
+        - delay (in seconds)
+        -------------------------------------------------- '''
+        nsamp   = myqt.gui_call(self.spB_nsamp.value,)
+        nav     = 5 # number of frames to average to find speckles
+        ref0    = self.coadd_acquisitions(nav, True)               # ref. image
+        (spx, spy, spi) = locate_speckles(ref0, self.nspk, nbit=0) # find them
+
+        stats   = [] # empty list for correction amplitudes
+        
+        (skx, sky) = self.pos2spf(spx, spy)
+        skx = np.array(skx)[0]
+        sky = np.array(sky)[0]
+        spa = self.spi2amp(spi)
+
+        shape = np.zeros_like(erase_map)
+        probe_cube = self.probe_ROI(kx=skx, ky=sky, spa=spa*1e-3,
+                                    ref=ref0*0.0, nav=nav)
+
+        for ii in range(self.nspk):
+            inten = track_speckle_intensity(probe_cube, spx[ii], spy[ii])
+            self.plot_curve(inten[0])
+            (spk_amp, spk_phi) = self.CA_solver(inten, spa[ii])
+            shape += spk_amp * np.sin(2*np.pi*(skx[ii]*xdm+sky[ii]*ydm) +
+                                      spk_phi + np.pi)
+
+            stats.append(spk_amp)
+            #print("modulation=%.2f nm -> phase=%+.2f rad, ampli=%.2f nm" % 
+            #      (spa[ii], spk_phi, spk_amp))
+
+        self.add_shape_2_DM(shape * 1e-3, dmch=dmcc)
+        msg = "null: ave=%.2f, std=%.2f, max=%.2f" % (np.mean(stats),
+                                                      np.std(stats),
+                                                      np.max(stats))
+        self.log(msg, "blue")
+        #time.sleep(0.1)
+
+
+        # updating list of speckles to track
+        # self.updt_target_list(ref0)
+    
+    # =========================================================
+    def CA_solver(self, inten_arr, mod_amp):
+        ''' -----------------------------------------------------
+        Solver for the complex amplitude of a speckle after it
+        has been probed with the DM.
+
+        parameters:
+        ----------
+        - inten_arr: the array of measured speckle intensity
+        - modul_amp: the amplitude of the modulation
+        ----------------------------------------------------- '''
+        test    = np.dot(inten_arr, self.test_CA)
+        gamma   = 2 * np.abs(test) / self.nsamp / inten_arr.mean()
+        
+        spk_phi = np.angle(test) # speckle phase
+        spk_amp = mod_amp * (1 - np.sqrt(1-gamma**2)) / gamma
+        
+        #a11 = mod_amp * (1 + np.sqrt(1-gamma**2)) / gamma
+        #a12 = mod_amp * (1 - np.sqrt(1-gamma**2)) / gamma
+        
+        if np.isnan(spk_amp): # just a safe-guard
+            spk_amp = 0.0
+
+        return((spk_amp, spk_phi))
+
+    # =========================================================
+    def updt_nsamp(self, initialize=False):
+        ''' -----------------------------------------------------
+        Called when updating the number of samples to take during
+        speckle modulation. Updates a corresponding main object
+        variable (self.nsamp) and pre-computes:
+        - self.dephase : array of phase offsets 
+        - self.test_CA : array of test complex amplitudes
+        ----------------------------------------------------- '''
+        if initialize is True:
+            self.nsamp = 10
+        else:
+            self.nsamp = myqt.gui_call(self.spB_nsamp.value,)
+
+        self.dephase = 2*np.pi*np.arange(self.nsamp)/float(self.nsamp)
+        self.test_CA = np.exp(1j*self.dephase)
+
+    # =========================================================
+    def updt_target_props(self, initialize=False):
+        ''' -----------------------------------------------------
+        Called when updating the number of speckles to track
+        ----------------------------------------------------- '''
+        nsmax = 50 # max number of speckles to track simumtaneously
+        
+        if initialize is True:
+            self.tgt_spxy = np.zeros((nsmax, 2)) # image x,y coordinates
+            self.tgt_skxy = np.zeros((nsmax, 2)) # spf kx, ky coordinates
+            self.tgt_brit = np.zeros(nsmax)      # speckle brightness (ADU)
+            self.tgt_cont = np.zeros(nsmax)      # speckle contrast
+            self.nspk = 1
+        else:
+            self.nspk = myqt.gui_call(self.spB_nspk.value,) # set object property
+        
+    # =========================================================
+    def updt_target_list(self, myimg):
+        ''' -----------------------------------------------------
+        Refreshes the list and coordinates of speckles to be
+        targeted by the nulling loop.
+        ----------------------------------------------------- '''
+        (spx, spy) = locate_speckles(myimg, self.nspk, nbit=0)
+
+        # after locating the speckles in the image, store their properties
+        # if self.target_locked: no update of speckle
+        
+        sys.stdout.write("\rnspk = %d" % (nspk,))
+        sys.stdout.flush()
+        return(0)
+
+# ==========================================================
+# ==========================================================
+if __name__ == "__main__":
+    main()

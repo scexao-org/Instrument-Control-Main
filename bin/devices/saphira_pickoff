@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+# =================================================================== #
+#  __             _     _                   _      _          __  __  #
+# / _\ __ _ _ __ | |__ (_)_ __ __ _   _ __ (_) ___| | _____  / _|/ _| #
+# \ \ / _` | '_ \| '_ \| | '__/ _` | | '_ \| |/ __| |/ / _ \| |_| |_  #
+# _\ \ (_| | |_) | | | | | | | (_| | | |_) | | (__|   < (_) |  _|  _| #
+# \__/\__,_| .__/|_| |_|_|_|  \__,_| | .__/|_|\___|_|\_\___/|_| |_|   #
+#          |_|                       |_|                              #
+#                                                                     #
+# =================================================================== #
+
+import os
+import sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from devices import devices
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+devname = "saphira_pickoff"
+
+conexids = ["usb-Newport_CONEX-AGP_A6204NH0-if00-port0"]
+conexnames = ["x"]
+
+description = "SAPHIRA pickoff mirror"
+
+defpos = ["saphira", "ird", "kcam", "out"]
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+devices(devname, conexids, conexnames, args=args, description=description, defpos=defpos, color_st=True)

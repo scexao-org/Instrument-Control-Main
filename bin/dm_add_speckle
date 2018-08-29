@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+
+from   scexao_shm   import shm
+import zernike
+
+hmsg = """ --------------------------------------------------------------
+dm_add_zernike: adds a zernike polynomial to a given channel
+of the deformable mirror.
+
+Command syntax:
+--------------
+
+>> dm_add_speckle kx ky aa phi chn
+
+Parameters:
+----------
+- kx, ky : spatial frequency (<0.5)
+- aa     : amplitude of the sine wave
+- phi    : phase of the sine wave
+- chn    : DM channel (default = 5)
+-------------------------------------------------------------- """
+
+dms   = 50
+xc,yc = np.meshgrid(np.arange(dms)-dms/2, # dm coordinates 
+                    np.arange(dms)-dms/2) # 
+
+args = sys.argv[1:]
+
+# -----------------------
+if args == []: 
+    print(hmsg)
+    sys.exit()
+# -----------------------
+try:
+    kx = float(args[0])
+except:
+    print(hmsg)
+    sys.exit()
+# -----------------------
+try:
+    ky = float(args[1])
+except:
+    print(hmsg)
+    sys.exit()
+# -----------------------
+try:
+    aa = float(args[2])
+except:
+    print(hmsg)
+    sys.exit()
+# -----------------------
+try:
+    phi = float(args[3])
+except:
+    print(hmsg)
+    sys.exit()
+# -----------------------
+try:
+    chn = int(args[4])
+except:
+    chn = 4
+    print("channel 04 used by default")
+# -----------------------
+
+# ===========================================================
+def DM_sine(amp, kx, ky, phi=0.0):
+    phase = 2*np.pi*(kx * xc + ky * yc) + phi
+    return(amp * np.sin(phase))
+
+def get_DM_disp(chn=3):
+    exec "map0 = disp%02d.get_data(False, True)" % (chn,)
+    return(map0)
+
+def disp_2_DM(dispm, chn=3):
+    exec "disp%02d.set_data(dispm.astype('float32'))" % (chn,)
+    #os.system("imsempost "%(self.fname,))
+# ===========================================================
+
+print ("(kx, ky) = (%.2f,%.2f) => (a, phi) = (%.2f, %.2f) => chn = %02d" % \
+           (kx, ky, aa, phi, chn))
+
+dmc  = shm('/tmp/dm00disp%02d.im.shm' % (chn,), verbose=False) # DM channel
+
+disp0 = dmc.get_data(False, True)
+disp  = DM_sine(aa, kx, ky, phi).astype('float32')
+
+dmc.set_data(disp+disp0)
+os.system("imsempost dm00disp%02d"%(chn,))
+
+dmc.close()

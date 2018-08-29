@@ -1,0 +1,194 @@
+#!/usr/bin/env python
+
+# =============================================================== #
+#   _____                                  ___ _____  _      _    #
+#   \_   \_ ____   _____ _ __ ___  ___    / _ \\_   \/_\    /_\   #
+#    / /\/ '_ \ \ / / _ \ '__/ __|/ _ \  / /_)/ / /\//_\\  //_\\  #
+# /\/ /_ | | | \ V /  __/ |  \__ \  __/ / ___/\/ /_/  _  \/  _  \ #
+# \____/ |_| |_|\_/ \___|_|  |___/\___| \/   \____/\_/ \_/\_/ \_/ #
+#                                                                 #
+# =============================================================== #
+
+
+#COORDINATES INVPIAA:
+# x      24.46
+# y      23.68
+# theta 101300
+# phi    94500
+
+import sys
+import os
+import time
+import pdb
+import subprocess
+
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import zaber_chain
+import conex
+import logit #Custom logging library
+con=conex.conex()
+
+#CONEX wheel 10
+WN=14
+cidx = '/dev/serial/by-id/usb-Newport_CONEX-AGP_A606QDMA-if00-port0'
+#cid = False
+#CONEX wheel 10
+WN=15
+cidy = '/dev/serial/by-id/usb-Newport_CONEX-AGP_A6Z9D9QL-if00-port0'
+#cid = False
+zabdev  = "/dev/serial/by-path/"
+zabdev += "pci-0000:00:1d.0-usb-0:1.8.4.4.4.4:1.0-port0"
+
+zab_idt  = 6
+zab_idp  = 7
+
+CF_FILE  = "invpiaa.conf" # file storing saved positions
+
+def usage():
+    print """---------------------------------------
+Usage: invpiaa <dof> <command> <arg>
+---------------------------------------
+dof:\n---
+    x        horizontal axis
+    theta    rotaion about x axis (Zaber)
+    y        vertical axis
+    phi      rotation about y axis (Zaber)\n
+command:\n-------
+    status   displays the actuator position
+    home     sends the device home
+    goto     moves the device to the position:
+             numerical value only\n
+arg:\n---
+    numerical value (in steps)
+examples:\n--------
+    invpiaa x status
+    invpiaa x home
+    invpiaa y goto 42000
+    invpiaa theta goto 10000
+--------------------------------------- """
+    sys.exit()
+
+# ============================================
+#       utilities to use config files
+# ============================================
+def read_config():
+    if os.path.exists(CF_FILE):
+        f = open(CF_FILE, 'r')
+        config = yaml.load(f)
+        f.close()
+        return(config)
+    else:
+        print("Config file does not exist")
+        return(None)
+
+def update_config(data):
+    f = open(CF_FILE, 'w')
+    yaml.dump(data, file, default_flow_style=False)
+    f.close()
+
+def main():
+    args = sys.argv[1:] # list of arguments
+    na = args.__len__() # number of arguments
+
+    if na < 2:
+        usage()
+
+    if args == []: usage()
+
+    if "x" in args[0].lower():
+        cid = cidx
+        tkn = "con" # technology of actuator
+    elif "y" in args[0].lower():
+        cid = cidy
+        tkn = "con" # technology of actuator
+    elif "theta" in args[0].lower():
+        idn = zab_idt
+        tkn = "zab" # technology of actuator
+    elif "phi" in args[0].lower():
+        idn = zab_idp
+        tkn = "zab" # technology of actuator
+
+    # -----------------------------------------
+    #        Zaber actuator use case
+    # -----------------------------------------
+    if tkn == "zab":
+        if "home" in args[1].lower():
+            zab = zaber_chain.zaber_chain(zabdev, quiet=True)
+            zab.home(idn)
+            zab.close()
+            if idn==1:
+                logit.logit('InvPIAA_y_axis','moved_to_position_0')
+            elif idn==16:
+                logit.logit('InvPIAA_theta_axis','moved_to_position_0')
+            elif idn==17:
+                logit.logit('InvPIAA_phi_axis','moved_to_position_0')
+        elif "stat" in args[1].lower():
+            zab = zaber_chain.zaber_chain(zabdev, quiet=True)
+            position = zab.status(idn, quiet=True)
+            zab.close()
+            print("Axis %s (idn=%d): pos = %d" % (args[0], idn, position))
+        elif "goto"in args[1].lower():
+            if na < 3:    
+                usage()
+            try:
+                pos = int(args[2])
+            except:
+                usage()
+
+            zab = zaber_chain.zaber_chain(zabdev, quiet=True)
+            zab.move(idn, pos)
+            zab.close()
+            if idn==1:
+                logit.logit('InvPIAA_y_axis','moved_to_position_'+str(pos))
+            elif idn==16:
+                logit.logit('InvPIAA_theta_axis','moved_to_position_'+str(pos))
+            elif idn==17:
+                logit.logit('InvPIAA_phi_axis','moved_to_position_'+str(pos))
+            
+        sys.exit(0)
+    # -----------------------------------------
+    #      EZ-stepper actuator use case
+    # -----------------------------------------
+    if tkn == "con":
+        if "home" in args[1].lower():
+            con.open(WN, cid)
+            con.home()
+            con.close()
+            subprocess.call(["scexaostatus","set", "inv_piaa"+args[0].lower(), "2"])
+            logit.logit('Inv_piaa'+args[0].lower(),'moved_to_position_0')
+            sys.exit()
+        elif "stat" in args[1].lower():
+            con.open(WN, cid)
+            con.status_calsrc()
+            con.close()
+        elif "goto" in args[1].lower():
+            if na < 2:
+                print("Oops!  No value entered.  Try again...\n")
+                usage()
+            try:
+                args[2]
+            except:
+                print("%s is not a numerical position" % (args[2]))
+                sys.exit()
+            else:
+                if isinstance(float(args[2]),float):
+                    if (float(args[2])>0) and (float(args[2])<27):
+                        con.open(WN, cid)
+                        con.move(float(args[2]))
+                        con.close()
+                        logit.logit('Inv_piaa'+args[0].lower(),'moved_to_position_'+str(args[2]))
+                    else:
+                        print("Value must be between 0 and 27. Try again...\n")
+                else:
+                    usage()
+        sys.exit(0)
+    # -----------------------------------------
+    # -----------------------------------------
+    else:
+        usage()
+
+if __name__ == "__main__":
+    main()
+

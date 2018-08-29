@@ -1,0 +1,204 @@
+#!/usr/bin/env python
+
+# ================================================ #
+#   _________                            ____  __. #
+#  /   _____/__ ________   ___________  |    |/ _| #
+#  \_____  \|  |  \____ \_/ __ \_  __ \ |      <   #
+#  /        \  |  /  |_> >  ___/|  | \/ |    |  \  #
+# /_______  /____/|   __/ \___  >__|    |____|__ \ # 
+#         \/      |__|        \/                \/ # 
+# ================================================ #
+
+
+
+# =================================================== #
+# =================================================== #
+
+import sys
+import os
+import time
+import subprocess
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import wheel
+import logit
+
+devdir = "/dev/serial/by-id/"
+IR_ND_dev  = devdir + "usb-Thorlabs_FW102C_Filter_Wheel_FWUADG5I-if00-port0"
+OPT_ND_dev = devdir + "usb-FTDI_FT232R_USB_UART_A600crkt-if00-port0"
+SPF_dev    = devdir + "usb-Thorlabs_FW102C_Filter_Wheel_FWV6ODVL-if00-port0"
+
+import conex
+con=conex.conex()
+
+#CONEX wheel 1
+WN=14
+cid = '/dev/serial/by-id/usb-Newport_CONEX-AGP_A6YU85TK-if00-port0'
+
+def usage():
+    print """---------------------------------------
+Usage: superK <dev> <command> <arg>
+---------------------------------------
+dev:\n---
+    irnd       IR neutral density wheel
+    optnd      vis neutral density wheel
+    filter     spectral filter wheel
+    src_select change between sources
+command:\n-------
+    status     displays status
+    home       for scr_select only
+    goto       for src_select only
+arg:\n---
+    1 - 6 (wheel slot position)
+    1 - 4 (src_select positions)\n
+examples:\n--------
+    superK irnd 5
+    superK optnd 2
+    superK filter status
+    superK src_select goto 3
+    superK src_select status
+
+Wheels content:
+--------------
+
++--------+--------+-------------+------------------+-------------------+
+|Command | irnd   | optnd       | filter           | src_select        |  
++--------+--------+-------------+------------------+-------------------+
+|Slot    | IR NDs | Optical NDs | Spectral filters | Sources           |
++--------+--------+-------------+------------------+-------------------+
+|1       | Open   | Open        | Open             | SuperK narrowband |
+|2       | OD 0.3 | OD 0.3      | 950 nm  LP       | 1523 nm HeNe      |
+|3       | OD 1.0 | OD 1.0      | 1500 nm LP       | SuperK broadband  |
+|4       | OD 1.3 | OD 2.0      | 900  +/- 40 nm   | empty             |
+|5       | OD 2.0 | OD 3.0      | 1550 +/- 50 nm   | Halogen lamp      |
+|6       | OD 3.0 | Open        | OD 4.0 (vis)     |                   |
++--------+--------+-------------+------------------+-------------------+ """
+    sys.exit()
+
+# =====================================================================
+# =====================================================================
+def main():
+    args = sys.argv[1:]  # list of read arguments
+    na = args.__len__()  # number of arguments
+
+    if args == []: usage()
+
+    if "irnd" in args[0].lower():
+        print args[1].lower()
+        if (na > 1) and (("?" in args[1].lower()) or \
+                             ("st" in args[1].lower())):
+            whl = wheel.wheel(IR_ND_dev)
+            print("Last stored position = %c" %(whl.saved(),))
+            subprocess.call(["scexaostatus","set", "supKirpos", str(whl.saved())])
+            whl.close()
+            sys.exit()
+        elif (na > 1) and args[1].isdigit():
+            if (1 <= int(args[1]) <= 6):
+                whl = wheel.wheel(IR_ND_dev)
+                whl.goto(args[1])
+                whl.close()
+                subprocess.call(["scexaostatus","set", "supKirpos", str(args[1])])
+                logit.logit('SuperK_irnd','moved_to_slot_'+str(args[1]))
+            else:
+                print("Wheel only has 6 positions")
+            sys.exit()
+        else:
+            usage()
+    # ------------
+    elif "optnd" in args[0].lower():
+        print args[1].lower()
+        if (na > 1) and (("?" in args[1].lower()) or \
+                             ("st" in args[1].lower())):
+            whl = wheel.wheel(OPT_ND_dev)
+            print("Last stored position = %c" %(whl.saved(),))
+            subprocess.call(["scexaostatus","set", "supKoptpos", str(whl.saved())])
+            whl.close()
+            sys.exit()
+        elif (na > 1) and args[1].isdigit():
+            if (1 <= int(args[1]) <= 6):
+                whl = wheel.wheel(OPT_ND_dev)
+                whl.goto(args[1])
+                whl.close()
+                subprocess.call(["scexaostatus","set", "supKoptpos", str(args[1])])
+                logit.logit('SuperK_optnd','moved_to_slot_'+str(args[1]))
+            else:
+                print("Wheel only has 6 positions")
+            sys.exit()
+        else:
+            usage()
+    # ------------
+    elif "filter" in args[0].lower():
+        print args[1].lower()
+        if (na > 1) and (("?" in args[1].lower()) or \
+                             ("st" in args[1].lower())):
+            whl = wheel.wheel(SPF_dev)
+            print("Last stored position = %c" %(whl.saved(),))
+            subprocess.call(["scexaostatus","set", "supKfilpos", str(whl.saved())])
+            whl.close()
+            sys.exit()
+        elif (na > 1) and args[1].isdigit():
+            if (1 <= int(args[1]) <= 6):
+                whl = wheel.wheel(SPF_dev)
+                whl.goto(args[1])
+                whl.close()
+                subprocess.call(["scexaostatus","set", "supKfilpos", str(args[1])])
+                logit.logit('SuperK_filter','moved_to_slot_'+str(args[1]))
+            else:
+                print("Wheel only has 6 positions")
+            sys.exit()
+        else:
+            usage()
+
+    elif "src_select" in args[0].lower():                  #Status commands
+        if na > 1: 
+            if ("?" in args[1].lower()) or ("st" in args[1].lower()):
+                con.open(WN, cid)
+                con.src_status()
+                con.close()
+                sys.exit()
+            elif "goto" in args[1].lower():  #Goto commands
+                if na < 3:
+                    usage()
+                elif args[2].isdigit(): 
+                    if (1 <= int(args[2]) <= 5):
+                        os.system("nps_off1 5")
+                        con.open(WN, cid)
+                        if int(args[2])==1:
+                            con.move(20.3)
+                        elif int(args[2])==2:
+                            con.move(32.7)
+                        elif int(args[2])==3:
+                            con.move(43.0)
+                        elif int(args[2])==4:
+                            con.move(43.12)
+                        elif int(args[2])==5:
+                            con.move(52.5)
+                        con.close()
+                        time.sleep(10.0)
+                        os.system("nps_on1 5")
+                        subprocess.call(["scexaostatus","set", "supKsrc", str(args[2])])
+                        logit.logit('SuperK_source','moved_to_slot_'+str(args[2]))
+                    else:
+                        print("Source selector only has 5 positions")
+                else:
+                    print("Select a position between 1 and 5")
+                sys.exit()
+            elif "home" in args[1].lower():   #Home command
+                os.system("nps_off1 5")               
+                con.open(WN, cid)
+                con.home()
+                con.close()
+                time.sleep(10.0)
+                os.system("nps_on1 5")
+                #subprocess.call(["scexaostatus","set", "piaal1pos", str(1)])
+                #logit.logit('PIAA1_wheel','moved_to_slot_1')
+                sys.exit()
+        else:
+            usage()            
+
+    else:
+        usage()
+
+if __name__ == "__main__":
+    main()

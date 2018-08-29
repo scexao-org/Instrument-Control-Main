@@ -1,0 +1,38 @@
+#! /bin/bash
+EXPECTED_ARGS=2
+
+if [ $# -ne $EXPECTED_ARGS ]
+then
+  echo
+  echo " ------------- Pyramid PZT offset -----------------"
+  echo " Usage: $0 xvolt yvolt "
+  echo 
+exit
+fi
+
+
+if [ $(echo " $1 < -7.0" | bc) -eq 1 ]
+then echo "X value too large"
+exit
+fi
+
+if [ $(echo " $1 > -3.0" | bc) -eq 1 ]
+then echo "X value too small"
+exit
+fi
+
+if [ $(echo " $2 < -7.0" | bc) -eq 1 ]
+then echo "Y value too large"
+exit
+fi
+
+if [ $(echo " $2 > -3.0" | bc) -eq 1 ]
+then echo "Y value too small"
+exit
+fi
+
+
+echo -e 'AVC'$1'\r\n'  > /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AH01JW35-if00-port0
+
+echo -e 'AVD'$2'\r\n' > /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AH01JW35-if00-port0
+

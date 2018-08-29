@@ -1,0 +1,172 @@
+#!/usr/bin/python
+
+import pygame, sys
+from pygame.locals import *
+import numpy as np
+import pyfits as pf
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import mmap
+import struct
+import os
+import Image
+
+home = os.getenv('HOME')
+#sys.path.append(home+'/Progs/python/libs/')
+sys.path.append(home+'/src/lib/python/')
+
+from scexao_shm import shm
+
+auxdir = home + "/conf/dm_patterns/"
+
+top_map = "151025_spkn_top.fits"
+lft_map = "151025_spkn_lft.fits"
+dwn_map = "151025_spkn_dwn.fits"
+rgt_map = "151025_spkn_rgt.fits"
+
+# -----------------------
+#   set up the window
+# -----------------------
+pygame.init()
+
+FPS = 20                        # frames per second setting
+fpsClock = pygame.time.Clock()  # start the pygame clock!
+XW, YW = 200, 200               # window size
+screen = pygame.display.set_mode((XW, YW), 0, 32)
+pygame.display.set_caption('Dark-Hole control panel!')
+
+WHITE = (255, 255, 255)
+GREEN = (  0, 153,   0) 
+BLUE  = ( 51,  51, 255)
+RED   = (255,   0,   0)
+YLOW  = (255, 255,   0)
+BLAK  = (  0,   0,   0)
+GREY  = (128, 128, 128)
+ORNG  = (255, 153,  51)
+FGCOL = BLAK
+
+dmc = shm('/tmp/dm00disp06.im.shm', verbose=False)
+
+font1 = pygame.font.SysFont("default",   24)
+lbl1 = font1.render("UP",    True, FGCOL)
+lbl2 = font1.render("RIGHT", True, FGCOL)
+lbl3 = font1.render("LEFT",  True, FGCOL)
+lbl4 = font1.render("DOWN",  True, FGCOL)
+lbl5 = font1.render("FLAT",  True, FGCOL)
+
+r1 = lbl1.get_rect()
+r2 = lbl2.get_rect()
+r3 = lbl3.get_rect()
+r4 = lbl4.get_rect()
+r5 = lbl5.get_rect()
+
+
+r1.center = (XW/2,XW/6)
+r2.center = (5*XW/6, YW/2)
+r3.center = (XW/6, YW/2)
+r4.center = (XW/2, 5*YW/6)
+r5.center = (XW/2, YW/2)
+
+# -----------------------
+def apply_map(lbl='FLAT'):
+    if lbl == "UP":
+        dmap = pf.getdata(auxdir+top_map)
+    elif lbl == "DOWN":
+        dmap = pf.getdata(auxdir+dwn_map)
+    elif lbl == "RIGHT":
+        dmap = pf.getdata(auxdir+rgt_map)
+    elif lbl == "LEFT":
+        dmap = pf.getdata(auxdir+lft_map)
+    else:
+        dmap = np.zeros((50,50), dtype='float32')
+
+    os.system('/home/scexao/bin/log Applying pre-calculated %s speckle map' % (lbl,))
+    print('test')
+    dmc.set_data(dmap)
+
+# -----------------------
+#   the main game loop
+# -----------------------
+
+clicked = False
+
+while True: 
+
+    pygame.draw.circle(screen, GREY, (XW/2, YW/2), 2*XW/5, 5)
+
+    b1 = pygame.draw.circle(screen, BLUE, (XW/2, YW/6), XW/6, 0)
+    pygame.draw.circle(screen, GREY, (XW/2, YW/6), XW/6, 5)
+
+    b2 = pygame.draw.circle(screen, YLOW, (5*XW/6, YW/2), XW/6, 0)
+    pygame.draw.circle(screen, GREY, (5*XW/6, YW/2), XW/6, 5)
+
+    b3 = pygame.draw.circle(screen, RED, (XW/6, YW/2), XW/6, 0)
+    pygame.draw.circle(screen, GREY, (XW/6, YW/2), XW/6, 5)
+
+    b4 = pygame.draw.circle(screen, GREEN, (XW/2, 5*YW/6), XW/6, 0)
+    pygame.draw.circle(screen, GREY, (XW/2, 5*YW/6), XW/6, 5)
+
+    b5=pygame.draw.circle(screen, ORNG, (XW/2, YW/2), XW/6, 0)
+    pygame.draw.circle(screen, GREY, (XW/2, YW/2), XW/6, 5)
+
+    for i in xrange(1,6):
+        exec 'screen.blit(lbl%d, r%d)' % (i,i,)
+
+
+    # =====================================
+    for event in pygame.event.get():
+
+        if event.type == QUIT:
+            pygame.quit()
+            dmc.close()
+            print("dark-hole manager has ended normally.")
+            sys.exit()
+
+        elif event.type == KEYDOWN:
+
+            if event.key == K_ESCAPE:
+                pygame.quit()
+                dmc.close()
+                print("dmgame has ended normally.")
+                sys.exit()
+
+            if event.key == K_LEFT:
+                apply_map('LEFT')
+
+            if event.key == K_RIGHT:
+                apply_map('RIGHT')
+
+            if event.key == K_UP:
+                apply_map('UP')
+
+            if event.key == K_DOWN:
+                apply_map('DOWN')
+
+            if event.key == K_f:
+                apply_map('FLAT')
+
+        elif event.type == MOUSEMOTION:
+            mx, my = event.pos
+
+        elif event.type == MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            clicked = True
+
+            if b5.collidepoint(mx, my):
+                apply_map('FLAT')
+            if b1.collidepoint(mx, my):
+                apply_map('UP')
+            if b2.collidepoint(mx, my):
+                apply_map('RIGHT')
+            if b3.collidepoint(mx, my):
+                apply_map('LEFT')
+            if b4.collidepoint(mx, my):
+                apply_map('DOWN')
+
+
+    pygame.display.update()
+    fpsClock.tick(FPS)
+
+# =====================================
+pygame.quit()
+sys.exit()

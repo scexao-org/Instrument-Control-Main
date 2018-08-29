@@ -1,0 +1,861 @@
+#!/usr/bin/env python
+
+import pygame, sys
+from pygame.locals import *
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import pyfits as pf
+import pdb
+import threading
+import mmap
+import struct 
+import os
+import Image
+import time
+import datetime
+from scipy.interpolate import griddata
+from scipy.signal      import medfilt2d
+from numpy.linalg      import solve
+from scipy.ndimage.interpolation import rotate
+
+home = os.getenv('HOME')
+
+utcnow = datetime.datetime.utcnow
+
+tt = utcnow()
+auxdir = home+"/conf/fpwfs_aux/"
+logfile = 'apf_wfs_%s.log' % (tt.strftime("%Y%m%d"))
+
+#sys.path.append(home+'/Progs/python/libs/') # Frantz's laptop
+sys.path.append(home+'/src/lib/python/')
+from   camera_tools import cam_cmd
+from   img_tools    import mkdisk
+from   scexao_shm   import shm
+import wheel
+
+#sys.path.append(home+'/Progs/python/libs/pysco') # Frantz's laptop
+sys.path.append(home+'/src/lib/python/pysco')
+import pysco
+import zernike
+
+shift = np.fft.fftshift
+fft   = np.fft.fft2
+ifft  = np.fft.ifft2
+
+dms = 50
+zeroV = np.zeros((dms,dms), dtype='float32')
+
+recenter = True # recenter the frames before analysis
+
+# --------------
+import logging
+logger = logging.getLogger('APFWFS')
+hdlr = logging.FileHandler(auxdir+logfile)
+formatter = logging.Formatter('%(asctime)s %(message)s')
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+logger.setLevel(20)
+# --------------
+
+hmsg = """Asymmetric Pupil WFS GUI help
+-----------------------------
+pupil control:
+-------------
+LCTRL-m: insert asymmetric mask
+RCTRL-m: remove asymmetric mask
+
+camera controls:
+---------------
+a     : increase exposure time
+q     : decrease exposure time
+SPACE : start/stop data stream
+
+display controls:
+----------------
+d     : subtract dark for display
+l     : linear/non-linear display
+m     : color/gray color-map
+ESC   : quit focal-plane WFS
+
+loop controls:
+-------------
+
+SHIFT-c  : calibration of the sensor
+right -> : start / stop loop
+
+"""
+
+# =======================================================
+atest = 0.04
+np.set_printoptions(precision=3, suppress=True)
+
+model = pysco.KPI(auxdir+"scexao.kpi.gz")
+
+# build up the pseudo-inverse
+U, S, Vh   = np.linalg.svd(model.TFM.T, full_matrices=0)
+neigm      = S.size # max number of eigenval for pinv
+S1         = np.zeros_like(S)
+iS1        = np.diag(1/S)
+neig       = 100 # default number of eigenval for pinv
+iS1[neig:] = 0.0
+pinv2      = np.dot(np.dot(Vh.T,iS1),U.T)
+
+sz, dz  = 256, 128
+pscale  = 12.1                            # (mas/pixel) eye-balled
+m2pix   = pysco.core.mas2rad(pscale * sz / 1.6e-6)
+uv_samp = model.uv * m2pix + dz           # uv sample coordinates in pixels
+
+xi, yi = np.mgrid[-4:4:0.035, -4:4:0.035] # interpolation grid for WFT
+wfsz = xi.shape
+dist = np.hypot(xi, yi)
+
+tel_mask = np.ones_like(dist)
+tel_mask[dist < 1.2] = 0.0
+tel_mask[dist > 4.0] = 0.0
+tel_mask[(xi < 0) * (np.abs(yi) < 0.6)] = 0.0
+tel_mask = rotate(tel_mask, 15, reshape=False)
+
+rmax = np.sqrt((model.mask**2).sum(1).max())
+rmax = 3.96
+interpol = 'nearest' # 'linear' # 'cubic'
+
+i0, i1 = 4, 14 # focus - spherical (not included)
+
+
+# ========== build up a bank of Zernike modes ===========
+model.mask /= rmax              # temporary scaling for Zernike (0 < r < 1)
+for i in xrange(i0,i1):         # focus and beyond
+    exec 'z%d = atest * zernike.mkzer1_vector(%d,  model.mask)[1:]' % (i,i)
+    exec 'test = np.dot(model.TFM, z%d)' % (i,)
+    exec 'z%d = np.dot(pinv2.T, test)' % (i,)
+    exec 'z%d -= z%d.mean()' % (i,i)
+    exec 'z%d *= 1.0/atest' % (i,)
+    exec 'test = np.dot(model.TFM, z%d)' % (i,)
+    exec 'r%d = np.dot(pinv2.T, test)' % (i,)
+
+model.mask *= rmax              # back to normal
+
+# theoretical modes
+ZZ = np.transpose([z4,z5,z6,z7,z8,z9,z10,z11,z12,z13])
+# reconstructed modes
+RR = np.transpose([r4,r5,r6,r7,r8,r9,r10,r11,r12,r13])
+
+pf.writeto(auxdir+"ZZ_theo.fits", RR, clobber=True)
+
+# export the modes as interpolated wavefront images (fits)
+for i in xrange(i0,i1):
+    mymode = griddata((model.mask[1:,0], model.mask[1:,1]), 
+                      ZZ[:,i-i0], (xi, yi), method=interpol)
+    mymode[tel_mask < 0.5] = np.nan
+    pf.writeto(auxdir+"inpt_z%02d.fits" % (i,), mymode, clobber=True)
+
+    mymode = griddata((model.mask[1:,0], model.mask[1:,1]), 
+                      RR[:,i-i0], (xi, yi), method=interpol)
+    mymode[tel_mask < 0.5] = np.nan
+    pf.writeto(auxdir+"resp_z%02d.fits" % (i,), mymode, clobber=True)
+
+# reload the calibration last saved
+if os.path.exists(auxdir+"ZZ_recal.fits"):
+    ZZ  = pf.getdata(auxdir+'ZZ_recal.fits')
+
+# ----------------------------
+stnav = 0
+nsamp = 20
+ZTZ = np.dot(ZZ.T, ZZ)
+zcv = solve(ZTZ, np.dot(ZZ.T, np.ones(291)))
+nz = zcv.shape[0]
+zcva = np.zeros((nsamp, nz))
+# ----------------------------
+
+# Dummy for simulation purposes (Frantz's laptop)
+#def cam_cmd(cmd): 
+#    return(True)
+
+# ------------------------------------------------------------------
+#      extract phase information from the FT array
+# ------------------------------------------------------------------
+def get_wft_vect(myarray, stats=False):
+    
+    xx = np.cast['int'](np.round(uv_samp[:,0]))
+    yy = np.cast['int'](np.round(uv_samp[:,1]))
+    uvphase = myarray[yy, xx]
+    phase = np.dot(uvphase, pinv2)
+    phase -= phase.mean()
+
+    if stats:
+        stats = (np.std(uvphase), np.max(uvphase) - np.min(uvphase), 
+                 np.std(phase),   np.max(  phase) - np.min(  phase))
+        return(phase, stats)
+    else:
+        return(phase)
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+camid = 1 # camera identifier (1: LOWFS camera)
+
+cam  = shm("/tmp/ircam%d.im.shm" % (camid,), False)
+#cam  = shm('/tmp/cam.im.shm', verbose=False)
+
+dmc = shm('/tmp/dm0disp7.im.shm') # DM channel (correction)
+dmp = shm('/tmp/dm0disp5.im.shm') # DM channel (perturbation)
+
+# ------------------------------------------------------------------
+#                       global variables
+# ------------------------------------------------------------------
+zoom = 1                    # zoom for the display of the images
+
+mycmap = cm.gray
+
+(xsize, ysize) = (320, 256)
+nel = xsize * ysize
+dx = (xsize-ysize)/2
+
+fmask = mkdisk((ysize, ysize), (ysize/2, ysize/2), 70.0)
+# -----------------------
+#   set up the window
+# -----------------------
+pygame.init()
+
+FPS = 40                        # frames per second setting
+fpsClock = pygame.time.Clock()  # start the pygame clock!
+XW, YW = 990, 700
+
+screen = pygame.display.set_mode((XW, YW), 0, 32)
+pygame.display.set_caption('Asymmetric pupil WFS')
+
+# ===============================================================
+def get_img_data(check=False, reform=True):
+    ''' ----------------------------------------
+    Return the current image data content,
+    formatted as a 2D numpy array.
+    Reads from the already-opened shared memory
+    data structure.
+    ---------------------------------------- '''
+    return(cam.get_data(check, reform).astype('float'))
+
+# ===============================================================
+def arr2im(arr, vmin=False, vmax=False, pwr=1.0):
+    ''' ------------------------------------------
+    convert numpy array into image for display
+    ------------------------------------------ '''
+    arr2 = arr.astype('float')**pwr
+    if not vmin:
+        mmin,mmax = arr2.min(), arr2.max()
+    else:
+        mmin,mmax = vmin,vmax
+
+    arr2 -= mmin
+    arr2 /= (mmax-mmin)
+
+    if zoom != 1:
+        img = Image.fromarray(arr2)
+        rimg = img.resize((zoom*ysize, zoom*xsize))
+        rarr = np.asarray(rimg)
+        test = mycmap(rarr)
+    else:
+        test = mycmap(arr2)
+    return((255*test[:,:,:3]).astype('int'))
+
+# ===============================================================
+def current_wft():
+    global recenter
+
+    temp = get_img_data()
+
+    if subt_bias:
+        temp -= bias
+    temp -= temp.min()
+
+    temprs = temp[:,dx:dx+256]
+    if (recenter):
+        temprs = pysco.core.recenter(temprs, sg_rad=10, verbose=False, nbit=10)
+    ft_tmp = shift(fft(shift(temprs)))
+    ft_phi = fmask*np.angle(ft_tmp)
+    ft_phi = medfilt2d(ft_phi)
+    (wft, stats) = get_wft_vect(ft_phi, stats=True)
+    return(wft)
+
+# ===============================================================
+def calibrate_wfs():
+    ''' -------------------------------------------------
+    Attempt at calibrating the response of the WFS.
+    Go from Z4 to Z10 with the DM and analyze resulting
+    image. Build up a response matrix.
+    ------------------------------------------------- '''
+    nav = 20
+    global ZZ, ZTZ
+
+    pupil_slot = os.popen('pupil wheel ?').read()[17]
+    if (pupil_slot == '1'):
+        line = 'ASYMMETRIC MASK NOT IN!'
+        lstat = font2.render(line, True, FGCOL, RED)
+        screen.blit(lstat, rec_lstat)
+        return(0)
+
+    else:
+        line  = "  Loop is CALIBRATING  "
+        lstat = font2.render(line, True, FGCOL, ORNG)
+        screen.blit(lstat, rec_lstat)
+        os.system('/home/scexao/bin/log APF-WFS calibration start')
+
+    ref = current_wft() # for later ...
+
+    for j in xrange(0,nav-1):
+        time.sleep(0.05)
+        ref += current_wft()
+    ref /= float(nav)
+
+    ZZ2 = np.zeros_like(ZZ)
+
+    for i in xrange(i0,i1):     # focus and beyond
+        myarr = atest*zernike.mkzer1(i, dms,dms/2, True).astype('float32')
+        dmc.set_data(myarr)
+        time.sleep(0.5)
+        test = current_wft()
+
+        for j in xrange(0,nav-1):
+            time.sleep(0.05)
+            test += current_wft()
+
+        test /= float(nav)
+        test -= ref
+        test -= test.mean()
+        ZZ2[:,i-i0] = test / atest
+
+    dmc.set_data(zeroV)
+
+    ZZ = ZZ2
+    ZTZ = np.dot(ZZ.T, ZZ)
+
+    pf.writeto(auxdir+'ZZ_recal.fits', ZZ, clobber=True)
+    pf.writeto(auxdir+'ZTZ_recal.fits', ZTZ, clobber=True)
+
+    line  = "   Loop CALIBRATED   "
+    lstat = font2.render(line, True, FGCOL, GREEN)
+    screen.blit(lstat, rec_lstat)
+
+    iu = 0
+    iv = 1
+    for i in xrange(i0,i1):
+        mymode = griddata((model.mask[1:,iu], model.mask[1:,iv]),
+                          ZZ[:,i-i0] * atest, (xi, yi), method=interpol)
+        mymode[tel_mask < 0.5] = np.nan
+        pf.writeto(auxdir+"calib_z%02d.fits" % (i,), mymode, clobber=True)
+
+    return(0)
+
+# ------------------------------------------------------------------
+#                 !!! now we are in business !!!!
+# ------------------------------------------------------------------
+
+WHITE = (255, 255, 255)
+GREEN = (  0, 153,   0) 
+BLUE  = ( 51,  51, 255)
+RED   = (255,   0,   0)
+YLOW  = (255, 255,   0)
+BLK   = (  0,   0,   0)
+GREY  = (128, 128, 128)
+ORNG  = (255, 153,  51)
+
+FGCOL = WHITE  # foreground color (text)
+BGCOL = BLK    # background color
+BTCOL = BLUE   # *button* color
+
+background = pygame.Surface(screen.get_size())
+background = background.convert()
+background.fill(BLK)
+
+etimes = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000,
+                   5000, 10000, 16000, 24000, 37000, 57000, 89000,
+                   140000, 210000, 330000, 510000])
+net = 18
+
+# get initial exposure time value
+#etime = 1000 # Frantz's laptop simulation
+etime = int(cam_cmd("tint? %d" % (camid), True).strip('\x00'))
+# and the closest matching value in our etimes array
+tindex = np.where(etimes >= etime)[0][0]
+
+# ----------------------------
+#          labels
+# ----------------------------
+os.system('/home/scexao/bin/log APF-WFS starting')
+
+font1 = pygame.font.SysFont("default",   48)
+font2 = pygame.font.SysFont("default",   30)
+font3 = pygame.font.SysFont("monospace", 16)
+
+lbl = font2.render("Asymmetric WFS", True, FGCOL, BGCOL)
+rct = lbl.get_rect()
+rct.center = (170, 540)
+screen.blit(lbl, rct)
+
+lbl2 = font2.render('"Press [h] for help"', True, FGCOL)
+rct2 = lbl2.get_rect()
+rct2.center = (170, 580)
+screen.blit(lbl2, rct2)
+
+imin, imax = 0, 0
+msg = "t=%6d us" % (etime,)
+info = font3.render(msg, True, FGCOL)
+rct_info  = info.get_rect()
+rct_info.center = (200, 660)
+
+dinfo = font3.render("                       ", True, FGCOL)#, BGCOL)
+rct_dinfo  = dinfo.get_rect()
+rct_dinfo.center = (200, 680)
+screen.blit(dinfo, rct_dinfo)
+
+xws = xsize
+yws = ysize
+
+imin, imax = 0, 0
+surf_live_img   = pygame.surface.Surface((xws, yws))
+rect1           = surf_live_img.get_rect()
+rect1.center    = (5+xws/2, 5+yws/2)
+
+surf_live_fph   = pygame.surface.Surface((yws, yws))
+rect_fph        = surf_live_fph.get_rect()
+rect_fph.center = (xws+15+xws/2, 5+yws/2)
+
+surf_live_wft   = pygame.surface.Surface(wfsz)
+rect_wft        = surf_live_wft.get_rect()
+rect_wft.center = (660+165, 5+yws/2)
+
+temp   = get_img_data()
+temprs = temp[:,dx:dx+ysize] # resized for FT
+if recenter:
+    temprs = pysco.core.recenter(temprs, verbose=False)#, nbit=10)
+ft_tmp = shift(fft(shift(temprs)))
+
+ft_phi = fmask*np.angle(ft_tmp).transpose()
+myph   = arr2im(ft_phi, pwr=1.0)
+
+wft = get_wft_vect(ft_phi)
+mywft = griddata((model.mask[1:,0], model.mask[1:,1]), 
+                 wft, (xi, yi), method='linear')
+
+mywft[np.isnan(mywft)] = 0.0
+mywft[tel_mask < 1.0]  = 0.0
+
+gain = 0.005
+
+# =======================================================
+plot_cross = False   # flag for display of the crosses
+subt_bias  = True    # flag for bias subtraction
+cont_acq   = False   # flag to start/stop cam acquisition
+lin_scale  = True    # flag for linear range
+clr_scale  = True    # flag for the display color scale
+cloop      = False   # close loop flag
+
+bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (etime,)
+bias = pf.getdata(bname)
+#bias = np.zeros_like(temp) # Frantz laptop simu
+
+# =======================================================
+
+ptiles = (100, 99.95, 99.9, 99, 95, 90, 75, 50, 25, 5, 1, 0)
+npct = ptiles.__len__()
+
+pct_x = np.zeros(npct) + 170
+pct_y = np.arange(npct) * 15 + 300
+
+for i, ptile in enumerate(ptiles):
+    line = "p-tile %6.2f: xxxxx.x" % (ptile,)
+    exec 'ptile%d = font3.render(line, True, FGCOL)' % (i,)
+    exec 'recpt%d = ptile%d.get_rect()' % (i,i)
+    exec 'recpt%d.center = (pct_x[%d], pct_y[%d])' % (i,i,i)
+
+line = "RMS = %5.3f - P2V = %5.3f" % (0.0, 0.0)
+fstat = font3.render(line, True, FGCOL, BGCOL)
+rec_fstat = fstat.get_rect()
+rec_fstat.center = (330+165, 315)
+
+line = "RMS = %5.3f - P2V = %5.3f" % (0.0, 0.0)
+pstat = font3.render(line, True, FGCOL, BGCOL)
+rec_pstat = pstat.get_rect()
+rec_pstat.center = (660+165, 315)
+
+line = "Using: %3d/%3d eigen values" % (neig, neigm)
+rstat = font3.render(line, True, FGCOL, BGCOL)
+rec_rstat = pstat.get_rect()
+rec_rstat.center = (660+165, 330)
+
+zlabel = ['focus', 'astig1', 'astig2', 
+          'coma1', 'coma2', 'trefoil1', 'trefoil2',
+          'spheric', 'quad1', 'quad2', 'xxxxx',
+          'xxxxx', 'xxxxx', 'xxxxx', 'xxxxx']
+
+mode_lock = [False, False, False, False, False, 
+             False, False, False, False, False]
+
+for i in xrange(i0,i1):     # focus and beyond
+    line = "z%02d = %+5d nm (%8s)" % (i, 0.0, zlabel[i-4])
+    exec 'z%dstat = font3.render(line, True, FGCOL, BGCOL)' % (i,)
+    exec 'rec_z%dstat = z%dstat.get_rect()' % (i, i)
+    yc = 360+(i-i0)*22
+    exec 'rec_z%dstat.center = (825, yc)' % (i,)
+    exec 'screen.blit(z%dstat, rec_z%dstat)' % (i, i)
+
+line  = "      Loop is OPEN      "
+lstat = font2.render(line, True, FGCOL, GREEN)
+rec_lstat = lstat.get_rect()
+rec_lstat.center = (660+175, 650)
+screen.blit(lstat, rec_lstat)
+
+irange = 0.5
+counter = 0
+update = True
+
+logger.info('APF-WFS started!')
+# =======================================================
+# =======================================================
+while True: # the main game loop
+    clicked = False
+
+    pwr0 = 1.0
+    if not lin_scale:
+        pwr0 = 0.3
+
+    mycmap = cm.gray
+    if clr_scale:
+        mycmap = cm.jet
+
+    # read image
+    test = cam.get_counter()
+    if test != counter:
+        counter = test
+        update = True
+
+    if update == True:
+        update = False
+        temp      = get_img_data()
+
+        if subt_bias:
+            temp -= bias
+        imin, imax = temp.min(), temp.max()
+        temp -= imin
+
+        myim = arr2im(temp.transpose(), pwr=pwr0)
+        imax = np.percentile(temp, 99.95)
+        msg  = "t = %6d us" % (etime,)
+        info = font3.render(msg, False, FGCOL, BGCOL)
+        screen.blit(info, rct_info)
+
+        # ------------------------
+        temprs = temp[:,dx:dx+256]
+        temprs = pysco.core.recenter(temprs, verbose=False, nbit=10)
+        ft_tmp = shift(fft(shift(temprs)))
+        ft_phi = fmask*np.angle(ft_tmp)
+        ft_phi = medfilt2d(ft_phi)
+
+        myph = arr2im(ft_phi.transpose(), 
+                      vmin=-irange, vmax=irange, pwr=1.0)
+
+        # ------------------------
+        (wft, stats) = get_wft_vect(ft_phi, stats=True)
+        mywft = griddata((model.mask[1:,0], model.mask[1:,1]), 
+                         wft, (xi, yi), method='linear')
+    
+        mywft[np.isnan(mywft)] = -0.5
+        mywft[tel_mask < 0.5] = -0.5
+        mywft = arr2im(np.fliplr(mywft), 
+                       vmin=-irange, vmax=irange, pwr=1.0)
+
+        zcv = solve(ZTZ, np.dot(ZZ.T, wft))
+
+        zcva = np.roll(zcva, 1, axis=0)
+        zcva[0] = zcv
+        zcv0 = np.median(zcva, 0)
+
+        if cloop:
+            logger.info("Close-loop")
+            mydisp = dmc.get_data()
+            correc = np.zeros_like(mydisp)
+            for i in xrange(i0,i1):
+                if (not mode_lock[i-i0]):
+                    correc -= zcv0[i-i0] * zernike.mkzer1(i, dms,dms/2, True)
+            if (np.sum(mode_lock) < i1-i0):
+                dmc.set_data((0.999*(mydisp+gain*correc)).astype('float32'))
+        
+        msg = ["%+04d" % x for x in 1000*zcv]
+        logger.info(msg)
+    # ------------------------
+
+    # display information
+    msg = "non-" * (pwr0 < 0.9) +"linear // "
+    msg += "no-" * (True - subt_bias) + "bias"
+    msg += "                         "
+    dinfo = font3.render(msg, False, FGCOL, BGCOL)
+    screen.blit(dinfo, rct_dinfo)
+
+    pygame.surfarray.blit_array(surf_live_img, myim)
+    screen.blit(surf_live_img, rect1)
+
+    pygame.surfarray.blit_array(surf_live_fph, myph)
+    screen.blit(surf_live_fph, rect_fph)
+
+    pygame.surfarray.blit_array(surf_live_wft, mywft)
+    screen.blit(surf_live_wft, rect_wft)
+
+    # ----- image information -----
+    test = np.percentile(temp, ptiles)
+
+    for i, ptile in enumerate(ptiles):
+        line = "p-tile %6.2f: %7.1f" % (ptile,test[i])
+        exec 'ptile%d = font3.render(line, True, FGCOL, BGCOL)' % (i,)
+        exec 'screen.blit(ptile%d, recpt%d)' % (i, i)
+
+    # ---- Fourier and pupil information -----
+    line = "RMS = %5.3f - P2V = %5.3f" % (stats[0], stats[1])
+    fstat = font3.render(line, True, FGCOL, BGCOL)
+    screen.blit(fstat, rec_fstat)
+    # ----
+    line = "RMS = %5.3f - P2V = %5.3f" % (stats[2], stats[3])
+    pstat = font3.render(line, True, FGCOL, BGCOL)
+    screen.blit(pstat, rec_pstat)
+
+    line = "Using: %3d/%3d eigen values" % (neig, neigm)
+    rstat = font3.render(line, True, FGCOL, BGCOL)
+    screen.blit(rstat, rec_rstat)
+
+    for i in xrange(i0,i1):     # focus and beyond
+        line = "z%02d = %+5d nm (%8s)" % (i, 1000*zcv0[i-i0], zlabel[i-i0])
+        BGCOLOR = BGCOL
+        if (mode_lock[i-i0]):
+            BGCOLOR = RED
+        exec 'z%dstat = font3.render(line, True, FGCOL, BGCOLOR)' % (i,)
+        exec 'screen.blit(z%dstat, rec_z%dstat)' % (i, i)
+    
+    # ------------------------------------
+    if plot_cross:
+        pygame.draw.line(screen, RED, (5, yws/2+7), (xws+5, yws/2+7), 1)
+        pygame.draw.line(screen, RED, (xws/2+4, 5), (xws/2+4, yws+5), 1)
+
+    # =====================================
+    for event in pygame.event.get():
+
+        if event.type == QUIT:
+            pygame.quit()
+
+            # close shared memory access
+            # --------------------------
+            cam.close()
+            print("The program has ended normally.")
+            os.system('/home/scexao/bin/log APF-WFS exit')
+            sys.exit()
+        elif event.type == KEYDOWN:
+
+            if event.key == K_ESCAPE:
+                pygame.quit()
+                # close shared memory access
+                # --------------------------
+                cam.close()
+                print("The program has ended normally.")
+                os.system('/home/scexao/bin/log APF-WFS exit')
+                sys.exit()
+
+            if event.key == K_c:
+                mmods = pygame.key.get_mods()
+                
+                if (mmods & KMOD_LSHIFT):
+                    t = threading.Thread(target=calibrate_wfs, args=())
+                    t.start()
+                else:
+                    plot_cross = True - plot_cross
+
+            if event.key == K_i:
+                mmods = pygame.key.get_mods()
+
+                if (mmods & KMOD_LSHIFT):
+                    dmp.set_data(zeroV)
+
+                elif (mmods & KMOD_LCTRL):
+                    print("Reloading the KPI structure!")
+                    model = pysco.KPI(auxdir+"scexao.kpi.gz")
+                    # build up the pseudo-inverse
+                    U, S, Vh   = np.linalg.svd(model.TFM.T, full_matrices=0)
+                    neigm      = S.size # max number of eigenval for pinv
+                    S1         = np.zeros_like(S)
+                    iS1        = np.diag(1/S)
+                    iS1[neig:] = 0.0
+                    pinv2      = np.dot(np.dot(Vh.T,iS1),U.T)
+                    m2pix   = pysco.core.mas2rad(pscale * sz / 1.6e-6)
+                    uv_samp = model.uv * m2pix + dz 
+
+                else:
+                    dmc.set_data(zeroV)
+
+            if event.key == K_m:
+                mmods = pygame.key.get_mods()
+
+                if (mmods & KMOD_LCTRL):
+                    os.system('pupil wheel goto 5')
+                    os.system('/home/scexao/bin/log Asymmetric Mask moving IN')
+
+                elif (mmods & KMOD_RCTRL):
+                    os.system('pupil wheel goto 1')
+                    os.system('/home/scexao/bin/log Asymmetric Mask moving OUT')
+                else:
+                    update = True
+                    clr_scale = True - clr_scale
+
+            if event.key == K_r:
+                update = True
+                irange = 2 * stats[0] # 2-sigma display
+
+            if event.key == K_RIGHT:
+                cloop = True - cloop
+                update = True
+                line  = "      Loop is OPEN      "
+                lstat = font2.render(line, True, FGCOL, GREEN)
+                os.system('/home/scexao/bin/log APF-WFS loop open')
+                if cloop:
+                    pupil_slot = os.popen('pupil wheel ?').read()[17]
+                    if (pupil_slot == '1'):
+                        cloop = False
+                        line  = "   ASYM. MASK NOT IN!  "
+                        lstat = font2.render(line, True, FGCOL, RED)
+                    else:
+                        line  = "     Loop is CLOSE     "
+                        os.system('/home/scexao/bin/log APF-WFS loop close')
+                        lstat = font2.render(line, True, FGCOL, ORNG)
+                screen.blit(lstat, rec_lstat)
+                logger.info(line)
+
+            if event.key == K_UP: # pseudo inverse with more eigenvalues
+                update = True
+                mmods = pygame.key.get_mods()
+                step = 1
+                if (mmods & KMOD_LSHIFT):
+                    step = 10
+                neig += step
+                if neig >= neigm:
+                    neig = neigm
+
+                S1 = np.zeros_like(S)
+
+                iS1 = np.diag(1/S)
+                iS1[neig:] = 0.0
+                pinv2 = np.dot(np.dot(Vh.T,iS1),U.T)
+
+            if event.key == K_DOWN: # pseudo inverse with more eigenvalues
+                mmods = pygame.key.get_mods()
+                update = True
+                step = 1
+                if (mmods & KMOD_LSHIFT):
+                    step = 10
+                neig -= step
+                if neig <= 0:
+                    neig = 0
+
+                S1 = np.zeros_like(S)
+
+                iS1 = np.diag(1/S)
+                iS1[neig:] = 0.0
+                pinv2 = np.dot(np.dot(Vh.T,iS1),U.T)
+
+            if event.key == K_q:
+                if (tindex < net - 1):
+                    tindex += 1
+                    etime = etimes[tindex]
+                    cam_cmd("tint %d %d" % (camid, etime), False)
+                    bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (etime,)
+                    bias = pf.getdata(bname)
+                    
+            if event.key == K_a:
+                if (tindex > 0):
+                    tindex -= 1
+                    etime = etimes[tindex]
+                    cam_cmd("tint %d %d" % (camid, etime), False)
+                    bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (etime,)
+                    bias = pf.getdata(bname)
+
+            if event.key == K_SPACE:
+                cont_acq = True - cont_acq
+                if cont_acq:
+                    cam_cmd("stream %d" % (camid,))
+                else:
+                    cam_cmd("abort %d" % (camid,))
+
+            if event.key == K_d:
+                subt_bias = True - subt_bias
+                if subt_bias:
+                    bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (etime,)
+                    try:
+                        bias = pf.getdata(bname)
+                    except:
+                        bias = np.zeros_like(temp)
+
+            if event.key == K_h:
+                print(hmsg)
+
+            # special mode to re-acquire biases for all exp times
+            # ---------------------------------------------------
+            if event.key == K_b:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL) and (mmods & KMOD_LSHIFT):
+                    msg = "!! Acquiring darks !!"
+                    dinfo = font3.render(msg, False, FGCOL, BGCOL)
+                    screen.blit(dinfo, rct_dinfo)
+                    pygame.display.update([rct_dinfo])
+
+                    delay = np.max((etime*1e-6, 0.01))
+                    subt_bias = False
+
+                    whldev = "/dev/serial/by-id/"
+                    whldev += "usb-FTDI_FT232R_USB_UART_A600crjy-if00-port0"
+                    whl = wheel.wheel(whldev)
+
+                    slot = whl.what_slot() # remember current state
+                    whl.goto("6")          # blocking the light
+                    time.sleep(2.0)        # safety
+
+                    for tint in etimes:
+                        cam_cmd("tint %d %d" % (camid, tint), False)
+                        time.sleep(0.1)
+                        temp = get_img_data()
+                        bname = home+"/conf/chuckcam_aux/bias%07d.fits"%(tint,)
+
+                        pf.writeto(bname, temp, clobber=True)
+                        time.sleep(0.2)
+
+                    whl.goto(slot)         # back to previous state
+                    time.sleep(2.0)        # safety
+                    whl.close()            # closing wheel connection
+                        
+                    cam_cmd("tint %d %d" % (camid, etime), False)
+
+            if event.key == K_l:
+                lin_scale = True - lin_scale
+                update = True
+
+        elif event.type == MOUSEMOTION:
+            mx, my = event.pos
+
+        elif event.type == MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            clicked = True
+            
+            for i in xrange(i0, i1):
+                exec 'mytest = rec_z%dstat.collidepoint(mx, my)' % (i,)
+                if (mytest):
+                    mode_lock[i-i0] = True - mode_lock[i-i0]
+
+    pygame.display.update([rect1, rct, rct2, rct_info, rct_dinfo])
+    pygame.display.update([recpt0, recpt1, recpt2, recpt3])
+    pygame.display.update([rec_lstat])
+
+    # lines to split the window
+    pygame.draw.line(screen, FGCOL, (330, 0), (330, YW), 3)
+    pygame.draw.line(screen, FGCOL, (660, 0), (660, YW), 3)
+    pygame.draw.line(screen, FGCOL, (0, 281), (XW, 281), 3)
+    pygame.display.flip()
+    #screen.blit()
+    fpsClock.tick(FPS)
+
+os.system('/home/scexao/bin/log APF-WFS exit')
+pygame.quit()
+sys.exit()

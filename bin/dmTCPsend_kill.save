@@ -1,0 +1,5 @@
+#! /bin/bash
+
+tmux kill-session -t dmTCPsend-0
+tmux kill-session -t dmTCPsend-1
+

@@ -1,0 +1,20 @@
+# create arrays
+
+
+Cfits << EOF
+creaimshm dm00disp 50 50
+creaimshm dm00disp00 50 50
+creaimshm dm00disp01 50 50
+creaimshm dm00disp02 50 50
+creaimshm dm00disp03 50 50
+creaimshm dm00disp04 50 50
+creaimshm dm00disp05 50 50
+creaimshm dm00disp06 50 50
+creaimshm dm00disp07 50 50
+creaimshm dm00disp08 50 50
+creaimshm dm00disp09 50 50
+creaimshm dm00disp10 50 50
+creaimshm dm00disp11 50 50
+exit
+EOF
+

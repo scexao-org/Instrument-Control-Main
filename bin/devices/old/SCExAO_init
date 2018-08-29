@@ -1,0 +1,37 @@
+#!/bin/bash
+
+cal_src in
+sleep 0.1
+oap1 int
+sleep 0.1
+dichroic in
+sleep 0.1
+pupil wheel goto 1
+sleep 0.1
+piaa1 wheel goto 1
+sleep 0.1
+piaa2 wheel goto 1
+sleep 0.1
+nuller_pickoff out
+sleep 0.1
+fibinj_pickoff out
+sleep 0.1
+fpm wheel goto 1
+sleep 0.1
+lyot wheel goto 1
+sleep 0.1
+charis_pickoff goto 2
+sleep 0.1
+mkids_pickoff goto 2
+sleep 0.1
+vampfirst_splitter goto 3
+sleep 0.1
+pcfi_pickoff out
+sleep 0.1
+pcfi_len smi
+sleep 0.1
+pcfi_fib smi
+sleep 0.1
+saphira_pickoff out
+sleep 0.1
+pywfs_pickoff goto 7

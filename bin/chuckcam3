@@ -1,0 +1,857 @@
+#!/usr/bin/env python
+
+# -------------------------------------------------- #
+#    ___ _                _      ___                 #
+#   / __\ |__  _   _  ___| | __ / __\__ _ _ __ ___   #
+#  / /  | '_ \| | | |/ __| |/ // /  / _` | '_ ` _ \  #
+# / /___| | | | |_| | (__|   </ /__| (_| | | | | | | #
+# \____/|_| |_|\__,_|\___|_|\_\____/\__,_|_| |_| |_| #
+#                                                    #
+# -------------------------------------------------- #
+
+import pygame, sys
+from pygame.locals import *
+import numpy as np
+import matplotlib.cm as cm
+import struct 
+import os
+import Image
+import time
+import math as m
+import copy
+import datetime as dt
+import pyfits as pf
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from   camera_tools import cam_cmd
+from   scexao_shm   import shm
+
+
+hmsg = """CHUCK's INSTRUCTIONS
+-------------------
+
+camera controls:
+---------------
+q       : increase exposure time
+a       : decrease exposure time
+SPACE   : start/stop data stream
+CTRL+h  : hotspotalign
+CTRL+f  : camera to focus
+CTRL+l  : camera to lyot plane (pupil plane)
+CTRL+p  : camera to PIAA pupil plane
+CTRL+b  : take new darks
+CTRL+r  : save a reference image
+CTRL+s  : start/stop logging images
+CTRL+d  : save a HDR image
+
+display controls:
+----------------
+d       : subtract dark for display
+c       : display hotstpot crosses
+l       : linear/non-linear display
+m       : color/gray color-map
+o       : bullseye on the PSF
+i       : history of PSF positions
+v       : start/stop accumulating and averaging frames
+z       : zoom/unzoom on the center of the image
+r       : subtract a reference image
+
+mouse controls:
+--------------
+mouse      : display of the flux under the mouse pointer
+left click : measure distances in pix
+ 
+ESC   : quit chuckcam3
+
+"""
+
+#args = sys.argv[1:]
+zoom = 2    # zoom for the display (default is 2)
+#if args != []:
+#    if isinstance(int(args[0]),int):
+#        zoom = int(args[0])
+#        zoom = min(3,max(1,zoom))
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+#camid = 2 # camera identifier (1: science camera)
+#if not os.path.isfile("/tmp/blobcam.im.shm"):
+#    os.system("tmux new-session -d -s IRcam")
+#    os.system("tmux send-keys -t IRcam \"cd ~/src/OWLcam\" C-m")
+#    os.system("tmux send-keys -t IRcam \"./raptormulti 3\" C-m")
+
+cam = shm("/tmp/blobcam.im.shm")
+
+#cam_cmd("tecon %d" % (camid,)) # start TEC
+
+# ------------------------------------------------------------------
+#                       global variables
+# ------------------------------------------------------------------
+
+mycmap = cm.gray
+(xsize, ysize) = cam.size[:cam.naxis]
+
+# -----------------------
+#   set up the window
+# -----------------------
+pygame.init()
+
+FPS = 20                        # frames per second setting
+fpsClock = pygame.time.Clock()  # start the pygame clock!
+XW, YW = xsize*zoom, (ysize+100)*zoom
+
+screen = pygame.display.set_mode((XW, YW), 0, 32)
+pygame.display.set_caption('SCIENCE camera display!')
+
+os.system("tmux new-session -d -s blobcam") #start a tmux session for messsages
+
+# ------------------------------------------------------------------
+#             short hands for shared memory data access
+# ------------------------------------------------------------------
+def get_img_data(check=False):
+    ''' ----------------------------------------
+    Return the current image data content,
+    formatted as a 2D numpy array.
+    Reads from the already-opened shared memory
+    data structure.
+    ---------------------------------------- '''
+    return(cam.get_data(check, True).astype(float))
+
+# ------------------------------------------------------------------
+#  another short hand to convert numpy array into image for display
+# ------------------------------------------------------------------
+def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0):
+    
+    if  zoom2 != 1:
+        arr2 = arr[xsize/2*(1-1./zoom2):xsize/2*(1+1./zoom2),ysize/2*(1-1./zoom2):ysize/2*(1+1./zoom2)]
+    else:
+        arr2 = arr
+    arr3 = arr2.astype('float')**pwr
+    mmin,mmax = arr3.min(), arr3.max()
+    arr3 -= mmin
+    if mmin < mmax:
+        arr3 /= (mmax-mmin)
+
+    if zoom != 1 or zoom2 != 1:
+        img = Image.fromarray(arr3)
+        rimg = img.resize((zoom*ysize, zoom*xsize))
+        rarr = np.asarray(rimg)
+        test = mycmap(rarr)
+    else:
+        test = mycmap(arr3)
+    return((255*test[:,:,:3]).astype('int'))
+
+# ------------------------------------------------------------------
+#  find center of the image
+# ------------------------------------------------------------------
+def find_center(image,bias,subt_bias):
+    if not subt_bias:
+        image2 = image-bias
+    else:
+        image2 = copy.deepcopy(image)
+    imin = np.percentile(image2, 99.85)
+    image2 -= imin
+    mask = image2 > 0
+    image2 *= mask
+    total = np.nansum(image2)
+    X, Y = np.indices(np.shape(image2))
+    cx = (np.nansum(Y*image2)/total)
+    cy = (np.nansum(X*image2)/total)
+    cx += 0.5
+    cy += 0.5
+    return [cx, cy]
+
+# ------------------------------------------------------------------
+#              !!! now we are in business !!!!
+# ------------------------------------------------------------------
+
+WHITE = (255, 255, 255)
+GREEN = (147, 181,  44) 
+BLUE  = (  0,   0, 255)
+RED1   = (255,   0,   0)
+RED   = (246, 133, 101) #(185,  95, 196)
+BLK   = (  0,   0,   0)
+CYAN  = (0, 255, 255)
+
+FGCOL = WHITE  # foreground color (text)
+SACOL = RED1   # saturation color (text)
+BGCOL = BLK    # background color
+BTCOL = BLUE   # *button* color
+
+background = pygame.Surface(screen.get_size())
+background = background.convert()
+
+#etimes = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000,
+#                   5000, 10000, 20000,50001, 100002, 200004, 300006,
+#                   400008, 500010])
+#etimes = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000,
+#                   5000, 10000, 16000, 24000, 37000, 57000, 89000,
+#                   140000, 210000, 330000, 510000])
+
+#net = np.size(etimes)
+
+# get initial exposure time value
+#etime = int(cam.get_expt())
+# and the closest matching value in our etimes array
+#if etime <= etimes[-1]:
+#    tindex = np.where(etimes >= etime)[0][0]
+#else:
+#    tindex = np.where(etimes == etimes[-1])[0][0]
+
+# ----------------------------
+#          labels
+# ----------------------------
+font1 = pygame.font.SysFont("default",   20*zoom)
+font2 = pygame.font.SysFont("default",   14*zoom)
+font3 = pygame.font.SysFont("monospace", 5*(zoom+1))
+font4 = pygame.font.SysFont("monospace", 7+3*zoom)
+font5 = pygame.font.SysFont("monospace", 7+3*zoom)
+font5.set_bold(True)
+
+xws = xsize*zoom
+yws = ysize*zoom
+
+path_cartoon = "/home/scexao/conf/chuckcam3_aux/Chuck%d.png" % (zoom,)
+cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
+
+lbl = font1.render("SCIENCE camera viewer", True, WHITE, BGCOL)
+rct = lbl.get_rect()
+rct.center = (110*zoom, 270*zoom)
+screen.blit(lbl, rct)
+
+lbl2 = font1.render("Press [h] for help", True, WHITE, BGCOL)
+rct2 = lbl2.get_rect()
+rct2.center = (110*zoom, 285*zoom)
+screen.blit(lbl2, rct2)
+
+lbl3 = font2.render("Because Chuck always helps the weak", True, WHITE, BGCOL)
+rct3 = lbl3.get_rect()
+rct3.center = (110*zoom, 300*zoom)
+screen.blit(lbl3, rct3)
+
+#imin, imax = 0, 0
+#msg = "t = %3d us (min,max) = (%5d,%5d)" % (etime, imin, imax)
+#info = font3.render(msg, True, FGCOL, BGCOL)
+#rct_info  = info.get_rect()
+#rct_info.center = (110*zoom, 315*zoom)
+
+xmou, ymou, fmou = 0, 0, 0
+msg2 = " mouse = (%3d,%3d), flux = %5d" % (xmou, ymou, fmou)
+info2 = font3.render(msg2, True, FGCOL, BGCOL)
+rct_info2  = info2.get_rect()
+rct_info2.center = (110*zoom, 325*zoom)
+
+msgli = " "
+mli = font4.render(msgli, True, CYAN)
+rct_mli  = mli.get_rect()
+rct_mli.center = (xmou, ymou)
+
+msgcoor = "                          "
+mcoor = font4.render(msgcoor, True, CYAN)
+rct_mcoor  = mcoor.get_rect()
+rct_mcoor.bottomleft = (15*zoom, 230*zoom)
+
+msgcoor2 = "                          "
+mcoor2 = font4.render(msgcoor2, True, CYAN)
+rct_mcoor2  = mcoor2.get_rect()
+rct_mcoor2.bottomleft = (15*zoom, 240*zoom)
+
+dinfo = font3.render("                     ", True, FGCOL, BGCOL)
+rct_dinfo  = dinfo.get_rect()
+rct_dinfo.center = (110*zoom, 335*zoom)
+screen.blit(dinfo, rct_dinfo)
+
+dinfo2 = font3.render("                          ", True, FGCOL, BGCOL)
+rct_dinfo2  = dinfo2.get_rect()
+rct_dinfo2.center = (110*zoom, 345*zoom)
+screen.blit(dinfo2, rct_dinfo2)
+
+msgsave1 = "saving images"
+msgsave2 = "  before I   "
+msgsave3 = "kick your ass"
+savem1 = font5.render(msgsave1, True, RED1)
+savem2 = font5.render(msgsave2, True, RED1)
+savem3 = font5.render(msgsave3, True, RED1)
+rct_savem1 = savem1.get_rect()
+rct_savem2 = savem2.get_rect()
+rct_savem3 = savem3.get_rect()
+h_savem2 = savem2.get_height()
+h_savem3 = savem3.get_height()
+rct_savem1.bottomright = (xws-10*zoom, yws-h_savem2-h_savem3)
+rct_savem2.bottomright = (xws-10*zoom, yws-h_savem3)
+rct_savem3.bottomright = (xws-10*zoom, yws)
+
+cx = xsize/2.
+cy = ysize/2.
+
+#bullseye size
+bc = 2+4*zoom
+bl = 2*bc
+
+#zoom
+zoom2 = 1
+iz = 0
+zooms2 = [1, 2, 4]
+msgzm = "  "
+zm = font1.render(msgzm, True, CYAN)
+rct_zm  = zm.get_rect()
+rct_zm.topleft = (5*zoom, 5*zoom)
+
+imin, imax = 0, 0
+surf_live = pygame.surface.Surface((xws, yws))
+
+rect1 = surf_live.get_rect()
+rect1.topleft = (0, 0)
+
+rect2 = cartoon1.get_rect()
+rect2.bottomright = XW, YW+10*zoom
+screen.blit(cartoon1,  rect2)
+
+
+plot_cross   = True  # flag for display of the crosses
+plot_hotspot = False # flag for display of the hotspot
+plot_history = False # flag for display of position history
+subt_bias    = False # flag for bias subtraction
+subt_ref     = False # flag for ref subtraction
+cont_acq     = False 
+lin_scale    = True  # flag for linear range
+clr_scale    = False # flag for the display color scale
+average      = False # flag for averaging
+saveim       = False # flag to save images
+logexpt      = False # flag to log the exposure time
+
+bias = np.zeros((ysize,xsize))
+ref_im = np.zeros((ysize,xsize))
+
+badpixmap = np.ones((ysize,xsize))#1-pf.getdata(home+"/conf/chuckcam3_aux/badpixmap.fits")
+
+pygame.mouse.set_cursor(*pygame.cursors.broken_x)
+pygame.display.update()
+
+cntl = 0
+cnta = 0
+cnti = 0
+timeexpt = []
+
+nhist = 100
+ih = 0
+coor = np.zeros((2,nhist))
+
+with open('/home/scexao/conf/chuckcam3_aux/hotspots.txt') as file:
+    pos = np.array([[float(digit) for digit in line.split()] for line in file])
+
+# =======================================================
+# =======================================================
+while True: # the main game loop
+    clicked = False
+    pwr0 = 1.0
+    if not lin_scale:
+        pwr0 = 0.3
+
+    mycmap = cm.gray
+    if clr_scale:
+        mycmap = cm.jet
+    
+    # read exposure time changes
+    #if cam.get_expt() != etime:
+    #    etime = cam.get_expt()
+    #    bname = home+"/conf/chuckcam3_aux/bias%07d.fits" % (etime,)
+    #    bias = pf.getdata(bname)
+    #    tindex = np.where(etimes >= etime)[0][0]
+
+    # read image
+    temp = get_img_data()
+    temp *= badpixmap
+    isat = np.percentile(temp[1:-1,1:-1], 99.995)
+    #subtract bias
+    if subt_bias:
+        temp -= bias
+    # averaging
+    if average == True:
+        cnta += 1
+        if cnta == 1:
+            temp2 = copy.deepcopy(temp)
+        else:
+            temp2 *= float(cnta)/float(cnta+1)
+            temp2 += temp/float(cnta+1)
+    else:
+        temp2 = copy.deepcopy(temp)
+        cnta = 0
+    imax = np.max(temp2)
+    imin = np.percentile(temp2, 0.5)
+    temp2b = temp2-imin
+    temp2b *= temp2b>0
+    # subtract reference
+    if subt_ref:
+        if lin_scale:
+            if subt_bias:
+                myim = arr2im((temp2b-ref_im+bias).transpose(), pwr=pwr0)
+            else:
+                myim = arr2im((temp2b-ref_im).transpose(), pwr=pwr0)
+        else:
+            if subt_bias:
+                myim = arr2im((np.abs(temp2b-ref_im+bias)).transpose(), pwr=pwr0)
+            else:
+                myim = arr2im((np.abs(temp2b-ref_im)).transpose(), pwr=pwr0)
+    else:
+        myim = arr2im(temp2b.transpose(), pwr=pwr0)
+    pygame.surfarray.blit_array(surf_live, myim)
+    screen.blit(surf_live, rect1)
+    
+    # display expt and image information
+    #if etime < 1e3:
+    #    msg = "t = %3d us (min,max) = (%5d,%5d)" % (etime, imin, imax)
+    #elif etime >= 1e3 and etime < 1e6:
+    #    msg = "t = %3d ms (min,max) = (%5d,%5d)" % (etime/1e3, imin, imax)
+    #else:
+    #    msg = "t = %3d s  (min,max) = (%5d,%5d)" % (etime/1e6, imin, imax)
+    
+    #info = font3.render(msg, True, FGCOL, BGCOL)
+    #screen.blit(info, rct_info)
+
+    # display the bullseye on the PSF
+    if plot_hotspot:
+        [cx,cy] = find_center(temp2, bias, subt_bias)
+        if (cx >= 0) and (cx < 320) and (cy >= 0) and (cy < 256):
+            fh = temp2[int(cy), int(cx)]
+            msg2 = "center = (%3d,%3d), flux = %5d" % (cx, cy, fh)
+            info2 = font3.render(msg2, True, FGCOL, BGCOL)
+            screen.blit(info2, rct_info2)
+        cx = xsize/2*zoom+(cx-xsize/2)*zoom*zoom2
+        cy = ysize/2*zoom+(cy-ysize/2)*zoom*zoom2
+        pygame.draw.line(screen, RED1, (cx-bl*zoom2, cy), (cx+bl*zoom2, cy), 1)
+        pygame.draw.line(screen, RED1, (cx,cy-bl*zoom2), (cx, cy+bl*zoom2), 1)
+        pygame.draw.circle(screen, RED1, (int(cx),int(cy)), bc*zoom2, 1)
+    
+    # display of position history
+    if plot_history:
+        [cx,cy] = find_center(temp2, bias, subt_bias)
+        if (cx >= 0) and (cx < 320) and (cy >= 0) and (cy < 256):
+            fh = temp2[int(cy), int(cx)]
+            msg2 = "center = (%3d,%3d), flux = %5d" % (cx, cy, fh)
+            info2 = font3.render(msg2, True, FGCOL, BGCOL)
+            screen.blit(info2, rct_info2)
+        cx = xsize/2*zoom+(cx-xsize/2)*zoom*zoom2
+        cy = ysize/2*zoom+(cy-ysize/2)*zoom*zoom2
+        coor[:,ih] = np.array([cx, cy])
+        for ih2 in range(nhist):
+            pygame.draw.line(screen, RED1, (coor[0,ih2]-1, coor[1,ih2]-1), (coor[0,ih2]+1, coor[1,ih2]+1), 1)
+            pygame.draw.line(screen, RED1, (coor[0,ih2]+1, coor[1,ih2]-1), (coor[0,ih2]-1, coor[1,ih2]+1), 1)
+        ih += 1
+        ih %= nhist
+        stds = np.std(coor, axis=1)/zoom/zoom2
+        cx2 = (np.median(coor, axis=1)[0]-xws/2-pos[0,0]*zoom*zoom2)/zoom/zoom2
+        cy2 = -(np.median(coor, axis=1)[1]-yws/2-pos[0,1]*zoom*zoom2)/zoom/zoom2
+        msgcoor = "rms = %.2f pix, %.2f pix, %.2f pix" % (stds[0], stds[1], m.sqrt(np.sum(stds**2)/2.))
+        mcoor = font4.render(msgcoor, True, CYAN)
+        screen.blit(mcoor, rct_mcoor)
+        msgcoor2 = "dis = %.2f pix, %.2f pix, %.2f pix" % (cx2, cy2, m.sqrt(cx2**2+cy2**2))
+        mcoor2 = font4.render(msgcoor2, True, CYAN)
+        screen.blit(mcoor2, rct_mcoor2)
+            
+    else:
+        # display mouse information
+        [xmou, ymou] = pygame.mouse.get_pos()
+        xim = xsize/2*(1-1./zoom2)+xmou/zoom/zoom2
+        yim = ysize/2*(1-1./zoom2)+ymou/zoom/zoom2
+        if (xim >= xsize/2*(1-1./zoom2)) and (xim < xsize/2*(1+1./zoom2)) and (yim >= ysize/2*(1-1./zoom2)) and (yim < ysize/2*(1+1./zoom2)):
+            fim = temp2[yim, xim]
+            msg2 = " mouse = (%3d,%3d), flux = %5d" % (xim, yim, fim)
+            info2 = font3.render(msg2, True, FGCOL, BGCOL)
+            screen.blit(info2, rct_info2)
+    
+    # display information
+    if lin_scale:
+        msg = "    linear // "
+    else:
+        msg = "non-linear // "
+    if subt_bias:
+        msg += "   bias"
+    else:
+        msg += "no-bias"
+    dinfo = font3.render(msg, True, FGCOL, BGCOL)
+    screen.blit(dinfo, rct_dinfo)
+
+    if isat > 14700:
+        msg = "     !!!SATURATION!!!     "
+        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+        screen.blit(dinfo2, rct_dinfo2)
+    elif isat > 11000 and isat <=14700:
+        msg = "     !!!NON-LINEAR!!!     "
+        dinfo2 = font3.render(msg, True, SACOL, BGCOL)
+        screen.blit(dinfo2, rct_dinfo2)
+    else:
+        msg = "                          "
+        dinfo2 = font3.render(msg, True, SACOL, BGCOL)
+        screen.blit(dinfo2, rct_dinfo2)
+
+    # display the cross
+    if plot_cross:
+        #Pupil cross for summit
+        pygame.draw.line(screen, GREEN, 
+                         (0, yws/2+pos[1,1]*zoom*zoom2), (xws, yws/2+pos[1,1]*zoom*zoom2), 1)
+        pygame.draw.line(screen, GREEN, 
+                         (xws/2+pos[1,0]*zoom*zoom2,0), (xws/2+pos[1,0]*zoom*zoom2,yws), 1)
+        #Focus cross
+        pygame.draw.line(screen, RED, (0, yws/2+pos[0,1]*zoom*zoom2), (xws, yws/2+pos[0,1]*zoom*zoom2), 1)
+        pygame.draw.line(screen, RED, (xws/2+pos[0,0]*zoom*zoom2, 0), (xws/2+pos[0,0]*zoom*zoom2, yws), 1)
+        
+    # measure distances
+    if pygame.mouse.get_pressed()[0]:
+        if (xim >= 0) and (xim < 320) and (yim >= 0) and (yim < 256):
+            if cntl == 0:
+                xl1 = xmou
+                yl1 = ymou
+            else:
+                pygame.draw.line(screen, RED1, (xl1,yl1), (xmou,ymou))
+                dist = m.sqrt((xmou-xl1)**2+(ymou-yl1)**2)/zoom/zoom2
+                msgli = "%.2f pix" % (dist,)
+                mli = font4.render(msgli, True, CYAN)
+                rct_mli  = mli.get_rect()
+                if xmou < 246:
+                    rct_mli.midleft = (xmou+5+5*zoom, ymou)
+                else:
+                    rct_mli.midright = (xmou-5-5*zoom, ymou)
+                screen.blit(mli, rct_mli)
+            cntl += 1
+    else:
+        cntl = 0
+    
+    # saving images
+    tmuxon = os.popen('tmux ls |grep blobcamlog | awk \'{print $2}\'').read()
+    if tmuxon:
+        saveim = True
+    else:
+        saveim = False
+    if saveim:
+        screen.blit(savem1, rct_savem1)
+        screen.blit(savem2, rct_savem2)
+        screen.blit(savem3, rct_savem3)
+        rects = [rect1]#, rct_info, rct_info2, rct_zm, rct_dinfo, rct_dinfo2, rct_savem1, rct_savem2, rct_savem3]
+    else:
+        rects = [rect1]#, rct_info, rct_info2, rct_zm, rct_dinfo, rct_dinfo2]
+
+    #if logexpt:
+    #    time.sleep(0.1)
+     #   timeexpt = np.append(timeexpt, time.time())
+     #   time.sleep(0.1)
+     #   if timeexpt[-1]-timeexpt[0] > 4:
+     #       os.system("/home/scexao/bin/log Chuckcam3: changing exposure time to %d" %etime)
+     #       timeexpt = []
+     #       logexpt = False
+    
+    # KEYBOARD CONTROLS
+    # =====================================================================
+    for event in pygame.event.get():
+
+        # exit Chuckcam3
+        #------------------------------------------------------------------
+        if event.type == QUIT:
+            pygame.quit()
+
+            cam.close()
+            print("Chuckcam3 has ended normally.")
+            sys.exit()
+        elif event.type == KEYDOWN:
+
+            if event.key == K_ESCAPE:
+                pygame.quit()
+                cam.close()
+                print("Chuckcam3 has ended normally.")
+                sys.exit()
+
+            # CAMERA CONTROLS
+            #--------------------------------------------------------------
+            
+            # Increase exposure time
+            #-----------------------
+            if event.key == K_q:
+                if (tindex < net-1):
+                    tindex += 1
+                    etime = etimes[tindex]
+                    cam_cmd("tint %d %d" % (camid, etime), False)
+                    bname = home+"/conf/chuckcam3_aux/bias%07d.fits" % (etime,)
+                    badpixmap = 1-pf.getdata(home+"/conf/chuckcam3_aux/badpixmap.fits")
+                    bias = pf.getdata(bname)*badpixmap
+                    logexpt = True
+            
+            # Decrease exposure time
+            #-----------------------
+            if event.key == K_a:
+                if (tindex > 0):
+                    tindex -= 1
+                    etime = etimes[tindex]
+                    cam_cmd("tint %d %d" % (camid, etime), False)
+                    bname = home+"/conf/chuckcam3_aux/bias%07d.fits" % (etime,)
+                    badpixmap = 1-pf.getdata(home+"/conf/chuckcam3_aux/badpixmap.fits")
+                    bias = pf.getdata(bname)*badpixmap
+                    logexpt = True
+
+            # Start/stop data stream
+            #-----------------------
+            if event.key == K_SPACE:
+                cont_acq = not cont_acq
+                if cont_acq:
+                    cam_cmd("stream %d" % (camid,))
+                else:
+                    cam_cmd("abort %d" % (camid,))
+
+            # hotspotalign/display help
+            #--------------------------
+            if event.key == K_h:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("tmux send-keys -t blobcam \"hotspotalign2\" C-m")
+                else:
+                    print(hmsg)
+
+            # linear-logscale
+            #-------------------------------
+            if event.key == K_l:
+                mmods = pygame.key.get_mods()
+                lin_scale = not lin_scale
+
+            # Save new darks for all exposure times
+            # -------------------------------------
+            if event.key == K_b:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    msg = "  !! Acquiring darks !!   "
+                    dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+                    screen.blit(dinfo2, rct_dinfo2)
+                    os.system("log Chuckcam3: Saving internal darks")
+                    
+                    print("In the time it takes Chuck Norris to sidekick a")
+                    print("red-headed stepchild, we'll acquire all biases.")
+                    
+                    
+                    pygame.display.update([rct_dinfo2])
+                    time.sleep(2.0)        # safety
+                    
+                    for tint in etimes:
+                        cam_cmd("tint %d %d" % (camid, tint), False)
+                        time.sleep(0.2+tint*1.e-6)
+                        ndark = min(100, (5000000/tint))
+                        for idark in range(ndark):
+                            if idark == 0:
+                                temp3 = get_img_data(True)/float(ndark)
+                            else:
+                                temp3 += get_img_data(True)/float(ndark)
+                                
+                        bname = home+"/conf/chuckcam3_aux/bias%07d.fits"%(tint,)
+
+                        pf.writeto(bname, temp3, clobber=True)
+                        time.sleep(0.2)
+                    
+                   
+                    os.system("log Chuckcam3: Done saving internal darks")
+                        
+                    cam_cmd("tint %d %d" % (camid, etime), False)
+
+            # Save a reference image/subtract the reference image
+            # ---------------------------------------------------
+            if event.key == K_r:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    msg = "!! Acquiring reference !! "
+                    dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+                    screen.blit(dinfo2, rct_dinfo2)
+                    pygame.display.update([rct_dinfo2])
+ 
+                    subt_ref = False
+                    
+                    nref = 200#min(1000, (5000000/etime))
+                    for iref in range(int(nref)):
+                        if iref == 0:
+                            temp3 = get_img_data(True)/float(nref)
+                        else:
+                            temp3 += get_img_data(True)/float(nref)
+                                
+                    rname = home+"/conf/chuckcam3_aux/ref.fits"
+                    pf.writeto(rname, temp3, clobber=True)
+                    
+                else:
+                    rname = home+"/conf/chuckcam3_aux/ref.fits"
+                    ref_im = pf.getdata(rname)*badpixmap
+                    subt_ref = not subt_ref
+
+            # Start/stop logging images
+            #--------------------------
+            if event.key == K_s:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    saveim = not saveim
+                    if saveim:
+                        timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                        savepath = '/media/data/'+timestamp+'/blobcamlog/'
+                        ospath = os.path.dirname(savepath)
+                        if not os.path.exists(ospath):
+                            os.makedirs(ospath)
+                        nimsave = min(1000, (50000000/etime))
+                        # creating a tmux session for logging
+                        os.system("tmux new-session -d -s blobcamlog")
+                        os.system("tmux send-keys -t blobcamlog \"logshim blobcam %i %s\" C-m"%(nimsave, savepath))
+                        os.system("log Chuckcam3: start logging images")
+                        os.system("scexaostatus set logchuck 1")
+                    else:
+                        os.system("tmux send-keys -t blobcamlog \"logshimkill blobcam\"")
+                        os.system("tmux kill-session -t blobcamlog")
+                        os.system("log Chuckcam3: stop logging images")
+                        os.system("scexaostatus set logchuck 0")
+
+            # Save an HDR image/Subtract dark
+            #--------------------------------
+            if event.key == K_d:
+                mmods = pygame.key.get_mods()
+                
+                if (mmods & KMOD_LCTRL):
+##################################################################################
+                    # increase exposure time if max flux is too low
+                    #print imax, isat, tindex
+                    while ((imax < 4000) & (tindex < net-1)):
+                        tindex += 1
+                        etime = etimes[tindex]
+                        cam_cmd("tint %d %d" % (camid, etime), False)
+                        bname = home+"/conf/chuckcam3_aux/bias%07d.fits" % (etime,)
+                        badpixmap = 1-pf.getdata(home+"/conf/chuckcam3_aux/badpixmap.fits")
+                        bias = pf.getdata(bname)*badpixmap
+                        logexpt = True
+                        time.sleep(2)
+                        temp = get_img_data()
+                        temp *= badpixmap
+                        isat = np.percentile(temp[1:-1,1:-1], 99.995)
+                        temp -= bias
+                        imax = np.max(temp)
+                        #print imax, isat, tindex
+                    # decrease exposure time if saturating or non-linear
+                    while ((isat > 11000) & (tindex > 0)):
+                        tindex -= 1
+                        etime = etimes[tindex]
+                        cam_cmd("tint %d %d" % (camid, etime), False)
+                        bname = home+"/conf/chuckcam3_aux/bias%07d.fits" % (etime,)
+                        badpixmap = 1-pf.getdata(home+"/conf/chuckcam3_aux/badpixmap.fits")
+                        bias = pf.getdata(bname)*badpixmap
+                        logexpt = True
+                        time.sleep(2)
+                        temp = get_img_data()
+                        temp *= badpixmap
+                        isat = np.percentile(temp[1:-1,1:-1], 99.995)
+                        temp -= bias
+                        imax = np.max(temp)
+                        #print imax, isat, tindex
+                        
+                    etimetmp = etime
+                    v1 = 100
+                    v2 = 11000
+                    mask2 = (v1 < temp)*(temp < v2)
+                    hdim = np.zeros(temp.shape)
+                    hdim[:,:] = temp[:,:]
+                    hdim[temp < v1] = 0.0
+                    #starting HDR!
+                    for k in range(11):
+                        if (tindex < net-1):
+                            temp2 = copy.deepcopy(temp)
+                            etime2 = copy.deepcopy(etime)
+                            tindex += 1
+                            etime = etimes[tindex]
+                            cam_cmd("tint %d %d" % (camid, etime), False)
+                            bname = home+"/conf/chuckcam3_aux/bias%07d.fits" % (etime,)
+                            badpixmap = 1-pf.getdata(home+"/conf/chuckcam3_aux/badpixmap.fits")
+                            bias = pf.getdata(bname)*badpixmap
+                            logexpt = True
+                            time.sleep(2)
+                            temp = get_img_data()
+                            temp *= badpixmap
+                            temp -= bias
+                            mask1 = copy.deepcopy(mask2)
+                            mask2 = (v1 < temp)*(temp < v2)
+                            mask = mask1*mask2
+                            coeff = etime/float(etime2)#(temp/temp2)[mask].mean()
+                            #print coeff, etime/float(etime2)
+                            hdim *= coeff
+                            hdim += temp
+                            hdim /= 2.0
+                            hdim[temp < v1] = 0.0
+
+                    timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                    timestamp2 = dt.datetime.utcnow().strftime('%H:%M:%S.%f')
+                    savepath = '/media/data/'+timestamp+'/blobcamlog/'
+                    pf.writeto(savepath+'blobcam_hdr_'+timestamp2+'.fits', hdim/hdim.max(), clobber=True)
+                    cam_cmd("tint %d %d" % (camid, etimetmp), False)
+
+#####################################################################################
+                else:
+                    subt_bias = not subt_bias
+                    if subt_bias:
+                        bname = home+"/conf/chuckcam3_aux/bias%07d.fits" % (etime,)
+                        try:
+                            bias = pf.getdata(bname)*badpixmap
+                        except:
+                            bias = np.zeros_like(temp)
+
+            # Display hotspot crosses
+            #------------------------
+            if event.key == K_c:
+                plot_cross = not plot_cross
+
+            # Color/grayscale map
+            #--------------------
+            if event.key == K_m:
+                clr_scale = not clr_scale
+
+            # Display bullseye on the PSF
+            #----------------------------
+            if event.key == K_o:
+                plot_hotspot = not plot_hotspot
+                
+            # Display history of position
+            #----------------------------
+            if event.key == K_i:
+                plot_history = not plot_history
+
+            # Start/stop accumulating frames
+            #-------------------------------
+            if event.key == K_v:
+                average = not average
+
+            
+            # Save new hotspots
+            #------------------
+            if event.key == K_1:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    pos[0,0] += cx2
+                    pos[0,1] -= cy2
+                    np.savetxt('/home/scexao/conf/chuckcam3_aux/hotspots.txt', pos, fmt='%.2f')
+
+            if event.key == K_2:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    pos[1,0] = pos[0,0]+cx2
+                    pos[1,1] = pos[0,1]-cy2
+                    np.savetxt('/home/scexao/conf/chuckcam3_aux/hotspots.txt', pos, fmt='%.2f')
+
+
+            # Zoom/unzoom
+            #------------
+            if event.key == K_z:
+                iz += 1
+                iz %= 3
+                zoom2 = zooms2[iz]
+                if zoom2 != 1:
+                    msgzm = "x%d" % (zoom2,)
+                else:
+                    msgzm = "  "
+                zm = font1.render(msgzm, True, CYAN)
+
+
+
+    pygame.display.update(rects)
+
+    #pygame.display.flip()
+    fpsClock.tick(FPS)
+
+pygame.quit()
+sys.exit()

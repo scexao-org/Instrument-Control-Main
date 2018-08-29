@@ -1,0 +1,44 @@
+#!/bin/bash
+
+EXPECTED_ARGS=2
+
+if [ $# -ne $EXPECTED_ARGS ]
+then
+  echo
+  echo "------ Take Dark Image ------"
+  echo
+  echo "  INPUT : Number of frames" 
+  echo "          Coronagraph Type"
+  echo "  OUTPUT: dark.fits"
+  exit
+fi
+
+NBframes=$1
+
+echo "moving filter wheel..."
+lowfs_block
+#lyot wheel goto 1
+sleep 1
+
+mkdir -p darks
+
+echo "Exposure time (us)"
+for expT in 1 2 5 10 20 50 100 200 500  1000 2000 5000 10000 20000 50000 100000 200000 500000
+do
+echo $expT
+ircam_expT 2 $expT 
+sleep 2
+
+rm /home/scexao/conf/coro_aux/darks/dark_$2_${expT}.fits
+
+Cfits0 -n takedark << EOF
+scexaoaveim ircam2crop $NBframes dark 2
+savefits dark "/home/scexao/conf/coro_aux/darks/dark_$2_${expT}.fits"
+exit
+EOF
+
+done
+
+
+lowfs_block
+#lyot wheel goto 2

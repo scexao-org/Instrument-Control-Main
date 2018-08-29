@@ -1,0 +1,16 @@
+#! /bin/bash
+
+
+tmux kill-session -t saphiraTCPsend
+ssh scexao@scexao "tmux kill-session -t saphiraTCPrcv"
+
+sleep 0.5
+
+# restart new sessions
+ssh scexao@scexao "/home/scexao/bin/saphiraTCPrcv"
+sleep 5
+
+tmux new-session -d -s saphiraTCPsend
+tmux send-keys -t saphiraTCPsend "shmimTCPtransmit saphira2 10.20.20.2 30020" C-m
+
+

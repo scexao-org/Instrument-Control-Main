@@ -1,0 +1,10 @@
+#!/bin/bash
+
+while [ TRUE ]
+do
+echo -n "PYRAMID LOG INPUT : "
+read -e line
+
+log PYRAMID "$line"
+done
+

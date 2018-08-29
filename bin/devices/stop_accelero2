@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+
+import sys, os
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+"/src/lib/python/")
+from scexao_shm import shm
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+labid = 2 #LabJack identifier
+strshm = shm("/tmp/labjack%d_stream.im.shm" % (labid,)) #SHM of flag
+
+# ------------------------------------------------------------------
+#                Send flag to stop Labjack stream
+# ------------------------------------------------------------------
+
+flag = strshm.get_data()
+if flag[0]:
+    strshm.set_data(np.zeros(1).astype(np.float32)) # put the flag to zeros
+else:
+    print "the stream is already stopped"
+    strshm.set_data(np.ones(1).astype(np.float32))
+

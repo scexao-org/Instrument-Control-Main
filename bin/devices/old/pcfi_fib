@@ -1,0 +1,172 @@
+#!/usr/bin/env python
+
+# =============================================== #
+#    ___  ___   ________    __ _ _                #
+#   / _ \/ __\ / __\_   \  / _(_) |__   ___ _ __  #
+#  / /_)/ /   / _\  / /\/ | |_| | '_ \ / _ \ '__| #
+# / ___/ /___/ / /\/ /_   |  _| | |_) |  __/ |    #
+# \/   \____/\/  \____/   |_| |_|_.__/ \___|_|    #
+#                                                 #
+# =============================================== #
+
+import os
+import sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import logit #Custom logging library
+import conex2 as conex
+con = conex.conex()
+
+# SPECIFIC PARAMETERS FOR THIS WHEEL
+
+cid = "/dev/serial/by-id/"
+cidy = cid+"usb-Newport_CONEX-AGP_A606QE6E-if00-port0" # Y axis
+cidx = cid+"usb-Newport_CONEX-AGP_A606QDAO-if00-port0" # X axis
+cidf = cid+"usb-Newport_CONEX-AGP_A6Z9D925-if00-port0" # F axis
+
+conexname = "pcfi_fib"
+
+# GENERIC CODE
+
+filename = "/home/scexao/bin/devices/conf/conf_"+conexname+".txt"
+
+slots = [line.rstrip('\n') for line in open(filename)]
+nslots = len(slots)
+nparam = len(slots[0].split(';'))
+for i in range(nparam):
+    exec "param%d = []" % (i,)
+
+for j in range(nslots):
+    sparam = slots[j].split(';')
+    for i in range(nparam):
+        exec "param%d.append(sparam[i])" % (i,)
+
+def usage():
+    print """---------------------------------------
+Usage: %s <command> <arg>
+---------------------------------------
+COMMAND:
+    status     displays status
+    home       sends home
+    goto       moves position: numerical value
+    in/out     move optics in/out of the beam
+    ramp       ramp of values around the in position
+ARG:
+    position (between 0 and 27 mm)
+EXAMPLES:
+    %s x/y/f home
+    %s smi/mmi
+    %s x/y/f goto 5
+CONTENT:""" % (conexname,conexname,conexname,conexname)
+    for i in range(nslots):
+        print "   ", param0[i], param1[i]
+        
+    print "--------------------------------------- "
+    sys.exit()
+
+def quickhelp():
+    print "%20s       Post-coro fiber injection fiber xyz stage" % (conexname,)
+
+# =====================================================================
+# =====================================================================
+
+def main():
+    args = sys.argv[1:]
+    na = args.__len__()
+
+    quiet = True
+    if args == []:
+        usage()
+
+    elif "--help1" in args[0].lower():
+        quickhelp()
+
+    elif ("x" in args[0].lower()) or ("y" in args[0].lower()) or ("f" in args[0].lower()):
+        if "x" in args[0].lower():
+            cid = cidx
+            col = 2
+        elif "y" in args[0].lower():
+            cid = cidy
+            col = 3
+        elif "f" in args[0].lower():
+            cid = cidf
+            col = 4
+        else:
+            usage()
+            
+        if na > 1:
+            
+            if "home" in args[1].lower():   #Home command
+                con.open(cid, conexname)
+                con.home(conexname)
+                con.close()
+                logit.logit(conexname+"_"+str(args[0]),'Homed')
+                sys.exit()
+
+            elif ("?" in args[1].lower()) or ("st" in args[1].lower()):
+                con.open(cid, conexname)
+                con.status(conexname, col)
+                con.close()
+                sys.exit()
+
+            elif "goto" in args[1].lower():  #Goto commands
+                if na < 3:
+                    usage()
+                elif args[2].isdigit():
+                    pos = args[2]
+                    con.open(cid, conexname)
+                    con.move(float(pos), conexname)
+                    con.close()
+                    logit.logit(conexname+"_"+str(args[0]),'moved_to_'+pos)
+
+                else:
+                    usage()
+                sys.exit()
+            
+            else:
+                usage() 
+        else:
+            usage()
+
+    elif "smi" in args[0].lower():
+        con.open(cidx, conexname)
+        pos = param2[0]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_x','moved_to_smi_'+pos)
+        con.open(cidy, conexname)
+        pos = param3[0]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_y','moved_to_smi_'+pos)
+        con.open(cidf, conexname)
+        pos = param4[0]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_f','moved_to_smi_'+pos)
+        
+    elif "mmi" in args[0].lower():
+        con.open(cidx, conexname)
+        pos = param2[1]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_x','moved_to_mmi_'+pos)
+        con.open(cidy, conexname)
+        pos = param3[1]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_y','moved_to_mmi_'+pos)
+        con.open(cidf, conexname)
+        pos = param4[1]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_f','moved_to_mmi_'+pos)
+
+    else:
+        usage()
+
+
+# =====================================================================
+if __name__ == "__main__":
+    main()

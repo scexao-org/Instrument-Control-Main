@@ -1,0 +1,50 @@
+#!/bin/bash
+
+log Aligning to AO188 internal source
+
+cal_src home
+sleep 5.0
+
+superK irnd 6
+
+superK optnd 5
+
+superK filter 6
+
+dmflatAO188
+
+oap1 ao
+sleep 0.1
+
+dm_stage x push +1000
+sleep 0.5
+
+dm_stage x push +1000
+sleep 0.5
+
+dm_stage x push +1000
+sleep 0.5
+
+dm_stage x push +1000
+sleep 0.5
+
+dm_stage x push +1000
+sleep 0.5
+
+dm_stage x push +1000
+sleep 0.5
+
+dm_stage x push +1000
+sleep 0.5
+
+hotspotalign
+ 
+
+echo " oap1 x "
+oap1 x status
+
+echo " oap1 y "
+oap1 y status
+
+
+

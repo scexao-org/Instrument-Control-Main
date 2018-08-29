@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+from __future__ import absolute_import, division, print_function
+import zmq
+
+context = zmq.Context()
+
+#  Socket to talk to server
+runit=True
+try:
+ socket = context.socket(zmq.REQ)
+ socket.connect("tcp://localhost:3001")
+ print("Connected to server!")
+except:
+ runit=False
+ print("Error opening socket") 
+
+while True:
+    command = raw_input() #!!! Not python 3 ready !!!
+    socket.send(command)
+    message = socket.recv()
+    print(message)

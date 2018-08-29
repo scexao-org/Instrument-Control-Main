@@ -1,0 +1,5 @@
+Cfits << EOF
+readshmim ircam2
+cropshim ircam2 ircam1small 50 50 65 55
+exit
+EOF

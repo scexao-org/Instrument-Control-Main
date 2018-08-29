@@ -1,0 +1,4 @@
+#! /bin/bash
+
+stop_accelero1
+stop_accelero2

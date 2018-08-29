@@ -1,0 +1,144 @@
+#!/usr/bin/python
+
+import os
+import sys
+import time
+from pyqtgraph.Qt import QtGui, QtCore
+import numpy as np
+import pyqtgraph as pg
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from   scexao_shm   import shm
+
+args = sys.argv[1:]
+if len(args) > 4 :
+    aoln = int(args[0])
+    fsamp = float(args[1])
+    npoints = int(args[2])
+    npoints2 = npoints/5
+    nplots = int(args[3])
+    nplots = min(3,max(1,nplots))
+    modes = map(int, args[4:])
+    modes = np.array(modes)
+    nmodes = len(modes)
+else:
+    print("Wrong number of arguments")
+    sys.exit()
+
+app = QtGui.QApplication([])
+
+## Switch to using white background
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+# Enable antialiasing for prettier plots
+pg.setConfigOptions(antialias=True)
+
+win = pg.GraphicsWindow(title="Display of Accelerometer data"
+win.resize(600*nmodes,400*nplots)
+win.setWindowTitle("Display of Accelerometer data"
+
+# ------------------------------------------------------------------
+#                       global variables
+# ------------------------------------------------------------------
+pathtmp = "/tmp/aol%d_restmpplot.im.shm" % (aoln,)
+os.system("rm "+pathtmp)
+time.sleep(1)
+os.system("creashmim aol%d_restmpplot %d %d" % (aoln,npoints,2*nmodes+1))
+datatmpshm = shm("/tmp/aol%d_restmpplot.im.shm"% (aoln,), verbose=False)
+if nplots > 1:
+    pathpsd = "/tmp/aol%d_respsdplot.im.shm" % (aoln,)
+    os.system("rm "+pathpsd)
+    os.system("creashmim aol%d_respsdplot %d %d" % (aoln,npoints2//2,2*nmodes+1))
+    datapsdshm = shm("/tmp/aol%d_respsdplot.im.shm" % (aoln,), verbose=False)
+pathsave = "/tmp/aol%d_dispdata.im.shm" % (aoln,)
+if not os.path.isfile(pathsave):
+    os.system("creashmim aol%d_dispdata 1 1" % (aoln,))
+saveshm = shm(pathsave, verbose = False) # SHM of flag for identification
+saveshm.set_data0b(np.ones(1))
+
+# ------------------------------------------------------------------
+#               Initialization of variables
+# ------------------------------------------------------------------
+
+os.system("tmux new-session -d -s aol%d_disp_data" % (aoln,))
+time.sleep(2)
+args2 = ''
+for i in range(len(args)):
+    args2 += args[i]+' '
+os.system("tmux send-keys -t aol%d_disp_data \"save_data_aol %s\" C-m" % (aoln,args2))
+
+col = ['g', 'r']
+
+# DEFINE THE DIFERENT PLOTS
+
+# Temporal plots
+for i in range(nmodes):
+    exec "p%d = win.addPlot(title='mode #'+str(modes[i]))" % (i,)
+    exec "p%d.plot()" % (i,)
+    exec "p%d.setLabel('bottom', 'Time', units='s')" % (i,)
+    exec "p%d.setLabel('left', 'Residual', units='m')" % (i,)#'<font>&mu;m</font>')
+    exec "p%d.showGrid(x=True, y=True, alpha=0.25)" % (i,)
+    exec "curves%d = []" % (i,)
+    for j in range(2):
+        c = pg.PlotCurveItem(pen=(col[j]))
+        exec "p%d.addItem(c)" % (i,)
+        exec "curves%d.append(c)" % (i,)
+
+# Power Spectral Densities
+if nplots > 1:
+    win.nextRow()
+    for i in range(nmodes):
+        exec "p%d = win.addPlot(title='mode #'+str(modes[i]))" % (i+nmodes,)
+        exec "p%d.plot()" % (i+nmodes,)
+        exec "p%d.setLabel('bottom', 'Frequency', units='Hz')" % (i+nmodes,)
+        exec "p%d.setLabel('left', 'PSD', units='<font>&mu;m<sup>2</sup>/Hz</font>')" % (i+nmodes,)
+        exec "p%d.setLogMode(x=True, y=True)" % (i+nmodes,)
+        exec "p%d.showGrid(x=True, y=True, alpha=0.25)" % (i+nmodes,)
+        exec "curves%d = []" % (i+nmodes,)
+        for j in range(2):
+            c = pg.PlotCurveItem(pen=(col[j]))
+            exec "p%d.addItem(c)" % (i+nmodes,)
+            exec "curves%d.append(c)" % (i+nmodes,)
+
+# Power rejection
+if nplots > 2:
+    win.nextRow()
+    for i in range(nmodes):
+        exec "p%d = win.addPlot(title='mode #'+str(modes[i]))" % (i+2*nmodes,)
+        exec "p%d.plot()" % (i+2*nmodes,)
+        exec "p%d.setLabel('bottom', 'Frequency', units='Hz')" % (i+2*nmodes,)
+        exec "p%d.setLabel('left', 'Rejection')" % (i+2*nmodes,)
+        exec "p%d.setLogMode(x=True, y=True)" % (i+2*nmodes,)
+        exec "p%d.showGrid(x=True, y=True, alpha=0.25)" % (i+2*nmodes,)
+        exec "curves%d = []" % (i+2*nmodes,)
+        c = pg.PlotCurveItem(pen='b')
+        exec "p%d.addItem(c)" % (i+2*nmodes,)
+        exec "curves%d.append(c)" % (i+2*nmodes,)
+
+# UPDATE OF THE PLOTS
+def update():
+    global ptr
+    datatmp = datatmpshm.get_data(check=False)
+    datapsd = datapsdshm.get_data(check=False)
+    for i in range(nmodes):
+        for j in range(2):
+            exec "curves%d[j].setData(datatmp[0,:], datatmp[nmodes*j+i+1,:]*1e-6)" % (i,)
+            if nplots>1 :
+                exec "curves%d[j].setData(np.log10(datapsd[0,1:]), np.log10(datapsd[nmodes*j+i+1,1:]))" % (i+nmodes,)
+            if nplots > 2:
+                exec "curves%d[0].setData(np.log10(datapsd[0,1:]), np.log10(datapsd[i+nmodes+1,1:]/datapsd[i+1,1:]))" % (i+2*nmodes,)
+    time.sleep(1.0)
+
+timer = QtCore.QTimer()
+timer.timeout.connect(update)
+timer.start(100)
+
+## Start Qt event loop unless running in interactive mode.
+if __name__ == '__main__':
+    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+        QtGui.QApplication.instance().exec_()
+
+
+print "closing"
+saveshm.set_data0b(np.zeros(1))
+

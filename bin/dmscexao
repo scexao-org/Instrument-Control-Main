@@ -1,0 +1,6 @@
+Cfits << EOF
+loadfits "/home/scexao/conf/dm_patterns/scexao.fits" dmf
+readshmim dm00disp00
+cp dmf dm00disp00
+exit
+EOF

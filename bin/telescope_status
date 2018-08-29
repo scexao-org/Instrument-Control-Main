@@ -1,0 +1,52 @@
+#! /usr/bin/env python
+
+#
+# Simple fetch status from Gen2 example
+#
+# Eric Jeschke (eric@naoj.org)
+#
+# NOTE: do not use for high rates polling (more than once every 10 sec
+#  or so).
+#
+
+import time
+import sys, os
+from datetime import datetime
+import numpy as np
+from g2base.remoteObjects import remoteObjects as ro
+
+home = os.getenv('HOME')
+sys.path.append(home+"/src/lib/python/")
+from scexao_shm import shm
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+if not os.path.isfile("/tmp/telescope_status.im.shm"):
+    os.system("creashmim telescope_status 6 1")
+
+tsshm = shm("/tmp/telescope_status.im.shm") #SHM of data
+
+# ------------------------------------------------------------------
+#                Configure communication
+# ------------------------------------------------------------------
+
+# for testing purposes, please use the simulator
+#gen2host = 'g2sim.subaru.nao.ac.jp'
+# actual summit
+gen2host = 'g2ins1.sum.subaru.nao.ac.jp'
+
+# Do this once, and once only on process startup
+ro.init([gen2host])
+
+stobj = ro.remoteObjectProxy('status')
+
+
+
+while True:
+    result = stobj.fetch({'STATS.RA': 0, 'STATS.DEC': 0, 'STATS.AZ': 0, 'STATS.EL': 0, 'AON.IMR.PAD': 0, 'AON.IMR.PAP': 0})
+    tsshm.set_data(np.array(result.values(), dtype=np.float32))
+    
+    time.sleep(10.0)
+
+tsshm.close()

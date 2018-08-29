@@ -1,0 +1,475 @@
+#!/usr/bin/env python
+
+import pygame, sys
+from pygame.locals import *
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import pyfits as pf
+import pdb
+import threading
+import mmap
+import struct 
+import os
+import Image
+import time
+import datetime
+from scipy.interpolate import griddata
+from scipy.signal      import medfilt2d
+from numpy.linalg      import solve
+from scipy.ndimage.interpolation import rotate
+
+home = os.getenv('HOME')
+
+auxdir = home+"/conf/kernel_live/"
+logfile = 'kerlive.log'
+
+
+sys.path.append(home+'/src/lib/python/')
+from   camera_tools import cam_cmd
+from   img_tools    import mkdisk
+from   scexao_shm   import shm
+
+sys.path.append(home+'/src/lib/python/pysco')
+import pysco
+
+shift = np.fft.fftshift
+fft   = np.fft.fft2
+ifft  = np.fft.ifft2
+
+dms = 50
+zeroV = np.zeros((dms,dms), dtype='float32')
+
+recenter = True # recenter the frames before analysis
+
+# --------------
+import logging
+logger = logging.getLogger('APFWFS')
+hdlr = logging.FileHandler(auxdir+logfile)
+formatter = logging.Formatter('%(asctime)s %(message)s')
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+logger.setLevel(20)
+
+# --------------
+
+hmsg = """
+Kernel-phase live display
+-------------------------
+
+display controls:
+----------------
+d     : subtract dark for display
+l     : linear/non-linear display
+m     : color/gray color-map
+ESC   : quit focal-plane WFS
+
+"""
+
+# =======================================================
+camid = 1         # camera identifier (1: chuckcam)
+cam  = shm("/tmp/ircam%d.im.shm" % (camid,), False)
+
+model  = pysco.KPI(auxdir+"scexao_full.kpi.gz")
+kinv   = np.linalg.pinv(model.KerPhi)
+
+utcnow = datetime.datetime.utcnow
+
+sz, dz  = 256, 128
+pscale  = 12.1                            # (mas/pixel) eye-balled
+m2pix   = pysco.core.mas2rad(pscale * sz / 1.6e-6)
+uv_samp = model.uv * m2pix + dz           # uv sample coordinates in pixels
+
+xi, yi = np.mgrid[-4:4:0.035, -4:4:0.035] # interpolation grid for WFT
+wfsz = xi.shape
+dist = np.hypot(xi, yi)
+
+tel_mask = np.ones_like(dist)
+tel_mask[dist < 1.2] = 0.0
+tel_mask[dist > 4.0] = 0.0
+
+rmax = np.sqrt((model.mask**2).sum(1).max())
+rmax = 3.96
+interpol = 'nearest'
+
+np.set_printoptions(precision=3, suppress=True)
+
+
+# ---------------------------
+dxy = np.max(np.abs(model.uv))
+uvx = model.uv[:,0]
+uvy = model.uv[:,1]
+
+uvsz = 256
+xpi = np.linspace(-dxy, dxy, uvsz)
+ypi = np.linspace(-dxy, dxy, uvsz)
+
+uvx = np.append(uvx, -uvx)
+uvy = np.append(uvy, -uvy)
+
+# ------------------------------------------------------------------
+#         extract phase information from the FT array
+# ------------------------------------------------------------------
+def get_uv_phase(myarray, stats=False):
+    
+    xx = np.cast['int'](np.round(uv_samp[:,0]))
+    yy = np.cast['int'](np.round(uv_samp[:,1]))
+    uvphase = myarray[yy, xx]
+
+    if stats:
+        stats = (np.std(uvphase), np.max(uvphase) - np.min(uvphase))
+        return(uvphase, stats)
+    else:
+        return(uvphase)
+
+# ------------------------------------------------------------------
+#                       global variables
+# ------------------------------------------------------------------
+zoom = 1                    # zoom for the display of the images
+
+mycmap = cm.jet
+
+(xsize, ysize) = (320, 256)
+nel = xsize * ysize
+dx = (xsize-ysize)/2
+
+fmask = mkdisk((ysize, ysize), (ysize/2, ysize/2), 70.0)
+
+# -----------------------
+#   set up the window
+# -----------------------
+pygame.init()
+
+FPS = 40                        # frames per second setting
+fpsClock = pygame.time.Clock()  # start the pygame clock!
+XW, YW = 552, 500
+
+screen = pygame.display.set_mode((XW, YW), 0, 32)
+pygame.display.set_caption('LIVE KERNEL-PHASE DISPLAY')
+
+# ===============================================================
+def get_img_data(check=False, reform=True):
+    ''' ----------------------------------------
+    Return the current image data content,
+    formatted as a 2D numpy array.
+    Reads from the already-opened shared memory
+    data structure.
+    ---------------------------------------- '''
+    return(cam.get_data(check, reform).astype('float'))
+
+# ===============================================================
+def arr2im(arr, vmin=False, vmax=False, pwr=1.0):
+    ''' ------------------------------------------
+    convert numpy array into image for display
+    ------------------------------------------ '''
+    arr2 = arr.astype('float')**pwr
+    if not vmin:
+        mmin,mmax = arr2.min(), arr2.max()
+    else:
+        mmin,mmax = vmin,vmax
+
+    arr2 -= mmin
+    arr2 /= (mmax-mmin)
+
+    if zoom != 1:
+        img = Image.fromarray(arr2)
+        rimg = img.resize((zoom*ysize, zoom*xsize))
+        rarr = np.asarray(rimg)
+        test = mycmap(rarr)
+    else:
+        test = mycmap(arr2)
+    return((255*test[:,:,:3]).astype('int'))
+
+# ===============================================================
+def current_wft():
+    global recenter
+
+    temp = get_img_data()
+
+    if subt_bias:
+        temp -= bias
+    temp -= temp.min()
+
+    temprs = temp[:,dx:dx+256]
+    if (recenter):
+        temprs = pysco.core.recenter(temprs, sg_rad=10, verbose=False, nbit=10)
+    ft_tmp = shift(fft(shift(temprs)))
+    ft_phi = fmask*np.angle(ft_tmp)
+    ft_phi = medfilt2d(ft_phi)
+    (wft, stats) = get_wft_vect(ft_phi, stats=True)
+    return(wft)
+
+# ------------------------------------------------------------------
+#                 !!! now we are in business !!!!
+# ------------------------------------------------------------------
+
+WHITE = (255, 255, 255)
+GREEN = (  0, 153,   0) 
+BLUE  = ( 51,  51, 255)
+RED   = (255,   0,   0)
+YLOW  = (255, 255,   0)
+BLK   = (  0,   0,   0)
+GREY  = (128, 128, 128)
+ORNG  = (255, 153,  51)
+
+FGCOL = WHITE  # foreground color (text)
+BGCOL = BLK    # background color
+BTCOL = BLUE   # *button* color
+
+background = pygame.Surface(screen.get_size())
+background = background.convert()
+
+background.fill(BLK)
+
+etimes = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000,
+                   5000, 10000, 16000, 24000, 37000, 57000, 89000,
+                   140000, 210000, 330000, 510000])
+net = 18
+
+# get initial exposure time value
+#etime = 1000 # Frantz's laptop simulation
+etime = int(cam_cmd("tint? %d" % (camid), True).strip('\x00'))
+
+# and the closest matching value in our etimes array
+tindex = np.where(etimes >= etime)[0][0]
+
+# ----------------------------
+#          labels
+# ----------------------------
+font1 = pygame.font.SysFont("default",   26)
+font2 = pygame.font.SysFont("default",   30)
+font3 = pygame.font.SysFont("monospace", 16)
+
+lbl = font2.render("KERNEL-LIVE", True, FGCOL, BGCOL)
+rct = lbl.get_rect()
+rct.center = (138, 450)
+screen.blit(lbl, rct)
+
+lbl = font2.render('"Press [h] for help"', True, FGCOL)
+rct = lbl.get_rect()
+rct.center = (138, 470)
+screen.blit(lbl, rct)
+
+lbl = font1.render('Raw Fourier-phase', True, FGCOL)
+rct = lbl.get_rect()
+rct.center = (138, 10)
+screen.blit(lbl, rct)
+
+lbl = font1.render('Clean Fourier-phase', True, FGCOL)
+rct = lbl.get_rect()
+rct.center = (414, 10)
+screen.blit(lbl, rct)
+
+
+# -----------------------------
+# -----------------------------
+xws, yws = xsize, ysize
+
+imin, imax = 0, 0
+
+surf_live_fph   = pygame.surface.Surface((yws, yws))
+rect_fph        = surf_live_fph.get_rect()
+rect_fph.center = (138, 148)
+
+surf_live_ker   = pygame.surface.Surface((uvsz, uvsz))
+rect_ker        = surf_live_ker.get_rect()
+rect_ker.center = (414, 148)
+
+temp   = get_img_data()
+temprs = temp[:,dx:dx+ysize] # resized for FT
+if recenter:
+    temprs = pysco.core.recenter(temprs, verbose=False)#, nbit=10)
+ft_tmp = shift(fft(shift(temprs)))
+
+ft_phi = fmask*np.angle(ft_tmp).transpose()
+myph   = arr2im(ft_phi, pwr=1.0)
+
+pygame.surfarray.blit_array(surf_live_fph, myph)
+screen.blit(surf_live_fph, rect_fph)
+
+# =======================================================
+subt_bias  = True    # flag for bias subtraction
+cont_acq   = False   # flag to start/stop cam acquisition
+lin_scale  = True    # flag for linear range
+clr_scale  = True    # flag for the display color scale
+cloop      = False   # close loop flag
+
+bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (etime,)
+bias = pf.getdata(bname)
+
+# =======================================================
+
+line = "RMS = %5.3f - P2V = %5.3f" % (0.0, 0.0)
+fstat = font3.render(line, True, FGCOL, BGCOL)
+rec_fstat = fstat.get_rect()
+rec_fstat.center = (138, 300)
+
+line = "RMS = %5.3f - P2V = %5.3f" % (0.0, 0.0)
+kstat = font3.render(line, True, FGCOL, BGCOL)
+rec_kstat = kstat.get_rect()
+rec_kstat.center = (414, 300)
+
+nsamp = 20
+clean_phi = np.zeros((nsamp, model.uv.size/2))
+
+irange = 1.5
+counter = 0
+update = True
+
+
+KTK = np.dot(kinv, model.KerPhi)
+
+logger.info('KERNEL LIVE STARTED!')
+# =======================================================
+# =======================================================
+while True: # the main game loop
+    clicked = False
+
+    pwr0 = 1.0
+    if not lin_scale:
+        pwr0 = 0.3
+
+    # read image
+    test = cam.get_counter()
+    if test != counter:
+        counter = test
+        update = True
+
+    if update == True:
+        update = False
+        temp      = get_img_data()
+
+        if subt_bias:
+            temp -= bias
+        imin, imax = temp.min(), temp.max()
+        temp -= imin
+        myim = arr2im(temp.transpose(), pwr=pwr0)
+
+        '''imax = np.percentile(temp, 99.95)
+        msg  = "t = %6d us" % (etime,)
+        info = font3.render(msg, False, FGCOL, BGCOL)
+        screen.blit(info, rct_info)'''
+
+        # ------------------------
+        # The raw Fourier phase
+        temprs = temp[:,dx:dx+256]
+        temprs = pysco.core.recenter(temprs, verbose=False, nbit=10)
+        ft_tmp = shift(fft(shift(temprs)))
+        ft_phi = fmask*np.angle(ft_tmp)
+        ft_phi = medfilt2d(ft_phi)
+
+        myph = arr2im(ft_phi.transpose(), 
+                      vmin=-irange, vmax=irange, pwr=1.0)
+        (raw_phi, raw_stats) = get_uv_phase(ft_phi, stats=True)
+
+        # ------------------------
+        # Filter the Fourier-phase with the Kernel
+        #kerphi = np.dot(model.KerPhi, raw_phi)
+        #clean_phi0 = np.dot(kinv, kerphi)
+        clean_phi0 = np.dot(KTK, raw_phi)
+
+        clean_phi    = np.roll(clean_phi, 1, axis=0)
+        clean_phi[0] = clean_phi0
+        clean_phi0   = np.median(clean_phi, 0)
+        clean_stats  = (clean_phi0.std(), clean_phi.max() - clean_phi.min())
+        clean_phi0   = np.append(clean_phi0, -clean_phi0)
+
+        #msg = ["%+04d" % x for x in 1000*zcv]
+        #logger.info(msg)
+    # ------------------------
+    pygame.surfarray.blit_array(surf_live_fph, myph)
+    screen.blit(surf_live_fph, rect_fph)
+
+
+    # add the display of the KERNEL cleared phase
+    # -------
+    reco = griddata((uvx, uvy), clean_phi0, (xpi[None,:], ypi[:,None]), 
+                    method='linear')
+    myker = arr2im(np.fliplr(reco), 
+                   vmin=-irange, vmax=irange, pwr=1.0)
+
+    pygame.surfarray.blit_array(surf_live_ker, myker)
+    screen.blit(surf_live_ker, rect_ker)
+    
+    # ---- Fourier and pupil information -----
+    line = "RMS = %5.3f - P2V = %5.3f" % (raw_stats[0], raw_stats[1])
+    fstat = font3.render(line, True, FGCOL, BGCOL)
+    screen.blit(fstat, rec_fstat)
+
+    # ----
+    line = "RMS = %5.3f - P2V = %5.3f" % (clean_stats[0], clean_stats[1])
+    kstat = font3.render(line, True, FGCOL, BGCOL)
+    screen.blit(kstat, rec_kstat)
+
+    # ----
+
+    line = 'Phase range display = %.1f' % (irange,)
+    lbl = font2.render(line, True, FGCOL, BGCOL)
+    rct = lbl.get_rect()
+    rct.center = (414, 350)
+    screen.blit(lbl, rct)
+
+
+    # ------------------------------------
+
+    # =====================================
+    for event in pygame.event.get():
+
+        if event.type == QUIT:
+            pygame.quit()
+
+            # close shared memory access
+            # --------------------------
+            cam.close()
+            print("The program has ended normally.")
+            sys.exit()
+
+        elif event.type == KEYDOWN:
+
+            if event.key == K_ESCAPE:
+                pygame.quit()
+                # close shared memory access
+                # --------------------------
+                cam.close()
+                print("The program has ended normally.")
+                sys.exit()
+
+            if event.key == K_d:
+                subt_bias = True - subt_bias
+                if subt_bias:
+                    etime = int(cam_cmd("tint? %d" % (camid), 
+                                        True).strip('\x00'))
+                    bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (etime,)
+                    try:
+                        bias = pf.getdata(bname)
+                    except:
+                        bias = np.zeros_like(temp)
+            if event.key == K_a:
+                irange += 0.1
+
+            if event.key == K_q:
+                if irange > 0.2:
+                    irange -= 0.1
+
+            if event.key == K_h:
+                print(hmsg)
+
+            if event.key == K_l:
+                lin_scale = True - lin_scale
+                update = True
+
+        elif event.type == MOUSEMOTION:
+            mx, my = event.pos
+
+        elif event.type == MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            clicked = True
+            
+    # lines to split the window
+    pygame.draw.line(screen, FGCOL, (276, 0), (276, YW), 3)
+    pygame.display.flip()
+    #screen.blit()
+    fpsClock.tick(FPS)
+
+pygame.quit()
+sys.exit()

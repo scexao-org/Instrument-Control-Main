@@ -1,0 +1,226 @@
+#!/bin/bash
+
+
+
+# number of arguments to script
+NBARGS=1
+
+
+# ======================= PROCESS NAME =================================
+pname=`echo "$0" | sed "s/\.\///g"`
+echo "pname = $pname"
+
+
+
+
+# ================= screen printing using tput =============================
+
+# Num  Colour    #define         R G B
+
+# 0    black     COLOR_BLACK     0,0,0
+# 1    red       COLOR_RED       1,0,0
+# 2    green     COLOR_GREEN     0,1,0
+# 3    yellow    COLOR_YELLOW    1,1,0
+# 4    blue      COLOR_BLUE      0,0,1
+# 5    magenta   COLOR_MAGENTA   1,0,1
+# 6    cyan      COLOR_CYAN      0,1,1
+# 7    white     COLOR_WHITE     1,1,1
+
+# tput setab [1-7] # Set the background colour using ANSI escape
+# tput setaf [1-7] # Set the foreground colour using ANSI escape
+
+# tput bold    # Select bold mode
+# tput dim     # Select dim (half-bright) mode
+# tput smul    # Enable underline mode
+# tput rmul    # Disable underline mode
+# tput rev     # Turn on reverse video mode
+# tput smso    # Enter standout (bold) mode
+# tput rmso    # Exit standout mode
+
+# tput cup Y X # Move cursor to screen postion X,Y (top left is 0,0)
+# tput cuf N   # Move N characters forward (right)
+# tput cub N   # Move N characters back (left)
+# tput cuu N   # Move N lines up
+# tput ll      # Move to last line, first column (if no cup)
+# tput sc      # Save the cursor position
+# tput rc      # Restore the cursor position
+# tput lines   # Output the number of lines of the terminal
+# tput cols    # Output the number of columns of the terminal
+
+
+# tput ech N   # Erase N characters
+# tput clear   # Clear screen and move the cursor to 0,0
+# tput el 1    # Clear to beginning of line
+# tput el      # Clear to end of line
+# tput ed      # Clear to end of screen
+# tput ich N   # Insert N characters (moves rest of line forward!)
+# tput il N    # Insert N lines
+
+
+# tput sgr0    # Reset text format to the terminal's default
+# tput bel     # Play a bell
+
+
+
+
+function printHELP {
+echo "------------------------------------------------------------------------"
+echo "$(tput bold) $pname : DECODE SAPHIRA IMAGE read-reset-read $(tput sgr0)"
+echo "------------------------------------------------------------------------"
+echo "   "
+echo " $(tput bold)USAGE:$(tput sgr0)"
+echo "     $0 [-h] <outfile>"
+echo ""
+echo " $(tput bold)OPTIONS:$(tput sgr0)"
+echo "     $(tput bold)-h$(tput sgr0)          help"
+echo ""
+echo " $(tput bold)INPUT:$(tput sgr0)"
+echo "     <outfile>     output stream name"
+echo ""
+echo "------------------------------------------------------------------------"
+}
+
+
+printHELP1 ()
+{
+	printf "%20s       Decode SAPHIRA read-reset-read image stream\n" "$0" 
+}
+
+
+
+EXITSTATUS=0
+
+function checkFile {
+if [ -f $1 ]
+  then
+    echo "[$(tput setaf 2)$(tput bold)   OK   $(tput sgr0)] File $(tput bold)$1$(tput sgr0) found"
+   else
+    echo "[$(tput setaf 1)$(tput bold) FAILED $(tput sgr0)] File $(tput bold)$1$(tput sgr0) not found"
+    EXITSTATUS=1
+fi
+}
+
+function checkDir {
+if [ -d $1 ]
+  then
+    echo "[$(tput setaf 2)$(tput bold)   OK   $(tput sgr0)] Directory $(tput bold)$1$(tput sgr0) found"
+   else
+    echo "[$(tput setaf 1)$(tput bold) FAILED $(tput sgr0)] Directory $(tput bold)$1$(tput sgr0) not found"
+    EXITSTATUS=1
+fi
+}
+
+function cmdexists()
+{
+  command -v "$1" >/dev/null 2>&1
+}
+
+
+function checkCommand {
+if cmdexists $1; then
+	echo "[$(tput setaf 2)$(tput bold)   OK   $(tput sgr0)] Command $(tput bold)$1$(tput sgr0) found"
+else
+	echo "[$(tput setaf 1)$(tput bold) FAILED $(tput sgr0)] Command $(tput bold)$1$(tput sgr0) not installed.  Aborting."; EXITSTATUS=1;
+fi
+
+}
+
+
+# ================= OPTIONS =============================
+
+
+
+
+# Transform long options to short ones
+singlelinehelp=0
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    "--help") set -- "$@" "-h" ;;
+    "--help1") 
+set -- "$@" "-h" 
+singlelinehelp=1;
+;;
+    *)        set -- "$@" "$arg"
+  esac
+done
+
+
+
+
+#Parse command line flags
+
+
+while getopts :h FLAG; do
+  case $FLAG in
+    h)  #show help
+      if [ "$singlelinehelp" -eq "0" ]; then
+      printHELP
+      else
+      printHELP1
+      fi
+      exit
+      ;;
+    \?) #unrecognized option - show help
+      echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed."
+      printHELP
+      ;;
+  esac
+done
+
+shift $((OPTIND-1))  #This tells getopts to move on to the next argument.
+
+### End getopts code ###
+
+
+
+
+
+
+
+
+if [ "$1" = "help" ] || [ "$#" -ne $NBARGS ]; then
+if [ "$#" -ne $NBARGS ]; then
+    echo "$(tput setaf 1)$(tput bold) Illegal number of parameters ($NBARGS params required, $# entered) $(tput sgr0)"
+fi
+printHELP
+        exit
+fi
+
+
+
+# ======================= CHECK REQUIRED FILES =================================
+echo ""
+checkFile "/tmp/pbimage.im.shm"
+
+
+
+# ============================= CHECK IF COMMAND EXISTS ==========================
+
+checkCommand Cfits
+
+
+
+
+
+
+if [ $EXITSTATUS -eq 1 ]; then
+echo ""
+echo "$(tput setaf 1)$(tput bold) REQUIRED FILES, COMMANDS NOT FOUND: EXITING $(tput sgr0)"
+echo ""
+exit
+else
+echo ""
+fi
+
+
+
+
+# ======================= SCRIPT CODE STARTS HERE =================================
+
+Cfits << EOF
+readshmim pbimage
+streamhalfdiff pbimage $1 3
+exit
+EOF
+

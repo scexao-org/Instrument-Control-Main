@@ -1,0 +1,11 @@
+#!/bin/bash
+
+Cfits0 << EOF
+aoloopcontroldmturboff
+exit
+EOF
+
+dmdispzero 00 01
+
+tmux kill-session -t dmturb
+

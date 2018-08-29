@@ -1,0 +1,196 @@
+#!/usr/bin/env python
+
+# ======================= #
+#    ___  _      ___   _  #
+#   /___\/_\    / _ \ / | #
+#  //  ///_\\  / /_)/ | | #
+# / \_//  _  \/ ___/  | | #
+# \___/\_/ \_/\/      |_| #
+#                         #
+# ======================= #
+
+import os
+import sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import logit #Custom logging library
+import zaber_chain2 as zaber_chain
+import conex2 as conex
+con = conex.conex()
+
+# SPECIFIC PARAMETERS FOR THIS WHEEL
+
+zabdev  = "/dev/serial/by-path/"
+zabdev += "pci-0000:00:1d.0-usb-0:1.2.4.4.4.2:1.0-port0"
+
+idn = 8
+
+cid = "/dev/serial/by-id/"
+cidx = cid+"usb-Newport_CONEX-AGP_A6WXES9V-if00-port0"
+cidy = cid+"usb-Newport_CONEX-AGP_A6XNPLWN-if00-port0"
+
+conexname = "oap1"
+
+# GENERIC CODE
+
+filename = "/home/scexao/bin/devices/conf/conf_"+conexname+".txt"
+
+slots = [line.rstrip('\n') for line in open(filename)]
+nslots = len(slots)
+nparam = len(slots[0].split(';'))
+for i in range(nparam):
+    exec "param%d = []" % (i,)
+
+for j in range(nslots):
+    sparam = slots[j].split(';')
+    for i in range(nparam):
+        exec "param%d.append(sparam[i])" % (i,)
+
+def usage():
+    print """---------------------------------------
+Usage: %s <dev> <command> <arg>
+---------------------------------------
+DEV:
+    x          rotate  x wheel
+    y          rotate y wheel
+    int/ao     rotate oap for interna/ao188
+    f          translate focus
+COMMAND:
+    status     displays status
+    home       sends home
+    goto       moves position: numerical value
+ARG:
+    numerical value (angle in degrees)
+    numerical value (zaber steps)
+EXAMPLES:
+    %s x/y/f home
+    %s x goto 17.38 (absolute pos)
+    %s x status
+CONTENT:""" % (conexname,conexname,conexname,conexname)
+    for i in range(nslots):
+        print "   ", param0[i], param1[i]
+        
+    print "--------------------------------------- "
+    sys.exit()
+
+def quickhelp():
+    print "%20s       OAP1 orientation" % (conexname,)
+
+# =====================================================================
+# =====================================================================
+def main():
+    args = sys.argv[1:]  # list of read arguments
+    na = args.__len__()  # number of arguments
+
+    if args == []:
+        usage()
+        
+    if "--help1" in args[0].lower():
+        quickhelp()
+
+    elif ("x" in args[0].lower()) or ("y" in args[0].lower()):
+        if "x" in args[0].lower():
+            cid = cidx
+            col = 2
+        elif "y" in args[0].lower():
+            cid = cidy
+            col = 3
+        else:
+            usage()
+            
+        if na > 1:
+            
+            if "home" in args[1].lower():   #Home command
+                con.open(cid, conexname)
+                con.home(conexname)
+                con.close()
+                logit.logit(conexname+"_"+str(args[0]),'Homed')
+                sys.exit()
+
+            elif ("?" in args[1].lower()) or ("st" in args[1].lower()):
+                con.open(cid, conexname)
+                con.status(conexname, col)
+                con.close()
+                sys.exit()
+
+            elif "goto" in args[1].lower():  #Goto commands
+                if na < 3:
+                    usage()
+                elif args[2].isdigit():
+                    pos = args[2]
+                    con.open(cid, conexname)
+                    con.move(float(pos), conexname)
+                    con.close()
+                    logit.logit(conexname+"_"+str(args[0]),'moved_to_'+pos)
+
+                else:
+                    usage()
+                sys.exit()
+            
+            else:
+                usage() 
+        else:
+            usage()
+
+    elif "int" in args[0].lower():
+        con.open(cidx, conexname)
+        pos = param2[0]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_x','moved_to_int_'+pos)
+        con.open(cidy, conexname)
+        pos = param3[0]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_y','moved_to_int_'+pos)
+        
+    elif "ao" in args[0].lower():
+        con.open(cidx, conexname)
+        pos = param2[1]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_x','moved_to_ao_'+pos)
+        con.open(cidy, conexname)
+        pos = param3[1]
+        con.move(float(pos), conexname)
+        con.close()
+        logit.logit(conexname+'_y','moved_to_ao_'+pos)
+        
+    elif "f" in args[0].lower():
+        
+        if na < 2: # safety
+            usage()
+            
+        if "home" in args[1].lower():
+            zab = zaber_chain.zaber_chain(zabdev, quiet=True)
+            zab.home(idn)
+            zab.close()
+            logit.logit(conexname+"_"+str(args[0]),'Homed')
+            
+        elif ("?" in args[1].lower()) or ("st" in args[1].lower()):
+            zab = zaber_chain.zaber_chain(zabdev, quiet=True)
+            zab.status(idn, quiet=True)
+            zab.close()
+            
+        elif "goto" in args[1].lower():
+            if na < 3: # safety
+                usage()
+                
+                try:
+                    pos = int(args[2])
+                except:
+                    usage()
+                    
+                    zab = zaber_chain.zaber_chain(zabdev, quiet=True)
+                    zab.move(idn, pos)
+                    zab.close()
+                    logit.logit(conexname+'_'+str(args[0]),'moved_to_'+str(pos))
+                    
+                    
+    else:
+        usage()
+
+if __name__ == "__main__":
+    main()
+

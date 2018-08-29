@@ -1,0 +1,698 @@
+#!/usr/bin/env python
+
+# -------------------------------------------- #
+#    __        _       _   ___                 #
+#   /__\ __ _ (_)_ __ (_) / __\__ _ _ __ ___   #
+#  / \/// _` || | '_ \| |/ /  / _` | '_ ` _ \  #
+# / _  \ (_| || | | | | / /__| (_| | | | | | | #
+# \/ \_/\__,_|/ |_| |_|_\____/\__,_|_| |_| |_| #
+#           |__/                               #
+# -------------------------------------------- #
+
+import pygame, sys
+from pygame.locals import *
+import numpy as np
+import matplotlib.cm as cm
+import struct 
+import os
+import Image
+import time
+import math as m
+import copy
+import datetime as dt
+from astropy.io import fits as pf
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import colormaps as cmaps
+from   camera_tools import cam_cmd
+from   scexao_shm   import shm
+
+
+hmsg = """RAJNIKANTH's INSTRUCTIONS
+-------------------
+
+camera controls:
+---------------
+a      : increase exposure time
+q      : decrease exposure time
+SPACE  : start/stop data stream
+CTRL+b : take new darks
+CTRL+r : save the reference
+CTRL+s : start/stop logging images
+
+display controls:
+----------------
+d      : subtract dark for display
+l      : linear/non-linear display
+m      : color/gray color-map
+o      : bullseye on the PSF
+v      : start/stop accumulating and averaging frames
+z      : zoom/unzoom on the center of the image
+r      : subtract a reference image
+
+mouse controls:
+--------------
+mouse      : display of the flux under the mouse pointer
+ 
+ESC   : quit chuckcam
+
+"""
+
+args = sys.argv[1:]
+zoom = 1    # zoom for the display (default is 2)
+if args != []:
+    if isinstance(int(args[0]),int):
+        zoom = int(args[0])
+        zoom = min(3,max(1,zoom))
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+camid = 2 # camera identifier (2: LOWFS camera)
+if not os.path.isfile("/tmp/ircam%d.im.shm" % (camid,)):
+    os.system("tmux new-session -d -s IRcam")
+    time.sleep(2)
+    os.system("tmux send-keys -t IRcam \"cd ~/src/OWLcam\" C-m")
+    time.sleep(2)
+    os.system("tmux send-keys -t IRcam \"./raptormulti 3\" C-m")
+    time.sleep(10)
+
+
+cam = shm("/tmp/ircam%d.im.shm" % (camid,), verbose=False)
+(xsize, ysize) = cam.mtdata['size'][:2]#size[:cam.naxis]
+cam_dark = shm("/tmp/ircam%d_dark.im.shm" % (camid,), data=np.zeros((xsize,ysize), dtype=np.float32), verbose=False)
+
+
+
+cam_cmd("tecon %d" % (camid,)) # start TEC
+
+# ------------------------------------------------------------------
+#                       global variables
+# ------------------------------------------------------------------
+
+mycmap = cm.gray
+(xsize, ysize) = cam.size[:cam.naxis]
+
+# -----------------------
+#   set up the window
+# -----------------------
+pygame.init()
+
+FPS = 20                        # frames per second setting
+fpsClock = pygame.time.Clock()  # start the pygame clock!
+XW, YW = xsize*zoom, (ysize+100)*zoom
+
+screen = pygame.display.set_mode((XW, YW), 0, 32)
+pygame.display.set_caption('LOWFS camera display!')
+
+#os.system("tmux new-session -d -s ircam2") #start a tmux session for messsages
+
+# ------------------------------------------------------------------
+#             short hands for shared memory data access
+# ------------------------------------------------------------------
+def get_img_data(check=True):
+    ''' ----------------------------------------
+    Return the current image data content,
+    formatted as a 2D numpy array.
+    Reads from the already-opened shared memory
+    data structure.
+    ---------------------------------------- '''
+    return(cam.get_data(check, True, timeout=1.).astype(float))
+
+# ------------------------------------------------------------------
+#  another short hand to convert numpy array into image for display
+# ------------------------------------------------------------------
+def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref = False):
+    
+    if  zoom2 != 1:
+        arr2 = arr[z_coor[0]-xsize/2./zoom2:z_coor[0]+xsize/2./zoom2,z_coor[1]-ysize/2/zoom2:z_coor[1]+ysize/2/zoom2]
+    else:
+        arr2 = arr
+    arr3 = arr2.astype('float')**pwr
+    mmin,mmax = arr3.min(), arr3.max()
+    if subt_ref:
+        if mmax > abs(mmin):
+            arr3[0,0] = -mmax
+            mmin = -mmax
+        else:
+            arr3[0,0] = -mmin
+            mmax = -mmin
+    arr3 -= mmin
+    if mmin < mmax:
+        arr3 /= (mmax-mmin)
+
+    if zoom != 1 or zoom2 != 1:
+        img = Image.fromarray(arr3)
+        rimg = img.resize((zoom*ysize, zoom*xsize))
+        rarr = np.asarray(rimg)
+        test = mycmap(rarr)
+    else:
+        test = mycmap(arr3)
+    return((255*test[:,:,:3]).astype('int'))
+
+# ------------------------------------------------------------------
+#  find center of the image
+# ------------------------------------------------------------------
+def find_center(image,bias,subt_bias):
+    if not subt_bias:
+        image2 = image-bias
+    else:
+        image2 = copy.deepcopy(image)
+    imin = np.percentile(image2, 99.85)
+    image2 -= imin
+    mask = image2 > 0
+    image2 *= mask
+    total = np.nansum(image2)
+    X, Y = np.indices(np.shape(image2))
+    cx = (np.nansum(Y*image2)/total)
+    cy = (np.nansum(X*image2)/total)
+    cx += 0.5
+    cy += 0.5
+    return [cx, cy]
+
+# ------------------------------------------------------------------
+#              !!! now we are in business !!!!
+# ------------------------------------------------------------------
+
+WHITE = (255, 255, 255)
+GREEN = (147, 181,  44) 
+BLUE  = (  0,   0, 255)
+RED1   = (255,   0,   0)
+RED   = (246, 133, 101) #(185,  95, 196)
+BLK   = (  0,   0,   0)
+CYAN  = (0, 255, 255)
+
+FGCOL = WHITE  # foreground color (text)
+SACOL = RED1   # saturation color (text)
+BGCOL = BLK    # background color
+BTCOL = BLUE   # *button* color
+
+background = pygame.Surface(screen.get_size())
+background = background.convert()
+
+etimes = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000,
+                   5000, 7000, 10000, 16000, 24000, 37000, 57000, 89000,
+                   140000, 210000, 330000, 510000])
+
+net = np.size(etimes)
+
+# get initial exposure time value
+etime = int(cam.get_expt())
+# and the closest matching value in our etimes array
+if etime <= etimes[-1]:
+    tindex = np.where(etimes >= etime)[0][0]
+else:
+    tindex = np.where(etimes == etimes[-1])[0][0]
+
+# ----------------------------
+#          labels
+# ----------------------------
+font1 = pygame.font.SysFont("default",   20*zoom)
+font2 = pygame.font.SysFont("default",   14*zoom)
+font3 = pygame.font.SysFont("monospace", 5*(zoom+1))
+font4 = pygame.font.SysFont("monospace", 7+3*zoom)
+font5 = pygame.font.SysFont("monospace", 7+3*zoom)
+font5.set_bold(True)
+
+path_cartoon = "/home/scexao/conf/rajnicam_aux/rajni%d.png" % (zoom,)
+cartoon1 = pygame.image.load(path_cartoon)
+
+lbl = font1.render("LLOWFS camera viewer", True, WHITE, BGCOL)
+rct = lbl.get_rect()
+rct.center = (110*zoom, 270*zoom)
+screen.blit(lbl, rct)
+
+lbl2 = font1.render("Press [h] for help", True, WHITE, BGCOL)
+rct2 = lbl2.get_rect()
+rct2.center = (110*zoom, 285*zoom)
+screen.blit(lbl2, rct2)
+
+lbl3 = font2.render("and get God Rajnikanth's blessings", True, WHITE, BGCOL)
+rct3 = lbl3.get_rect()
+rct3.center = (110*zoom, 300*zoom)
+screen.blit(lbl3, rct3)
+
+imin, imax = 0, 0
+msg = "t = %3d us (min,max) = (%5d,%5d)" % (etime, imin, imax)
+info = font3.render(msg, True, FGCOL, BGCOL)
+rct_info  = info.get_rect()
+rct_info.center = (110*zoom, 315*zoom)
+
+xmou, ymou, fmou = 0, 0, 0
+msg2 = " mouse = (%3d,%3d), flux = %5d" % (xmou, ymou, fmou)
+info2 = font3.render(msg2, True, FGCOL, BGCOL)
+rct_info2  = info2.get_rect()
+rct_info2.center = (110*zoom, 325*zoom)
+
+dinfo = font3.render("                     ", True, FGCOL, BGCOL)
+rct_dinfo  = dinfo.get_rect()
+rct_dinfo.center = (110*zoom, 335*zoom)
+screen.blit(dinfo, rct_dinfo)
+
+dinfo2 = font3.render("                          ", True, FGCOL, BGCOL)
+rct_dinfo2  = dinfo2.get_rect()
+rct_dinfo2.center = (110*zoom, 345*zoom)
+screen.blit(dinfo2, rct_dinfo2)
+
+msgsave1 = "               "
+savem1 = font5.render(msgsave1, True, RED1, BGCOL)
+rct_savem1 = savem1.get_rect()
+rct_savem1.midleft = (250*zoom-28, 320*zoom)
+screen.blit(savem1, rct_savem1)
+
+msgsave2 = "               "
+savem2 = font5.render(msgsave2, True, RED1, BGCOL)
+rct_savem2 = savem2.get_rect()
+rct_savem2.midleft = (250*zoom-28, 330*zoom)
+screen.blit(savem2, rct_savem2)
+
+msgsave3 = "               "
+savem3 = font5.render(msgsave3, True, RED1, BGCOL)
+rct_savem3 = savem3.get_rect()
+rct_savem3.midleft = (250*zoom-28, 340*zoom)
+screen.blit(savem3, rct_savem3)
+
+xws = xsize*zoom
+yws = ysize*zoom
+
+cx = xsize/2.
+cy = ysize/2.
+
+#bullseye size
+bc = 2+4*zoom
+bl = 2*bc
+
+#zoom
+zoom2 = 1
+iz = 0
+zooms2 = [1, 6]
+msgzm = "  "
+zm = font1.render(msgzm, True, CYAN)
+rct_zm  = zm.get_rect()
+rct_zm.topleft = (5*zoom, 5*zoom)
+
+imin, imax = 0, 0
+surf_live = pygame.surface.Surface((xws, yws))
+
+rect1 = surf_live.get_rect()
+rect1.topleft = (0, 0)
+
+rect2 = cartoon1.get_rect()
+rect2.bottomright = XW, YW
+
+plot_hotspot = False # flag for display of the hotspot
+subt_bias    = False # flag for bias subtraction
+subt_ref     = False # flag for ref subtraction
+cont_acq     = False 
+lin_scale    = True  # flag for linear range
+average      = False # flag for averaging
+saveim       = False # flag to save images
+logexpt      = False # flag to log the exposure time
+clr_scale    = 0     # flag for the display color scale
+
+bias = np.zeros((ysize,xsize))
+ref_im = np.zeros((ysize,xsize))
+
+badpixmap = 1-pf.getdata(home+"/conf/rajnicam_aux/badpixmap.fits")
+
+pygame.mouse.set_cursor(*pygame.cursors.broken_x)
+
+cnta = 0
+timeexpt = []
+
+# =======================================================
+# =======================================================
+while True: # the main game loop
+    clicked = False
+    pwr0 = 1.0
+    if not lin_scale:
+        pwr0 = 0.3
+
+    if clr_scale == 0:
+        mycmap = cm.gray
+    else:
+        if (subt_ref & lin_scale):
+            mycmap = cm.seismic
+        else:
+            if clr_scale == 1:
+                mycmap = cmaps.inferno
+            else:
+                mycmap = cmaps.plasma
+    
+    # read exposure time changes
+    if cam.get_expt() != etime:
+        etime = cam.get_expt()
+        bname = home+"/conf/rajnicam_aux/bias%06d.fits" % (etime,)
+        bias = pf.getdata(bname)
+        cam_dark.set_data(bias.astype(np.float32))
+        tindex = np.where(etimes >= etime)[0][0]
+
+
+    # read image
+    temp = get_img_data()
+    temp *= badpixmap
+    isat = np.percentile(temp[1:-1,1:-1], 99.995)
+    if subt_bias:
+        temp -= bias
+    if average == True:
+        cnta += 1
+        if cnta == 1:
+            temp2 = copy.deepcopy(temp)
+        else:
+            temp2 *= float(cnta-1)/float(cnta)
+            temp2 += temp/float(cnta)
+    else:
+        temp2 = copy.deepcopy(temp)
+        cnta = 0
+    imax = np.max(temp2)
+    imin = np.percentile(temp2, 0.5)
+    temp2b = temp2-imin
+    temp2b *= temp2b>0
+    if subt_ref:
+        if lin_scale:
+            if subt_bias:
+                myim = arr2im((temp2b-ref_im+bias).transpose(), pwr=pwr0, subt_ref=subt_ref)
+            else:
+                myim = arr2im((temp2b-ref_im).transpose(), pwr=pwr0, subt_ref=subt_ref)
+        else:
+            if subt_bias:
+                myim = arr2im((np.abs(temp2b-ref_im+bias)).transpose(), pwr=pwr0)
+            else:
+                myim = arr2im((np.abs(temp2b-ref_im)).transpose(), pwr=pwr0)
+    else:
+        myim = arr2im(temp2b.transpose(), pwr=pwr0)
+    pygame.surfarray.blit_array(surf_live, myim)
+    screen.blit(surf_live, rect1)
+    
+    if etime < 1e3:
+        msg = "t = %3d us (min,max) = (%5d,%5d)" % (etime, imin, imax)
+    elif etime >= 1e3 and etime < 1e6:
+        msg = "t = %3d ms (min,max) = (%5d,%5d)" % (etime/1e3, imin, imax)
+    else:
+        msg = "t = %3d s  (min,max) = (%5d,%5d)" % (etime/1e6, imin, imax)
+    
+    info = font3.render(msg, True, FGCOL, BGCOL)
+    screen.blit(info, rct_info)
+
+    # display the bullseye on the PSF
+    if plot_hotspot:
+        [cx,cy] = find_center(temp2, bias, subt_bias)
+        if (cx >= 0) and (cx < 320) and (cy >= 0) and (cy < 256):
+            fh = temp2[int(cy), int(cx)]
+            msg2 = "center = (%3d,%3d), flux = %5d" % (cx, cy, fh)
+            info2 = font3.render(msg2, True, FGCOL, BGCOL)
+            screen.blit(info2, rct_info2)
+        cx = xsize/2*zoom+(cx-xsize/2)*zoom*zoom2
+        cy = ysize/2*zoom+(cy-ysize/2)*zoom*zoom2
+        pygame.draw.line(screen, RED1, (cx-bl*zoom2, cy), (cx+bl*zoom2, cy), 1)
+        pygame.draw.line(screen, RED1, (cx,cy-bl*zoom2), (cx, cy+bl*zoom2), 1)
+        pygame.draw.circle(screen, RED1, (int(cx),int(cy)), bc*zoom2, 1)
+    else:
+        # display mouse information
+        [xmou, ymou] = pygame.mouse.get_pos()
+        xim = xsize/2*(1-1./zoom2)+xmou/zoom/zoom2
+        yim = ysize/2*(1-1./zoom2)+ymou/zoom/zoom2
+        if (xim >= xsize/2*(1-1./zoom2)) and (xim < xsize/2*(1+1./zoom2)) and (yim >= ysize/2*(1-1./zoom2)) and (yim < ysize/2*(1+1./zoom2)):
+            fim = temp2[yim, xim]
+            msg2 = " mouse = (%3d,%3d), flux = %5d" % (xim, yim, fim)
+            info2 = font3.render(msg2, True, FGCOL, BGCOL)
+            screen.blit(info2, rct_info2)
+    
+    # display information
+    if lin_scale:
+        msg = "    linear // "
+    else:
+        msg = "non-linear // "
+    if subt_bias:
+        msg += "   bias"
+    else:
+        msg += "no-bias"
+    dinfo = font3.render(msg, True, FGCOL, BGCOL)
+    screen.blit(dinfo, rct_dinfo)
+
+    if isat > 15000:
+        msg = "     !!!SATURATION!!!     "
+        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+        screen.blit(dinfo2, rct_dinfo2)
+    elif isat > 11000 and isat <=15000:
+        msg = "     !!!NON-LINEAR!!!     "
+        dinfo2 = font3.render(msg, True, SACOL, BGCOL)
+        screen.blit(dinfo2, rct_dinfo2)
+    else:
+        msg = "                          "
+        dinfo2 = font3.render(msg, True, SACOL, BGCOL)
+        screen.blit(dinfo2, rct_dinfo2)
+
+    # saving images
+    tmuxon = os.popen('tmux ls |grep ircam1log | awk \'{print $2}\'').read()
+    if tmuxon:
+        saveim = True
+    else:
+        saveim = False
+    if saveim:
+        screen.blit(cartoon1,  rect2)
+        msgsave1 = " saving images "
+        savem1 = font5.render(msgsave1, True, RED1, BGCOL)
+        screen.blit(savem1, rct_savem1)
+        msgsave2 = "   before I    "
+        savem2 = font5.render(msgsave2, True, RED1, BGCOL)
+        screen.blit(savem2, rct_savem2)
+        msgsave3 = " kick your ass "
+        savem3 = font5.render(msgsave3, True, RED1, BGCOL)
+        screen.blit(savem3, rct_savem3)
+    else:
+        msgsave1 = "               "
+        savem1 = font5.render(msgsave1, True, RED1, BGCOL)
+        screen.blit(savem1, rct_savem1)
+        msgsave2 = "               "
+        savem2 = font5.render(msgsave2, True, RED1, BGCOL)
+        screen.blit(savem2, rct_savem2)
+        msgsave3 = "               "
+        savem3 = font5.render(msgsave3, True, RED1, BGCOL)
+        screen.blit(savem3, rct_savem3)
+        screen.blit(cartoon1,  rect2)
+
+    if logexpt:
+        time.sleep(0.1)
+        timeexpt = np.append(timeexpt, time.time())
+        time.sleep(0.1)
+        if timeexpt[-1]-timeexpt[0] > 4:
+            os.system("/home/scexao/bin/log Rajnicam: changing exposure time to %d" %etime)
+            timeexpt = []
+            logexpt = False
+    
+    # =====================================
+    for event in pygame.event.get():
+
+        if event.type == QUIT:
+            pygame.quit()
+
+            # close shared memory access
+            # --------------------------
+            cam.close()          # global disp map
+            print("Rajnicam has ended normally.")
+            sys.exit()
+        elif event.type == KEYDOWN:
+
+            if event.key == K_ESCAPE:
+                pygame.quit()
+                # close shared memory access
+                # --------------------------
+                cam.close()          # global disp map
+                print("Rajnicam has ended normally.")
+                sys.exit()
+
+            if event.key == K_m:
+                clr_scale += 1
+                clr_scale %= 3
+
+            if event.key == K_q:
+                if (tindex < net - 1):
+                    tindex += 1
+                    etime = etimes[tindex]
+                    cam_cmd("tint %d %d" % (camid, etime), False)
+                    bname = home+"/conf/rajnicam_aux/bias%06d.fits" % (etime,)
+                    badpixmap = 1-pf.getdata(home+"/conf/rajnicam_aux/badpixmap.fits")
+                    bias = pf.getdata(bname)*badpixmap
+                    cam_dark.set_data(bias.astype(np.float32))
+                    logexpt = True
+                    
+                    
+
+
+            if event.key == K_a:
+                if (tindex > 0):
+                    tindex -= 1
+                    etime = etimes[tindex]
+                    cam_cmd("tint %d %d" % (camid, etime), False)
+                    bname = home+"/conf/rajnicam_aux/bias%06d.fits" % (etime,)
+                    badpixmap = 1-pf.getdata(home+"/conf/rajnicam_aux/badpixmap.fits")
+                    bias = pf.getdata(bname)*badpixmap
+                    cam_dark.set_data(bias.astype(np.float32))
+                    logexpt = True
+                    
+            if event.key == K_SPACE:
+                cont_acq = not cont_acq
+                if cont_acq:
+                    cam_cmd("stream %d" % (camid,))
+                else:
+                    cam_cmd("abort %d" % (camid,))
+
+            if event.key == K_d:
+                subt_bias = not subt_bias
+                if subt_bias:
+                    bname = home+"/conf/rajnicam_aux/bias%06d.fits" % (etime,)
+                    try:
+                        bias = pf.getdata(bname)*badpixmap
+                    except:
+                        bias = np.zeros_like(temp)
+
+            if event.key == K_h:
+                print(hmsg)
+
+            if event.key == K_o:
+                plot_hotspot = not plot_hotspot
+                
+            # Camera to Lyot/linear-logscale
+            #-------------------------------
+            if event.key == K_l:
+                lin_scale = not lin_scale
+
+            # Save new darks for all exposure times
+            # -------------------------------------
+            if event.key == K_b:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    if (mmods & KMOD_LSHIFT):
+                        # Save new darks for the current exposure time
+                        msg = "  !! Acquiring a dark !!  "
+                        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+                        screen.blit(dinfo2, rct_dinfo2)
+                        pygame.display.update([rct_dinfo2])
+                        os.system("log Rajnicam: Saving current internal dark")
+                    
+                        print("In the time it takes Rajnikanth to sidekick a")
+                        print("South-Indian stepchild, we'll acquire this dark.")
+                        
+                        os.system('lowfs_block')
+                        time.sleep(2.0)        # safety
+                        
+                        ndark = int(min(100, (5000000/etime)))
+                        for idark in range(ndark):
+                            if idark == 0:
+                                temp3 = get_img_data(True)/float(ndark)
+                            else:
+                                temp3 += get_img_data(True)/float(ndark)
+                        bname = home+"/conf/rajnicam_aux/bias%06d.fits"%(etime,)
+                        pf.writeto(bname, temp3, overwrite=True)
+                        bias = temp3*badpixmap
+                        time.sleep(0.2)
+                            
+                        os.system('lowfs_block')
+                        time.sleep(2.0)        # safety
+                        os.system("log Rajnicam: Done saving current internal dark")
+
+                    else:
+                        # Save new darks for all exposure times
+                        msg = "  !! Acquiring darks !!   "
+                        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+                        screen.blit(dinfo2, rct_dinfo2)
+                        pygame.display.update([rct_dinfo2])
+                        os.system("log Rajnicam: Saving internal darks")
+                    
+                        print("In the time it takes Rajnikanth to sidekick a")
+                        print("South-Indian stepchild, we'll acquire all biases.")
+                        
+                        subt_bias = False
+                        
+                        os.system('lowfs_block')
+                        time.sleep(2.0)        # safety
+                        
+                        for tint in etimes:
+                            cam_cmd("tint %d %d" % (camid, tint), False)
+                            time.sleep(0.2+tint*1.e-6)
+                            ndark = min(100, (5000000/tint))
+                            for idark in range(ndark):
+                                if idark == 0:
+                                    temp3 = get_img_data(True)/float(ndark)
+                                else:
+                                    temp3 += get_img_data(True)/float(ndark)
+                            bname = home+"/conf/rajnicam_aux/bias%06d.fits"%(tint,)
+                            pf.writeto(bname, temp3, overwrite=True)
+                            time.sleep(0.2)
+                            
+                        os.system('lowfs_block')
+                        time.sleep(2.0)        # safety
+                        os.system("log Rajnicam: Done saving internal darks")
+                        
+                        cam_cmd("tint %d %d" % (camid, etime), False)
+
+            # rajni mode to save and subtract a reference image
+            # --------------------------------------------------------
+            if event.key == K_r:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    msg = "!! Acquiring reference !! "
+                    dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+                    screen.blit(dinfo2, rct_dinfo2)
+                    pygame.display.update([rct_dinfo2])
+ 
+                    subt_ref = False
+                    
+                    nref = int(min(1000, (5000000/etime)))
+                    for iref in range(nref):
+                        if iref == 0:
+                            temp3 = get_img_data(True)/float(nref)
+                        else:
+                            temp3 += get_img_data(True)/float(nref)
+                                
+                    rname = home+"/conf/rajnicam_aux/ref.fits"
+                    pf.writeto(rname, temp3, overwrite=True)
+                    
+                else:
+                    rname = home+"/conf/rajnicam_aux/ref.fits"
+                    ref_im = pf.getdata(rname)*badpixmap
+                    subt_ref = not subt_ref
+
+            if event.key == K_v:
+                average = not average
+
+            if event.key == K_z:
+                z_coor = np.loadtxt(home+"/conf/rajnicam_aux/crop.txt")
+                iz += 1
+                iz %= 2
+                zoom2 = zooms2[iz]
+                if zoom2 != 1:
+                    msgzm = "x%d" % (zoom2,)
+                else:
+                    msgzm = "  "
+                zm = font1.render(msgzm, True, CYAN)
+
+            if event.key == K_s:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    saveim = not saveim
+                    if saveim:
+                        timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                        savepath = '/media/data/'+timestamp+'/ircam2log/'
+                        ospath = os.path.dirname(savepath)
+                        if not os.path.exists(ospath):
+                            os.makedirs(ospath)
+                        nimsave = int(min(1000, (50000000/etime)))
+                        # creating a tmux session for logging
+                        os.system("tmux new-session -d -s ircam2log")
+                        os.system("tmux send-keys -t ircam2log \"logshim ircam2 %i %s\" C-m"%(nimsave, savepath))
+                        os.system("log Rajnicam: start logging images")
+                    else:
+                        os.system("tmux send-keys -t ircam2log \"logshimkill ircam2\"")
+                        os.system("tmux kill-session -t ircam2log")
+                        os.system("log Rajnicam: stop logging images")
+
+    pygame.display.update([rect1, rect2, rct, rct2, rct3, rct_info, rct_info2, rct_zm, rct_dinfo, rct_dinfo2, rct_savem1, rct_savem2, rct_savem3])
+
+    #pygame.display.flip()
+    fpsClock.tick(FPS)
+
+pygame.quit()
+sys.exit()

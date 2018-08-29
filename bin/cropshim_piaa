@@ -1,0 +1,5 @@
+Cfits << EOF
+readshmim ircam2
+cropshim ircam2 ircam1small_piaa 50 50 140 135
+exit
+EOF

@@ -1,0 +1,299 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+import sys
+import string
+import select
+import socket
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+import numpy as np
+import zlib
+import pdb
+import time
+import zmq
+import json
+
+ZABER_XGAIN=53.2
+ZABER_YGAIN=53.2
+
+class ClientSocket:
+    """This is copied to macquarie-observatory-automation/common"""
+    MAX_BUFFER = 65536
+    def __init__(self,IP="127.0.0.1",Port="3001"): #!!! Set this below - not here !!!
+        #NB See the prototype in macquarie-university-automation for a slightly neater start.
+        ADS = (IP,Port)
+        self.count=0
+        try:
+            self.context = zmq.Context()
+            self.client = self.context.socket(zmq.REQ)
+            tcpstring = "tcp://"+IP+":"+Port
+            print(tcpstring)
+            self.client.connect(tcpstring)
+            self.client.RCVTIMEO = 10000
+            self.connected=True
+        except: 
+            print('ERROR: Could not connect to server. Please check that the server is running and IP is correct.')
+            self.connected=False
+
+    def send_command(self, command):
+        """WARNING: currently a blocking send/recv!"""
+        try: 
+            self.client.send(command,zmq.NOBLOCK)
+            response = self.client.recv(self.MAX_BUFFER,zmq.NOBLOCK)
+            self.connected=True
+            return response
+        except:
+            self.connected=False 
+#            self.client.close()
+            self.count += 1
+            return 'Error sending command, connection lost ({0:d} times)'.format(self.count)
+#        try: return self.client.recv(self.MAX_BUFFER,zmq.NOBLOCK)
+#        except Exception: return 'Error receiving response'
+
+class RHEAGui(QWidget):
+    current_image=0;
+    IMAGE_WIDTH=320;
+    IMAGE_HEIGHT=256;
+    status={"aoi":[400, 452, 320, 256]}
+    def __init__(self, IP='127.0.0.1', parent=None):
+        super(RHEAGui,self).__init__(parent)
+        self.client_socket = ClientSocket(IP=IP) 
+        
+        #Lay everything out in a vertical box
+        layout = QVBoxLayout()
+        layout.setSpacing(3)
+        
+        #First, the command entry box
+        lbl1 = QLabel('Command: ', self)
+        self.lineedit = QLineEdit("")
+        self.connect(self.lineedit, SIGNAL("returnPressed()"),
+                        self.send_to_server)
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(lbl1)
+        hbox1.addWidget(self.lineedit)
+        layout.addLayout(hbox1)
+       
+        #Add the server response label (QTextEdit)                
+        self.response_label = QTextEdit('[No Sever Response Yet]', self)
+        self.response_label.setReadOnly(True)
+        self.response_label.setStyleSheet("QTextEdit { background-color : black; color : lime; }")
+        self.response_label.setFixedWidth(320)
+        self.response_label.setFixedHeight(100)
+        layout.addWidget(self.response_label)
+        
+        #An easy way to set an AOI
+        lbl2 = QLabel('AOI: ', self)
+        self.aoi_edit = QLineEdit("400 452 320 256")
+        self.aoi_edit.setMaxLength(15)
+        self.connect(self.aoi_edit, SIGNAL("returnPressed()"),self.send_aoi)
+        #self.connect(self.aoi_y, SIGNAL("returnPressed()"),self.send_aoi)
+        #self.connect(self.aoi_w, SIGNAL("returnPressed()"),self.send_aoi)
+        #self.connect(self.aoi_h, SIGNAL("returnPressed()"),self.send_aoi)
+        self.get_aoi_button = QPushButton("Get", self)
+        self.get_aoi_button.clicked.connect(self.get_aoi_button_click)
+        self.out_aoi_button = QPushButton("Out", self)
+        self.out_aoi_button.clicked.connect(self.out_aoi_button_click)
+        self.in_aoi_button = QPushButton("In", self)
+        self.in_aoi_button.clicked.connect(self.in_aoi_button_click)
+        hbox2 = QHBoxLayout()
+        hbox2.setSpacing(3)
+        hbox2.addWidget(lbl2)
+        hbox2.addWidget(self.aoi_edit)
+        hbox2.addWidget(self.get_aoi_button)
+        hbox2.addWidget(self.out_aoi_button)
+        hbox2.addWidget(self.in_aoi_button)
+        #hbox2.addWidget(self.aoi_y)
+        layout.addLayout(hbox2)
+ 
+        #Some buttons relating to the image
+        self.move_from=[0,0]
+        self.ifu_move_ix=0
+        self.cent_ix=0
+        self.move_button = QPushButton("Move", self)
+        self.move_button.clicked.connect(self.move_button_click)
+        self.cent_button = QPushButton("Cent", self)
+        self.cent_button.clicked.connect(self.cent_button_click)
+        self.demod_button = QPushButton("Demod", self)
+        self.demod_button.setCheckable(True)
+        #self.demod_button.clicked.connect(self.demod_button_click)
+        self.scale_combo = QComboBox()
+        self.scale_combo.setEditable(True)
+        self.scale_combo.addItems('Linear Sqrt Asinh'.split())
+        hbox3 = QHBoxLayout()
+        hbox3.setSpacing(3)
+        hbox3.addWidget(self.move_button)
+        hbox3.addWidget(self.cent_button)
+        hbox3.addWidget(self.demod_button)
+        hbox3.addWidget(self.scale_combo)
+        layout.addLayout(hbox3)
+ 
+        #The image
+        imdata = np.zeros( (self.IMAGE_HEIGHT,self.IMAGE_WIDTH), dtype=np.uint32)
+        self.image = QImage(imdata.tostring(),self.IMAGE_WIDTH,self.IMAGE_HEIGHT,QImage.Format_RGB32)
+        self.image_label = QLabel("",self)
+        self.image_label.setPixmap(QPixmap.fromImage(self.image))
+        self.image_label.mouseReleaseEvent = self.label_clicked
+        layout.addWidget(self.image_label)
+        
+        #A status label
+        self.status_label = QLabel("", self)
+        layout.addWidget(self.status_label)
+
+        #Now show everything etc.        
+        self.setLayout(layout)
+        self.setWindowTitle("RHEA@Subaru Injection")
+        self.itimer = QTimer()
+        self.stimer = QTimer()
+        self.ask_for_image()
+        self.ask_for_status()
+
+    def get_aoi_button_click(self):
+        self.aoi_edit.setText(" ".join(["{0:d}".format(x) for x in self.status['aoi']]))
+
+    def out_aoi_button_click(self): 
+        aoi = self.status['aoi']
+        aoi[0] -= aoi[2]//2
+        aoi[1] -= aoi[3]//2
+        aoi[2] *= 2
+        aoi[3] *= 2
+        self.client_socket.send_command("aoi " + " ".join(["{0:d}".format(int(x)) for x in aoi]))        
+
+    def in_aoi_button_click(self):
+        aoi = self.status['aoi']
+        aoi[2] /= 2
+        aoi[3] /= 2
+        aoi[0] += aoi[2]//2
+        aoi[1] += aoi[3]//2
+        self.client_socket.send_command("aoi " + " ".join(["{0:d}".format(int(x)) for x in aoi])) 
+
+    def move_button_click(self):
+        self.ifu_move_ix=2
+        self.response_label.setText("Click on position to move from")
+
+    def cent_button_click(self):
+        self.cent_ix=1
+        self.response_label.setText("Click on new center")
+
+
+    def label_clicked(self,event):
+        if self.ifu_move_ix==2:
+            self.move_from = [event.x(),event.y()]
+            self.response_label.setText("Click on position to move to")
+        elif self.ifu_move_ix==1:
+            dx = event.x()-self.move_from[0]
+            dy = event.y()-self.move_from[1]
+            dx_zaber = -int(ZABER_XGAIN*dx*self.status['aoi'][2]/self.IMAGE_WIDTH)
+            dy_zaber = int(ZABER_YGAIN*dy*self.status['aoi'][3]/self.IMAGE_HEIGHT)
+            self.response_label.setText("Moving {0:4d} {1:4d}".format(dx_zaber,dy_zaber))
+            response = self.client_socket.send_command("xy {0:d} {1:d}".format(dx_zaber,dy_zaber))
+            self.response_label.setText(response)
+        if self.ifu_move_ix>0:
+            self.ifu_move_ix -= 1
+        if self.cent_ix==1:
+            new_x = event.x()*self.status['aoi'][2]/self.IMAGE_WIDTH + self.status['aoi'][0] - self.status['aoi'][2]//2
+            new_y = event.y()*self.status['aoi'][2]/self.IMAGE_WIDTH + self.status['aoi'][1] - self.status['aoi'][3]//2
+            new_x = (int(new_x)//4)*4
+            new_y = (int(new_y)//4)*4
+            aoi = [new_x,new_y,self.status['aoi'][2],self.status['aoi'][3]]
+            response = self.client_socket.send_command("aoi " + " ".join(["{0:d}".format(int(x)) for x in aoi]))
+            self.response_label.setText(response)
+            self.cent_ix=0
+                
+    def ask_for_image(self):
+        """ Always run this, but only send commands if we're connected """
+        if self.demod_button.isChecked():
+            command="image d"
+        else:
+            command = "image {0:d}".format(self.current_image)
+        if (self.client_socket.connected):
+            response = self.client_socket.send_command(command)
+            cmd_message = response.split(" ", 1)
+            if (cmd_message[0]=="image"):
+                self.display_image(cmd_message[1])
+            else:
+                self.response_label.setText(response)
+        self.itimer.singleShot(400, self.ask_for_image)
+
+    def ask_for_status(self):
+        command = "status"
+        if (self.client_socket.connected):
+            response = self.client_socket.send_command(command)
+            split_response = response.split(" ", 1)
+            if (split_response[0]=="status"):
+                self.update_status(split_response[1])
+            else:
+                self.response_label.setText(response)
+        self.stimer.singleShot(800, self.ask_for_status)
+
+    def update_status(self, response):
+        """This is given a string with "status" already removed"""
+        try:
+            self.status=json.loads(response)
+        except:
+            pdb.set_trace()
+        self.status_label.setText("Y:{0:5d} X:{1:5d} Focus:{2:5d} fps:{3:5.1f} itime:{4:5.1f}".\
+            format(self.status["pos"][0],self.status["pos"][1],
+            self.status["pos"][2],self.status["fps"],self.status["exptime"]))
+    
+    def display_image(self, response):
+        """This is given a string with image already removed"""    
+        argv = response.split(" ",2)
+        if argv[0]!='d':
+            self.current_image=int(argv[0])
+        compressed_len = int(argv[1])
+        if compressed_len == 0:
+            return
+        if (compressed_len > len(argv[2])):
+            print("ERROR: Only got {0:d} of {1:d} bytes".format(len(argv[2]), compressed_len))
+        else:
+            imdata = zlib.decompress(argv[2][0:compressed_len])
+            if (len(imdata)!=self.IMAGE_WIDTH*self.IMAGE_HEIGHT*4):
+                print("ERROR: Image size {0:d} instead of {1:d}".format(len(imdata), self.IMAGE_WIDTH*self.IMAGE_HEIGHT*4))
+            else:
+                imdata = np.fromstring(imdata, np.float32)
+                imdata = np.array(imdata).reshape( (self.IMAGE_HEIGHT,self.IMAGE_WIDTH) )
+                #Autoscale for now...
+                imdata = ( (imdata - np.min(imdata))/np.maximum(np.max(imdata)-np.min(imdata),1)*255).astype(np.uint32)
+                #Now Convert this 0 to 255 according to different algorithms...
+                if str(self.scale_combo.currentText()) == 'Sqrt':
+                    imdata = (np.sqrt(imdata/255.0)*255).astype(np.uint32)
+                elif str(self.scale_combo.currentText()) == 'Asinh':
+                    imdata = (np.arcsinh(imdata/10)/np.arcsinh(255.0/10.0)*255.0).astype(np.uint32)
+                imdata = imdata + (imdata<<8) + (imdata<<16)
+                self.image = QImage(imdata.tostring(),self.IMAGE_WIDTH,self.IMAGE_HEIGHT,QImage.Format_RGB32)
+#                pyqtRemoveInputHook(); pdb.set_trace()
+                self.image_label.setPixmap(QPixmap.fromImage(self.image))
+
+    def send_aoi(self):
+        try:
+            response = self.client_socket.send_command("aoi " + str(self.aoi_edit.text()))
+            self.response_label.setText(response)
+            self.client_socket.connected = True
+        except:
+            self.client_socket.connected = False
+            self.response_label.setText("*** Not Connected ***")
+
+
+    def send_to_server(self):
+        try:
+            response = self.client_socket.send_command(str(self.lineedit.text()))
+        except:
+            response = "*** Connection Error ***"
+        cmd_message = response.split(" ", 1) 
+        if (cmd_message[0]=="image"):
+            self.display_image(cmd_message[1])
+        else:
+            self.response_label.setText(response)
+
+        self.lineedit.setText("")
+
+app = QApplication(sys.argv)
+if len(sys.argv) > 1:
+    myapp = RHEAGui(IP=sys.argv[1])
+else:
+    myapp = RHEAGui(IP="scexao2")
+myapp.show()
+sys.exit(app.exec_())      
+            
+
+

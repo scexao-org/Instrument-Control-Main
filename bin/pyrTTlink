@@ -1,0 +1,9 @@
+#!/bin/bash
+
+ssh scexao@scexao "tmux kill-session -t pyrTTsend"
+tmux kill-session -t pyrTTrcv
+
+tmux new-session -d -s pyrTTrcv
+tmux send-keys -t pyrTTrcv "shmimTCPreceive 30110" C-m
+
+ssh scexao@scexao "/home/scexao/bin/pyrTTsend"

@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+# ---------------------------------------------------------------- #
+#    ___ _                _      _            ________  _____  __  #
+#   / __\ |__  _   _  ___| | __ | |_ ___     / __\_   \/__   \/ _\ #
+#  / /  | '_ \| | | |/ __| |/ / | __/ _ \   / _\  / /\/  / /\/\ \  #
+# / /___| | | | |_| | (__|   <  | || (_) | / / /\/ /_   / /   _\ \ #
+# \____/|_| |_|\__,_|\___|_|\_\  \__\___/  \/  \____/   \/    \__/ #
+#                                                                  #
+# ---------------------------------------------------------------- #
+
+import sys
+import numpy as np
+import os
+import time
+import math as m
+from astropy.io import fits as pf
+
+home = os.getenv('HOME')
+conf_dir = home + "/conf/chuckcam_aux/"
+sys.path.append(home+'/src/lib/python/')
+from xaosim.scexao_shmlib import shm
+import image_processing as impro
+
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+
+camid = 0 # camera identifier (0: science camera)
+cam = shm("/tmp/ircam%d.im.shm" % (camid,), verbose=False) # chuck shared memory
+cam_dark = shm("/tmp/ircam%d_dark.im.shm" % (camid,), verbose=False) # chuck current dark
+
+# ------------------------------------------------------------------
+#                Read parameters
+# ------------------------------------------------------------------
+
+args = sys.argv[1:]
+nim = int(args[0]) # number of images to average
+pathim = args[1] # path of the saved image
+
+# ------------------------------------------------------------------
+#                Create the averaged image
+# ------------------------------------------------------------------
+it = 0 # initialize averaging counter
+cnt = 0 # intialize camera counters
+cnt0 = -1
+
+while it < nim:
+    cnt = cam.get_counter() # read current image counter
+    if cnt == cnt0:
+        time.sleep(0.001)
+    else:
+        if it == 0: # initialize the first iteration
+            ave_im = cam.get_data(check=True, reform=True, timeout=1.0).astype('float')/float(nim)
+        else: # accumulate to average
+            ave_im += cam.get_data(check=True, reform=True, timeout=1.0).astype('float')/float(nim)
+        sys.stdout.write('\r acquisition #%5d\r' % (it,))
+        sys.stdout.flush()
+        it += 1
+        cnt0 = cnt
+    
+
+# ------------------------------------------------------------------
+#                Process the image
+# ------------------------------------------------------------------
+
+bias = cam_dark.get_data(check=True, reform=True, timeout=1.0).astype('float') # load bias
+ave_im -= bias # subtract bias
+temp, ave_im2 = impro.find_outlier_pixels(ave_im, tolerance=2.5) # remove bad pixels
+
+# ------------------------------------------------------------------
+#                Save image
+# ------------------------------------------------------------------
+
+pf.writeto(pathim, ave_im2, overwrite=True)
+
+# ------------------------------------------------------------------
+#                Close shared memory
+# ------------------------------------------------------------------
+
+cam.close()
+cam_dark.close()

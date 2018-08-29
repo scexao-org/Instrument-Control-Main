@@ -1,0 +1,90 @@
+#!/bin/bash
+
+echo "Calibration source fiber x:"
+src_fib x home &
+sleep 1
+echo "Calibration source fiber y:"
+src_fib y home &
+sleep 1
+echo "Calibration source selection:"
+src_select home &
+sleep 1
+echo "OAP1 theta:"
+oap1 theta home &
+sleep 1
+echo "OAP1 phi:"
+oap1 phi home &
+sleep 1
+echo "Dichroic:"
+dichroic home &
+sleep 1
+echo "Pupil mask:"
+pupil wheel home &
+sleep 1
+echo "PIAA lenses #1:"
+piaa1 wheel home &
+sleep 1
+echo "PIAA lenses #2:"
+piaa2 wheel home &
+sleep 1
+echo "GLINT pickoff:"
+nuller_pickoff home &
+sleep 1
+echo "Fiber injection pickoff:"
+fibinj_pickoff home &
+sleep 1
+echo "Focal plane mask:"
+fpm wheel home &
+sleep 1
+echo "Lyot mask:"
+lyot wheel home &
+sleep 1
+echo "inverse PIAA x:"
+invpiaa x home &
+sleep 1
+echo "inverse PIAA y:"
+invpiaa y home &
+sleep 1
+echo "OAP4 theta:"
+oap4 theta home &
+sleep 1
+echo "OAP4 phi:"
+oap4 phi home &
+sleep 1
+echo "CHARIS pickoff:"
+charis_pickoff home &
+sleep 1
+echo "MKIDS pickoff:"
+mkids_pickoff home &
+sleep 1
+echo "FIRST pickoff:"
+first_pickoff home &
+sleep 1
+echo "Post-coro fiber injection pickoff:"
+pcfi_pickoff home &
+sleep 1
+echo "Post-coro fiber injection lens:"
+pcfi_len home &
+sleep 1
+echo "Post-coro fiber injection fiber x:"
+pcfi_fib x home &
+sleep 1
+echo "Post-coro fiber injection fiber y:"
+pcfi_fib y home &
+sleep 1
+echo "Post-coro fiber injection fiber f:"
+pcfi_fib f home &
+sleep 1
+echo "IR cam focusing lens #2::"
+ircam_fcs f2 home &
+sleep 1
+echo "SAPHIRA pickoff:"
+saphira_pickoff home &
+sleep 1
+echo "Chuck pupil lens focus::"
+chuck_pup_fcs home &
+sleep 1
+echo "PyWFS pickoff:"
+pywfs_pickoff home &
+echo "RHEA pickoff:"
+rhea_pickoff home &

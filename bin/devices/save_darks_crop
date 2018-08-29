@@ -1,0 +1,54 @@
+#!/bin/bash
+
+EXPECTED_ARGS=2
+
+if [ $# -ne $EXPECTED_ARGS ]
+then
+    NBframes=100
+else
+    NBframes=$2
+fi
+
+
+timestamp=$(date -u +'%Y%m%d')
+timestamp2=$(date -u +'%H%M%S')
+
+echo "moving filter wheel..."
+
+lowfs_block
+sleep 1
+log "Rajnicam: Saving darks"
+darkpath1="${timestamp}/ircam2log/darks/${timestamp2}"
+darkpath="/media/data/${darkpath1}"
+mkdir -p $darkpath
+#rajnibias="/home/scexao/conf/rajnicam_aux"
+
+
+echo "test"
+#for expT in 1 2 5 10 20 50 100 200 500 1000 2000 4000 5000 6000 8000 10000 20000 30000 40000 #50001 60000 80000 100002 200004
+#for expT1 in $(seq 5000.1 5000.1 510010.2)
+for expT in 1 2 5 10 20 50 100 200 500 1000 2000 5000 7000 10000 16000 24000 37000 57000 89000 140000 210000 330000 510000
+
+do
+    #echo $expT1
+    #expT=$(echo "($expT1+0.5)/1" | bc)
+    echo $expT
+    ircam_expT $1 $expT
+    sleep 2
+    
+    NBframes2=$((NBframes < (50000000/expT) ? NBframes : (50000000/expT)))
+    echo $NBframes2
+    expT2=$(printf "%06d" $expT)
+    #rm ${rajnibias}/bias${expT2}.fits
+    
+    save_darks_Cfits_crop $1 $NBframes2 ${darkpath} ${expT2}
+    
+done
+
+fi
+
+#echo "badpixmap $1 ${darkpath1}/"
+#badpixmap $1 "${darkpath1}/"
+
+lowfs_block
+log "Rajnicam: Done saving darks"

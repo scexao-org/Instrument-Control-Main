@@ -1,0 +1,367 @@
+#!/usr/bin/env python
+
+#import pyfits
+from astropy.io import fits as pf
+import sys
+import pygame
+from pygame.locals import *
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from PIL import Image
+import threading
+import mmap
+import struct 
+import os
+import time
+from scipy.misc import imresize
+import subprocess
+import pdb
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from scexao_shm import shm
+
+cam = shm("/tmp/pbimage.im.shm")
+
+hmsg = """
+########################################
+
+SAPHIRA live viewer
+(based on SCExAO/shmimview2)
+-----------------------------------
+
+########################################
+
+display controls:
+----------------
+l     : linear/non-linear display
+m     : color/gray color-map
+b     : save dark frames
+d     : subtract dark frames
+ESC   : quit shmview
+
+########################################
+"""
+
+
+#args = sys.argv[1:]
+#if args == []: 
+#    print(hmsg)
+#    sys.exit()
+#else:
+#    filename = args[0]
+
+#if args.__len__() == 2:
+#    zoom = int(args[1])
+#    mindisp = None
+#    maxdisp = None
+#elif args.__len__() == 3:
+#    mindisp = float(args[1])
+#    maxdisp = float(args[2])
+#    zoom = 1
+#elif args.__len__() == 4:
+#    mindisp = float(args[1])
+#    maxdisp = float(args[2])
+#    zoom = int(args[3])
+#else:
+mindisp = None
+maxdisp = None
+
+# ------------------------------------------------------------------
+#                       global variables
+# ------------------------------------------------------------------
+mycmap = cm.gray
+# Initialise as these, but will be changed upon image read
+xsize=320
+ysize=256
+im = np.zeros((320, 256))
+#zMode = False
+#zCoords = (156, 356)
+zCoords = (160, 128)
+zSize = 64
+
+# -----------------------
+#   set up the window
+# -----------------------
+pygame.init()
+
+FPS = 20                        # frames per second setting
+fpsClock = pygame.time.Clock()  # start the pygame clock!
+XW, YW = xsize, ysize
+
+screen = pygame.display.set_mode((XW, YW), 0, 32)
+pygame.display.set_caption('SAPHIRA live viewer')
+#pygame.display.set_caption(args[0])
+
+# ------------------------------------------------------------------
+#             short hands for shared memory data access
+# ------------------------------------------------------------------
+def get_img_data(check=True):
+    ''' ----------------------------------------
+    Return the current image data content,
+    formatted as a 2D numpy array.
+    Reads from the already-opened shared memory
+    data structure.
+    ---------------------------------------- '''
+    global im
+    oldim = im
+
+    try:
+        newim = np.squeeze(cam.get_data(check, True, timeout = 1.).astype(float)) #dimensions 1,y,x
+
+        newXImSize = np.shape(newim)[1]
+        newYImSize = np.shape(newim)[0]
+        if (newXImSize != xsize) | (newYImSize != ysize):
+            #im = imresize(newim, (ysize, xsize), interp='nearest')
+            im = resize_img(newim, ysize, xsize)
+        else:
+            im = newim
+    except:
+        im = oldim
+    return(im)
+
+
+# ------------------------------------------------------------------
+# Resizes an image. Pads with 0s if wrong aspect ratio.
+# ------------------------------------------------------------------
+def resize_img(image, y, x):
+    newXImSize = np.shape(image)[1]
+    newYImSize = np.shape(image)[0]
+    aspect = float(newXImSize) / float(newYImSize)
+
+    if (newXImSize == xsize) & (newYImSize == ysize):
+        return image
+
+    if aspect < 1.25: #if tall image
+        im = imresize(image, (ysize, int(round(ysize*aspect))), interp='nearest')
+        pad = (xsize - np.shape(im)[1])/2
+        resizedim = np.zeros((ysize, xsize))
+        resizedim[ : , pad : pad+np.shape(im)[1] ] = im
+        im = resizedim
+        #im = np.append(np.zeros((ysize, pad/2)), im, axis=1)
+        #im = np.append(im, np.zeros((ysize, pad/2)), axis=1)
+    elif aspect==1.25:
+        im = imresize(image, (ysize, xsize), interp='nearest')
+    else: #aspect > 1.25 #if wide image
+        im = imresize(image, (int(round(xsize/aspect)), xsize), interp='nearest')
+        pad = (ysize - np.shape(im)[0])/2
+        resizedim = np.zeros((ysize, xsize))
+        resizedim[ pad : pad+np.shape(im)[0] , : ] = im
+        im = resizedim
+    return(im)
+
+
+
+# ------------------------------------------------------------------
+#  another short hand to convert numpy array into image for display
+# ------------------------------------------------------------------
+def arr2im(arr, vmin=0., vmax=66000.0, pwr=1.0, mmin=None, mmax=None):
+    
+    arr2 = arr.astype('float') 
+    if mmin is None or mmax is None: mmin,mmax = arr2.min(), arr2.max()
+    #mmax = np.percentile(arr2, 99)
+    arr2 -= mmin
+    arr2 /= (mmax-mmin)
+    if not lin_scale:
+        arr2 = arr2**pwr
+    
+    test = mycmap(arr2)
+
+    return((255*test[:,:,:3]).astype('int'))
+
+# ------------------------------------------------------------------
+#              !!! now we are in business !!!!
+# ------------------------------------------------------------------
+
+WHITE = (255, 255, 255)
+GREEN = (  0, 255,   0) 
+BLUE  = (  0,   0, 255)
+RED   = (255,   0,   0)
+BLK   = (  0,   0,   0)
+FGCOL = WHITE  # foreground color (text)
+BGCOL = BLK    # background color
+BTCOL = BLUE   # *button* color
+
+background = pygame.Surface(screen.get_size())
+background = background.convert()
+background.fill(BLK)
+
+# ----------------------------
+#          labels
+# ----------------------------
+font1 = pygame.font.SysFont("default",   48)
+font2 = pygame.font.SysFont("default",   30)
+font3 = pygame.font.SysFont("monospace", 16)
+
+xws = xsize
+yws = ysize
+
+imin, imax = 0, 0
+surf_live = pygame.surface.Surface((xsize, ysize))
+#screen.blit(surf_live, (5,5))
+
+rect1 = surf_live.get_rect()
+rect1.center = (xws/2, yws/2)
+
+#temp      = get_img_data()
+
+
+#plot_cross = True  # flag for display of the crosses
+#subt_bias  = False # flag for bias subtraction
+#cont_acq   = False 
+lin_scale  = True  # flag for linear range
+clr_scale  = False # flag for the display color scale
+subt_bias  = False
+#bias = np.zeros_like(temp)
+
+
+# =======================================================
+# =======================================================
+
+while True: # the main game loop
+
+    clicked = False
+
+    pwr0 = 1.0
+    if not lin_scale:
+        pwr0 = 0.3
+
+    mycmap = cm.gray
+    if clr_scale:
+        mycmap = cm.jet
+
+    # read image
+    #temp      = get_img_data()
+    temp = np.squeeze(cam.get_data(True, True, timeout = 1.).astype(float)) #dimensions y,x
+    #subtract bias
+    if subt_bias:
+        #print "bias", np.min(bias), np.max(bias)
+        #print "temp", np.min(temp), np.max(temp)
+        #temp = temp - resize_img(bias, ysize, xsize)
+        temp = resize_img(temp-bias, ysize, xsize)
+        #temp = resize_img(bias, ysize, xsize)
+    else: 
+        temp = resize_img(temp, ysize, xsize)
+
+    # Zoom box
+    #if zMode:
+    #    zs = zSize/2
+    #    temp = temp[(zCoords[0]-zs):(zCoords[0]+zs),(zCoords[1]-zs):(zCoords[1]+zs)]
+    #    temp = imresize(temp, (xsize, ysize), interp='nearest')
+
+    imin, imax = temp.min(), temp.max()
+    temp -= imin
+    myim      = arr2im(temp.transpose(), pwr=pwr0, mmin=mindisp, mmax=maxdisp)
+
+    #imax = np.percentile(temp, 99.95)
+    #msg = "(min,max) = (%5d,%5d)" % (imin, imax)
+
+    #pdb.set_trace()
+    # display information
+    pygame.surfarray.blit_array(surf_live, myim)
+    screen.blit(surf_live, rect1)
+
+
+    # =====================================
+    for event in pygame.event.get():
+
+        if event.type == QUIT:
+            pygame.quit()
+
+            sys.exit()
+        elif event.type == KEYDOWN:
+
+            if event.key == K_ESCAPE:
+                pygame.quit()
+                sys.exit()
+
+            if event.key == K_m:
+                clr_scale = True - clr_scale
+
+            if event.key == K_l:
+                lin_scale = True - lin_scale
+
+            if event.key == K_h:
+                print(hmsg)
+
+            #if event.key == K_z:
+            #    zMode = not zMode
+
+            #Save dark frames
+            if event.key == K_b:
+
+                msg = "  !! Acquiring a dark !!  "
+                #dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+                #screen.blit(dinfo2, rct_dinfo2)
+                #os.system("scexaostatus set darkchuck 'NEW INT DARK    '")
+                #os.system("scexaostatus set darkchuck_co '0'")
+                #os.system("log SAPHIRA: Saving current internal dark")
+                
+                print("Saving darks.")
+                
+#                os.system("ircam_block")          # blocking the light
+#                msgwhl = ircam_filters[6]
+#                wh = font1.render(msgwhl, True, RED1)
+                #screen.blit(wh, rct_wh)
+                #pygame.display.update([rct_dinfo2, rct_wh])
+                time.sleep(2.0)        # safety
+                
+                #ndark = min(100, (5000000/etime))
+                ndark=1000
+                temp = np.squeeze(cam.get_data(True, True, timeout = 1.).astype(float)) #dimensions 1,y,x
+                darkcube = np.zeros(np.append(ndark, np.shape(temp)))
+
+                for idark in range(ndark):
+                    darkcube[idark, :, :] = np.squeeze(cam.get_data(True, True, timeout = 1.).astype(float))
+
+                dark = np.median(darkcube, axis=0)
+                newXImSize = np.shape(dark)[1]
+                newYImSize = np.shape(dark)[0]
+                fname = home+"/pizzabox/SCExAO/pbserver.main/saphcamdarks/"+\
+                        time.strftime("%Y%m%d%H%M%S")+'_'+str(newXImSize)+'_'+str(newYImSize)+'.fits'
+                #print fname
+                #bname = home+"/conf/chuckcam_aux/bias%07d.fits"%(etime,)
+                pf.writeto(fname, dark, overwrite=True)
+                #bias = temp3*badpixmap
+                time.sleep(0.2)
+                        
+#                os.system("ircam_block")          # blocking the light
+                #os.system("scexaostatus set darkchuck 'OFF             '")
+                #os.system("scexaostatus set darkchuck_co '1'")
+                #os.system("log SAPHIRA: Done saving current internal dark")
+                print "Done saving darks."
+
+            #Subtract dark frames
+            if event.key == K_d:
+                subt_bias = not subt_bias
+                if subt_bias:
+                    
+                    #figure out res of current window
+                    newim = np.squeeze(cam.get_data(True, True, timeout = 1.).astype(float)) #dimensions y,x
+                    newXImSize = np.shape(newim)[1]
+                    newYImSize = np.shape(newim)[0]
+
+                    fname = home+"/pizzabox/SCExAO/pbserver.main/saphcamdarks/"
+
+                    #mostrecent = os.system('$(ls 'fname'*'newXImSize'_'newYImSize'.fits -t | head -n1)')
+                    mostrecent = subprocess.check_output('ls '+fname+'*'+str(newXImSize)+'_'+str(newYImSize)+
+                                                         '.fits -t | head -n1', shell='True')[:-1]
+                    #print mostrecent
+                    #try:
+                    bias = pf.getdata(mostrecent)#*badpixmap
+                    #                        cam_dark.set_data0(bias)
+                    #except:
+                    #    bias = np.zeros_like(temp)
+                    #    print "test2"
+
+                    #print "bias", np.min(bias), np.max(bias)
+
+
+    #pygame.display.update([rect1, rect2, rct, rct2, rct_info, rct_dinfo])
+    pygame.display.flip()
+
+    fpsClock.tick(FPS)
+
+pygame.quit()
+sys.exit()

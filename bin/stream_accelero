@@ -1,0 +1,19 @@
+#! /bin/bash
+
+tmux new-session -d -s accelero1
+tmux new-session -d -s accelero2
+
+
+tmux send-keys -t accelero1 "stream_accelero1b" C-m
+
+tmux send-keys -t accelero2 "stream_accelero2b" C-m
+
+sleep 1
+
+pidlist=$( ps aux | grep -i "[s]tream_accelero1b" | awk {'print $2'} )
+
+sudo cset proc -m -p $pidlist -t accel1
+
+pidlist=$( ps aux | grep -i "[s]tream_accelero2b" | awk {'print $2'} )
+
+sudo cset proc -m -p $pidlist -t accel2

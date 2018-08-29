@@ -1,0 +1,24 @@
+#!/bin/bash
+
+EXPECTED_ARGS=1
+
+if [ $# -ne $EXPECTED_ARGS ]
+then
+  echo
+  echo "-------- SET DM TURBULENCE AMPLITUDE ---------"
+ echo " "
+ echo "Usage: $0 <amplitude [um]>"
+ echo " "
+ echo "  INPUT <speed>   : aplitude [um]"
+ echo " "
+ echo "EXAMPLE :  $0 12.3"
+ echo " "
+ exit
+fi
+
+
+Cfits0 << EOF
+aoloopcontroldmturampl $1
+exit
+EOF
+

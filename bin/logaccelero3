@@ -1,0 +1,16 @@
+#! /bin/bash
+
+timestamp=$(date -u +'%Y%m%d')
+
+mkdir /media/data/${timestamp}/accelerometers/
+
+tmux new-session -d -s logaccelero3
+
+
+tmux send-keys -t logaccelero3 "logshim labjack3 10000 /media/data/${timestamp}/accelerometers/" C-m
+
+sleep 1
+
+pidlist=$( ps aux | grep -i "[l]ogshim labjack3 10000 /media/data/${timestamp}/accelerometers/" | awk {'print $2'} )
+
+sudo cset proc -m -p $pidlist -t logaccel2

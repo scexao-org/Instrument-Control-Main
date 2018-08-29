@@ -1,0 +1,48 @@
+#!/bin/bash
+
+log Aligning to internal SCExAO source
+
+src_fib in
+sleep 7.0
+
+mkids_pickoff 2
+charis_pickoff 2
+
+dmflat
+
+nps_on1 5
+
+sleep 1
+
+src_flux irnd 6
+
+src_flux optnd 5
+
+src_flux filter 1
+
+
+oap1 int
+sleep 0.1
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+dm_stage x push -1000
+sleep 0.5
+
+hotspotalign

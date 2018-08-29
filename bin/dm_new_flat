@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import numpy as np
+import pyfits as pf
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+
+from   scexao_shm   import shm
+import zernike
+
+auxdir = home + "/conf/dm_patterns/"
+
+hmsg = """ --------------------------------------------------------------
+dm_new_flat: saves what is currently in the channel 8 as the new flat
+-------------------------------------------------------------- """
+
+args = sys.argv[1:]
+
+chn = 8
+# -----------------------
+dmc  = shm('/tmp/dm00disp.im.shm', verbose=False) # DM channel
+
+disp = dmc.get_data()
+
+fname = home+"/conf/dm_patterns/internal_flat.fits"
+
+pf.writeto(fname, disp, clobber=True)
+

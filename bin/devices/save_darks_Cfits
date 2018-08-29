@@ -1,0 +1,86 @@
+#!/bin/bash
+
+NBARGS=5
+
+function printHELP {
+echo "------------------------------------------------------------------------"
+echo "$(tput bold) $pname : TAKE DARKS $(tput sgr0)"
+echo "------------------------------------------------------------------------"
+echo "  Takes nearIR camera darks (single exposure time)"
+echo "   "
+echo " $(tput bold)USAGE:$(tput sgr0)"
+echo "     $0 [-h] <cam index> <NBframes> <savedir> <fname> <savedir2>"
+echo ""
+echo " $(tput bold)OPTIONS:$(tput sgr0)"
+echo "     $(tput bold)-h$(tput sgr0)             help"
+echo ""
+echo " $(tput bold)INPUT:$(tput sgr0)"
+echo "     <Cam index>     1: focal plane camera, 2: LOWFS camera"
+echo "     <NBframes>      number of frames co-added"
+echo "     <savedir>       Directory in which darks are saved"
+echo "     <fname>         File name string. Full file is <savedir>/darkcube_<fname>.fits"
+echo "     <savedir2>      second directory in which darks are saved. Fill file: <savedir2>/bias<fname>.fits"
+echo ""
+echo " $(tput bold)OUTPUT:$(tput sgr0)"
+echo "     /media/data/<timestamp>/ircam<index>log/darks/*     dark files"
+echo ""
+echo "------------------------------------------------------------------------"
+}
+
+
+printHELP1 ()
+{
+    printf "%20s       Take darks, single exposure time\n" "$0" 
+}
+
+
+
+
+# Transform long options to short ones
+singlelinehelp=0
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    "--help") set -- "$@" "-h" ;;
+    "--help1") 
+set -- "$@" "-h" 
+singlelinehelp=1;
+;;
+    *)        set -- "$@" "$arg"
+  esac
+done
+
+
+
+NBframes="100" # default
+while getopts :hn: FLAG; do
+  case $FLAG in
+    h)  #show help
+      if [ "$singlelinehelp" -eq "0" ]; then
+      printHELP
+      else
+      printHELP1
+      fi
+      exit
+      ;;
+    \?) #unrecognized option - show help
+      echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed."
+      printHELP
+      ;;
+  esac
+done
+
+shift $((OPTIND-1))  
+
+
+
+
+
+Cfits -n takedark$1 << EOF
+readshmim ircam$1
+imgstreamave ircam$1 $2 dark$1 3 -1
+savefits dark$1 "$3/dark_$4.fits"
+savefits tmpstrcoadd "$3/darkcube_$4.fits"
+savefits dark$1 "$5/bias$4.fits"
+exit
+EOF

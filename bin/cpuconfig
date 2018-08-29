@@ -1,0 +1,486 @@
+#!/bin/bash
+
+# number of arguments to script
+NBARGS=0
+
+
+
+# ======================= PROCESS NAME =================================
+pname=`echo "$0" | sed "s/\.\///g"`
+
+
+function printHELP {
+echo "------------------------------------------------------------------------"
+echo "$(tput bold) $pname :CONFIGURE CPU FOR LOW-LATENCY $(tput sgr0)"
+echo "------------------------------------------------------------------------"
+echo " Configures LAN, CPU cores, CPU sets"
+echo "   "
+echo " $(tput bold)USAGE:$(tput sgr0)"
+echo "     $0 [-ho]"
+echo ""
+echo " $(tput bold)OPTIONS:$(tput sgr0)"
+echo "     $(tput bold)-h$(tput sgr0)          help"
+echo "     $(tput bold)-o$(tput sgr0)          turn OFF low-latency configuration (default is ON)"
+echo ""
+echo "------------------------------------------------------------------------"
+}
+
+
+printHELP1 ()
+{
+    printf "%20s       configure CPU for low-latency AO loop operation\n" "$0" 
+}
+
+
+
+
+
+# Transform long options to short ones
+singlelinehelp=0
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    "--help") set -- "$@" "-h" ;;
+    "--help1") 
+set -- "$@" "-h" 
+singlelinehelp=1;
+;;
+    *)        set -- "$@" "$arg"
+  esac
+done
+
+
+
+
+ON=1 # default
+
+while getopts :ho FLAG; do
+  case $FLAG in
+    h)  #show help
+      if [ "$singlelinehelp" -eq "0" ]; then
+      printHELP
+      else
+      printHELP1
+      fi
+      exit
+      ;;
+    o) 
+    echo "TURNING LOW-LATENCY SETTINGS OFF"
+	ON="0"
+    ;;
+    \?) #unrecognized option - show help
+      echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed."
+      printHELP
+      ;;
+  esac
+done
+
+shift $((OPTIND-1))  
+
+
+
+
+
+
+if [ "$1" = "help" ] || [ "$#" -ne $NBARGS ]; then
+if [ "$#" -ne $NBARGS ]; then
+    echo "$(tput setaf 1)$(tput bold) Illegal number of parameters ($NBARGS params required, $# entered) $(tput sgr0)"
+fi
+printHELP
+        exit
+fi
+
+
+# =================================================================================
+# =========== Setup low latency TCP
+# =================================================================================
+
+
+
+if [ "$ON" = "1" ]
+then
+sudo ethtool -C eth4 rx-usecs 0
+sudo ethtool -C eth5 rx-usecs 0
+sudo ethtool -C eth4 tx-usecs 0
+sudo ethtool -C eth5 tx-usecs 0
+
+sudo ethtool -A eth4 autoneg off rx off tx off
+sudo ethtool -A eth5 autoneg off rx off tx off
+
+sudo /sbin/sysctl -w net.ipv4.tcp_low_latency=1
+sudo /sbin/sysctl -w net.ipv4.tcp_sack=0
+sudo /sbin/sysctl -w net.ipv4.tcp_timestamps=0
+sudo /sbin/sysctl -w net.ipv4.tcp_fastopen=1
+
+sudo /sbin/sysctl -w net.ipv5.tcp_low_latency=1
+sudo /sbin/sysctl -w net.ipv5.tcp_sack=0
+sudo /sbin/sysctl -w net.ipv5.tcp_timestamps=0
+sudo /sbin/sysctl -w net.ipv5.tcp_fastopen=1
+fi
+
+
+
+
+# =================================================================================
+# =========== TURN OFF HYPERTHREADING
+# =================================================================================
+
+
+# processor   CPU    core
+# 0		0	0
+# 1		1	0
+# 2 	0	1
+# 3		1	1
+# 4		0	2
+# 5		1	2
+# 6		0	3
+# 7		1	3
+# 8		0	4
+# 9		1	4
+# 10	0	8
+# 11	1	8
+# 12	0	9    *
+# 13	1	9    *
+# 14	0	10   *
+# 15	1	10   *
+# 16	0	11   *
+# 17	1	11   *
+# 18	0	12   *
+# 19	1	12   *
+
+# 20	0	0
+# 21	1	0
+# 22	0	1
+# 23	1	1
+# etc...
+# 32	0	9
+# 33	1	9
+# etc...
+
+
+# CPU pairs on same core:
+#
+# 0 - 20
+# 1 - 21
+# 2 - 22
+# ...
+
+
+# Partially diable hyperthreading
+
+# processors 12-19 will be single thread
+
+if [ "$ON" = "1" ]; then
+echo "Turn off hyperthreading"
+
+sudo -s << EOF
+echo 1 > /sys/devices/system/cpu/cpu0/online
+echo 1 > /sys/devices/system/cpu/cpu1/online
+echo 1 > /sys/devices/system/cpu/cpu2/online
+echo 1 > /sys/devices/system/cpu/cpu3/online
+echo 1 > /sys/devices/system/cpu/cpu4/online
+echo 1 > /sys/devices/system/cpu/cpu5/online
+echo 1 > /sys/devices/system/cpu/cpu6/online
+echo 1 > /sys/devices/system/cpu/cpu7/online
+echo 1 > /sys/devices/system/cpu/cpu8/online
+echo 1 > /sys/devices/system/cpu/cpu9/online
+echo 1 > /sys/devices/system/cpu/cpu10/online
+echo 1 > /sys/devices/system/cpu/cpu11/online
+echo 1 > /sys/devices/system/cpu/cpu12/online 
+echo 1 > /sys/devices/system/cpu/cpu13/online 
+echo 1 > /sys/devices/system/cpu/cpu14/online 
+echo 1 > /sys/devices/system/cpu/cpu15/online 
+echo 1 > /sys/devices/system/cpu/cpu16/online 
+echo 1 > /sys/devices/system/cpu/cpu17/online 
+echo 1 > /sys/devices/system/cpu/cpu18/online 
+echo 1 > /sys/devices/system/cpu/cpu19/online 
+
+echo 1 > /sys/devices/system/cpu/cpu20/online
+echo 1 > /sys/devices/system/cpu/cpu21/online
+echo 1 > /sys/devices/system/cpu/cpu22/online
+echo 1 > /sys/devices/system/cpu/cpu23/online
+echo 1 > /sys/devices/system/cpu/cpu24/online
+echo 1 > /sys/devices/system/cpu/cpu25/online
+echo 1 > /sys/devices/system/cpu/cpu26/online
+echo 1 > /sys/devices/system/cpu/cpu27/online
+echo 1 > /sys/devices/system/cpu/cpu28/online
+echo 1 > /sys/devices/system/cpu/cpu29/online
+echo 1 > /sys/devices/system/cpu/cpu30/online
+echo 1 > /sys/devices/system/cpu/cpu31/online
+echo 0 > /sys/devices/system/cpu/cpu32/online
+echo 0 > /sys/devices/system/cpu/cpu33/online
+echo 0 > /sys/devices/system/cpu/cpu34/online
+echo 0 > /sys/devices/system/cpu/cpu35/online
+echo 0 > /sys/devices/system/cpu/cpu36/online
+echo 0 > /sys/devices/system/cpu/cpu37/online
+echo 0 > /sys/devices/system/cpu/cpu38/online
+echo 0 > /sys/devices/system/cpu/cpu39/online  
+exit
+EOF
+
+else
+
+sudo -s << EOF
+echo 1 > /sys/devices/system/cpu/cpu0/online
+echo 1 > /sys/devices/system/cpu/cpu1/online
+echo 1 > /sys/devices/system/cpu/cpu2/online
+echo 1 > /sys/devices/system/cpu/cpu3/online
+echo 1 > /sys/devices/system/cpu/cpu4/online
+echo 1 > /sys/devices/system/cpu/cpu5/online
+echo 1 > /sys/devices/system/cpu/cpu6/online
+echo 1 > /sys/devices/system/cpu/cpu7/online
+echo 1 > /sys/devices/system/cpu/cpu8/online
+echo 1 > /sys/devices/system/cpu/cpu9/online
+echo 1 > /sys/devices/system/cpu/cpu10/online
+echo 1 > /sys/devices/system/cpu/cpu11/online
+echo 1 > /sys/devices/system/cpu/cpu12/online 
+echo 1 > /sys/devices/system/cpu/cpu13/online 
+echo 1 > /sys/devices/system/cpu/cpu14/online 
+echo 1 > /sys/devices/system/cpu/cpu15/online 
+echo 1 > /sys/devices/system/cpu/cpu16/online 
+echo 1 > /sys/devices/system/cpu/cpu17/online 
+echo 1 > /sys/devices/system/cpu/cpu18/online 
+echo 1 > /sys/devices/system/cpu/cpu19/online 
+
+echo 1 > /sys/devices/system/cpu/cpu20/online
+echo 1 > /sys/devices/system/cpu/cpu21/online
+echo 1 > /sys/devices/system/cpu/cpu22/online
+echo 1 > /sys/devices/system/cpu/cpu23/online
+echo 1 > /sys/devices/system/cpu/cpu24/online
+echo 1 > /sys/devices/system/cpu/cpu25/online
+echo 1 > /sys/devices/system/cpu/cpu26/online
+echo 1 > /sys/devices/system/cpu/cpu27/online
+echo 1 > /sys/devices/system/cpu/cpu28/online
+echo 1 > /sys/devices/system/cpu/cpu29/online
+echo 1 > /sys/devices/system/cpu/cpu30/online
+echo 1 > /sys/devices/system/cpu/cpu31/online
+echo 1 > /sys/devices/system/cpu/cpu32/online
+echo 1 > /sys/devices/system/cpu/cpu33/online
+echo 1 > /sys/devices/system/cpu/cpu34/online
+echo 1 > /sys/devices/system/cpu/cpu35/online
+echo 1 > /sys/devices/system/cpu/cpu36/online
+echo 1 > /sys/devices/system/cpu/cpu37/online
+echo 1 > /sys/devices/system/cpu/cpu38/online
+echo 1 > /sys/devices/system/cpu/cpu39/online  
+exit
+EOF
+
+fi
+
+
+# =================================================================================
+# =========== set CPU SETS
+# =================================================================================
+
+# numactl --hardware
+#
+# available: 2 nodes (0-1)
+# node 0 cpus: 0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30
+# node 0 size: 64386 MB
+# node 0 free: 61505 MB
+# node 1 cpus: 1 3 5 7 9 11 13 15 17 19 21 23 25 27 29 31
+# node 1 size: 64508 MB
+# node 1 free: 62560 MB
+# node distances:
+# node   0   1 
+#  0:  10  20 
+#  1:  20  10 
+
+
+
+# ================ CPU 0 ====================
+# cores: 0 2 4 6 8 10 12* 14* 16* 18* 20 22 24 26 28 30 
+
+# NOTE: node 0 has EDT cards + network card
+
+# system         non real-time processes                 0 2 4 6 8 10 20 22 24 26 28 30
+# ircam0read     read ircam0                             12
+# ircam0com      transfer ircam0                         14
+# ircam0proc     process ircam0                          16,18
+
+# ================ CPU 1 ===================
+# cores: 1 3 5 7 9 11 13* 15* 17* 19* 21 23 25 27 29 31 
+
+# system         non real-time processes            	1 3 5 7 9 11 21 23 25 27 29 31    
+# aoRT           real-time AO control                   13 15 17 19
+
+
+
+
+# SYSTEM ARCHITECTURE, CPU SETS
+
+if [ "$ON" = "1" ]; then
+
+# system
+sudo cset set -c 0-11,20-31 -s system
+
+# ircam0
+sudo cset set --cpu 12 --set ircam0read
+sudo cset set --cpu 14 --set ircam0com
+sudo cset set --cpu 16,18 --set ircam1read
+
+# aoRT
+sudo cset set --cpu 13,15,17,19 --set aoRT
+
+
+
+# saphira log  12
+# sudo cset set --cpu 12 --set saphiralog
+
+# saphira    SAPHIRA camera read      14 & 15                                                             
+#sudo cset set --cpu 14 --set saphira
+#sudo cset set --cpu 15 --set saphira2
+
+# accelerometers: cores 16 & 17
+#sudo cset set --cpu 16 --set accel1
+#sudo cset set --cpu 17 --set accel2
+
+# accel log: cores 18 & 19
+#sudo cset set --cpu 18 --set logaccel1
+#sudo cset set --cpu 19 --set logaccel2
+
+
+# move as much as possible to system
+sudo cset proc -m -f root -t system
+sudo cset proc -k -f root -t system
+
+
+# move ircam process to CPU set
+pidlist=$( pgrep imgtake | xargs echo | sed 's/ /,/g' )
+sudo cset proc -m -p $pidlist -t ircam0read
+sudo chrt -f -p 60 ${pidlist} 
+
+# move ircam process to CPU set
+#pidlist=$( pgrep saphira3r|xargs echo | sed 's/ /,/g' )
+#sudo cset proc -m -p $pidlist -t ircam
+#sudo chrt -f -p 60 ${pidlist} 
+
+else
+
+echo "Destroying CPU sets"
+sudo cset se -d ircam0read
+sudo cset se -d ircam0com
+sudo cset se -d ircam1read
+sudo cset se -d aoRT
+sudo cset se -d system
+
+fi
+
+cset set -l
+
+
+
+if [ "$ON" = "1" ]; then
+
+# Disable real-time CPU throttling
+sudo sh -c "echo -1 > /proc/sys/kernel/sched_rt_runtime_us"
+
+sudo tmux new-session -d -s cpulatency
+sudo tmux send-keys -t cpulatency "sudo /home/scexao/bin/setlatency 0" C-m
+else
+sudo tmux kill-session -t cpulatency
+fi
+
+
+
+
+# =================================================================================
+# =========== set IRQs
+# =================================================================================
+
+if [ "$ON" = "1" ]; then
+# Stop IRQbalance
+sudo service irqbalance stop
+
+# Create hex bitmask to ban RT cores from irqbalance
+# Banned CPUs are all RT CPUs
+# 
+# aoRT           real-time loop computation              13 15 17 19
+# ircam0read     read ircam0                             12
+# ircam0com      ircam0 communication                    14
+# ircam1read     read ircam1                             16 18
+
+# REDIRECT IRQs on RT cpus to cpu1
+
+rm _cpu*irq_t0.txt &> /dev/null
+rm _cpu*irq_t1.txt &> /dev/null
+
+rm _cpuRTirq_t0.txt &> /dev/null
+rm _cpuRTirq_t1.txt &> /dev/null
+rm _cpu*irq_active.txt &> /dev/null
+rm _cpuRTirq_active.txt &> /dev/null
+
+touch _cpuRTirq.txt
+
+# protected cores
+cpulist=(12 13 14 15 16 17 18 19)
+
+# where to move IRQs (bitmask)
+# deploy to cpus 1 and 2 
+# Do not include leading zeros
+cpudest="110"
+
+
+twait=5
+
+echo "Monitoring IRQs for $twait second ..."
+
+
+for t in 0 1
+
+do
+
+for cpu in ${cpulist[*]}
+do
+cpu1=$(( $cpu + 2 ))
+cat /proc/interrupts | awk -v ind=$cpu1 '{if ($ind>0) print $0}' | sed 's/://g' | awk '{if ($1 ~  /^[0-9]*$/) print $0}'  > _cpu${cpu}irq_t$t.txt
+awk '{print $1}' _cpu${cpu}irq_t$t.txt >> _cpuRTirq_t$t.txt
+done
+
+sleep $twait
+
+done
+
+
+
+
+
+for cpu in ${cpulist[*]}
+do
+cnt=$( wc -l _cpu${cpu}irq_t0.txt | cut -f 1 -d " ")
+cpu1=$(( $cpu + 2 ))
+awk -v ind=$cpu1 '{print $1, $ind}' _cpu${cpu}irq_t0.txt > _irqt0.txt
+awk -v ind=$cpu1 '{print $1, $ind}' _cpu${cpu}irq_t1.txt > _irqt1.txt
+
+comm -13 _irqt0.txt _irqt1.txt > _cpu${cpu}irq_active.txt
+cntactive=$( wc -l _cpu${cpu}irq_active.txt | cut -f 1 -d " ")
+cat _cpu${cpu}irq_active.txt >> _cpuRTirq_active.txt
+printf "IRQs on RT cpu %2d  :  %3d     ACTIVE : %3d\n" $cpu $cnt $cntactive
+done
+
+
+
+cnt=$( wc -l _cpuRTirq_active.txt | cut -f 1 -d " ")
+irqmask=$( echo "obase=16;ibase=2;${cpudest}"|bc )
+printf "\n%3d IRQs will be moved to cpus %d  (mask : %s)\n\n" $cnt $cpudest $irqmask
+
+awk -v MASK=$irqmask '{printf("echo %d > /proc/irq/%d/smp_affinity\n", MASK, $1)}' _cpuRTirq_active.txt  > _irqmove_cmd.txt
+
+chmod +x _irqmove_cmd.txt
+
+sudo ./_irqmove_cmd.txt
+
+
+# NOTES
+
+# to monitor an irq:
+# watch -n 1 -d grep "271:" /proc/interrupts
+
+fi
+
+
+
+
+
+
+

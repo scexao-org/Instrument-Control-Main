@@ -1,0 +1,34 @@
+#!/bin/bash
+
+EXPECTED_ARGS=1
+
+if [ $# -ne $EXPECTED_ARGS ]
+then
+  echo
+  echo "-------- Make astrometric grid ---------"
+ echo " "
+ echo "Usage: $0 <CPA>"
+ echo "  "
+ echo "Creates a 2D sine wave for use for astrometric calibration "
+ echo "  INPUT <CPA>   : Cycle per Aperture"
+ echo "  Note that CPA = distance from optical axis in l/D"
+ echo "  Should keep CPA<10 to avoid aliasing"
+ echo "EXAMPLE :  $0 10.0"
+ echo " "
+ exit
+fi
+
+
+# beam diameter in pixel
+dpix=45 
+
+Cfits << EOF
+sl=2.0*_PI*$1/${dpix}
+mkslopexy imsx 50 50 sl 0.0
+imsinx=sin(imsx)
+mkslopexy imsy 50 50 0.0 sl
+imsiny=sin(imsy)
+im=imsinx+imsiny
+savefits im "!astromgrid.fits"
+exit
+EOF

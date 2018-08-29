@@ -1,0 +1,6 @@
+Cfits << EOF
+loadfits "/home/scexao/conf/dm_patterns/chuck2.fits" dmf
+readshmim dm00disp04
+cp dmf dm00disp04
+exit
+EOF

@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+
+from labjack import ljm
+import time
+import sys, os
+from datetime import datetime
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+"/src/lib/python/")
+from scexao_shm import shm
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+if not os.path.isfile("/tmp/labjack.im.shm"):
+    os.system("creashmim labjack 4 1")
+if not os.path.isfile("/tmp/labjack_stream.im.shm"):
+    os.system("creashmim labjack_stream 1 1")
+
+aishm = shm("/tmp/labjack.im.shm") #SHM of data
+strshm = shm("/tmp/labjack_stream.im.shm") #SHM of flag
+
+# ------------------------------------------------------------------
+#                Configure LabJack communication
+# ------------------------------------------------------------------
+
+# Open first found LabJack
+handle1 = ljm.open(ljm.constants.dtANY, ljm.constants.ctETHERNET, "labjack1")
+handle2 = ljm.open(ljm.constants.dtANY, ljm.constants.ctETHERNET, "labjack2")
+
+info1 = ljm.getHandleInfo(handle1)
+print("Opened a LabJack with Device type: %i, Connection type: %i,\n" \
+    "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" % \
+    (info1[0], info1[1], info1[2], ljm.numberToIP(info1[3]), info1[4], info1[5]))
+info2 = ljm.getHandleInfo(handle2)
+print("Opened a LabJack with Device type: %i, Connection type: %i,\n" \
+    "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" % \
+    (info2[0], info2[1], info2[2], ljm.numberToIP(info2[3]), info2[4], info2[5]))
+
+# Stream Configuration
+aScanListNames1 = ["AIN1", "AIN2"]#, "AIN3"] #Scan list names to stream
+numAddresses1 = len(aScanListNames1)
+aScanList1 = ljm.namesToAddresses(numAddresses1, aScanListNames1)[0]
+aScanListNames2 = ["AIN0", "AIN1"]#, "AIN3"] #Scan list names to stream
+numAddresses2 = len(aScanListNames2)
+aScanList2 = ljm.namesToAddresses(numAddresses2, aScanListNames2)[0]
+scanRate = 120.
+tint = 1/scanRate
+scansPerRead = 1
+
+try:
+    # Configure the analog inputs' negative channel, range, settling time and
+    # resolution.
+    aNames = ["AIN_ALL_NEGATIVE_CH", "AIN_ALL_RANGE", "STREAM_SETTLING_US",
+              "STREAM_RESOLUTION_INDEX"]
+    aValues = [ljm.constants.GND, 1.0, 0, 0] #single-ended, +/-10V, 0 (default),
+                                              #0 (default)
+    ljm.eWriteNames(handle1, len(aNames), aNames, aValues)
+    ljm.eWriteNames(handle2, len(aNames), aNames, aValues)
+
+    # Configure and start stream
+    flag = strshm.get_data()
+    timest0 = time.time()
+    timest = 0
+    timeint = 0
+    i = 0
+    while flag[0]:
+        #print timeint, tint
+        if timeint < tint:
+            timest = time.time()
+            timeint = timest-timest0
+            #time.sleep(0.001)
+        else:
+            timeint =  0
+            timest0 += tint
+            data1 = np.array(ljm.eReadNames(handle1,numAddresses1,aScanListNames1))
+            data2 = np.array(ljm.eReadNames(handle2,numAddresses2,aScanListNames2))
+            data = np.concatenate((data1,data2))
+            if not i:
+                data0 = data
+                i = 1
+            aishm.set_data0((data0+data)/2.)
+            data0 = data
+            #aishm.set_data0(data)
+        flag = strshm.get_data()
+   
+except ljm.LJMError:
+    ljme = sys.exc_info()[1]
+    print(ljme)
+except Exception:
+    e = sys.exc_info()[1]
+    print(e)
+
+print "Stop Stream" 
+#ljm.eStreamStop(handle)
+strshm.set_data0(np.ones(1)) # put back the flag to one
+
+# Close handle
+ljm.close(handle1)
+ljm.close(handle2)

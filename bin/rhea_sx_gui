@@ -1,0 +1,221 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+import sys
+import string
+import select
+import socket
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+import numpy as np
+import zlib
+import pdb
+import time
+import zmq
+import json
+
+class ClientSocket:
+    """ This class aims to be the simplest possible class to act as a client in 
+    simple client-server communication. The protocol is: command (a string with no
+    spaces), then a space, then data. A returned string begins with the same command
+    if it is the kind of response that needs action. Otherwise just a message."""
+    MAX_BUFFER = 65536
+    def __init__(self,IP="127.0.0.1",Port="3000"): #!!! Set this below - not here !!!
+        #NB See the prototype in macquarie-university-automation for a slightly neater start.
+        ADS = (IP,Port)
+        try:
+            self.context = zmq.Context()
+            self.client = self.context.socket(zmq.REQ)
+            tcpstring = "tcp://"+IP+":"+Port
+            print(tcpstring)
+            self.client.connect(tcpstring)
+            self.client.RCVTIMEO = 20000
+            self.connected=True
+        except: 
+            print('ERROR: Could not connect to server. Please check that the server is running.')
+            self.connected=False
+
+    def send_command(self, command):
+        """The main send-command routine for the client.
+        
+        TODO: If there is a timeout, we maybe just need to record that there has 
+        been a timeout, and try recv later. BUT - the server should never 
+        take a long time to return."""
+        try: 
+            self.client.send(command,zmq.NOBLOCK)
+            return self.client.recv(self.MAX_BUFFER,zmq.NOBLOCK)
+        except:
+#           The commands below should only be part of a "reconnect" function 
+#           (NOT YET IMPLEMENTED, NEEDS A PING FUNCTION, MAYBE CALLED PING)
+#            self.connected=False 
+#            self.client.close()
+            return 'Error sending command, connection lost or excessive command time.'
+
+class RHEASXGui(QWidget):
+    current_image=0;
+    def __init__(self, IP='127.0.0.1', parent=None):
+        super(RHEASXGui,self).__init__(parent)
+        self.client_socket = ClientSocket(IP=IP) 
+        
+        #Add the buttons
+        iplabels = ['SX','Arc','Flat']
+        self.ipbuttons = []
+        for iplabel in iplabels:
+            self.ipbuttons.append(QPushButton(iplabel, self))
+            self.ipbuttons[-1].clicked.connect(self.ippower_button_click)
+            self.ipbuttons[-1].setCheckable(True)
+        self.ifu_ref_button = QPushButton("IFU Ref", self)
+        self.ifu_ref_button.clicked.connect(self.ifu_ref_button_click)
+        self.ifu_ref_button.setCheckable(True)
+        self.backLED_button = QPushButton("backLED", self)
+        self.backLED_button.clicked.connect(self.backLED_button_click)
+        self.backLED_button.setCheckable(True)
+        self.pulse_button = QPushButton("Pulse", self)
+        self.pulse_button.clicked.connect(self.pulse_button_click)
+        self.pulse_button.setCheckable(True)
+        hbox2 = QHBoxLayout()
+        hbox2.setSpacing(3)
+        for button in self.ipbuttons:
+            hbox2.addWidget(button)
+        hbox2.addWidget(self.ifu_ref_button)
+        hbox2.addWidget(self.backLED_button)
+        hbox2.addWidget(self.pulse_button)
+        
+        #Add the main server response label (i.e. LineEdit)
+        lbl1 = QLabel('Command: ', self)
+        self.lineedit = QLineEdit("")
+        self.connect(self.lineedit, SIGNAL("returnPressed()"),
+                        self.send_to_server)
+        self.response_label = QTextEdit('[No Sever Response Yet]', self)
+        self.response_label.setReadOnly(True)
+        self.response_label.setStyleSheet("QTextEdit { background-color : black; color : lime; }")
+        self.response_label.setFixedWidth(400)
+        self.response_label.setFixedHeight(160)
+       
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(lbl1)
+        hbox1.addWidget(self.lineedit)
+       
+        self.status_label = QLabel("", self)
+ 
+        layout = QVBoxLayout()
+        layout.setSpacing(3)
+        layout.addLayout(hbox2)
+        layout.addLayout(hbox1)
+        layout.addWidget(self.response_label)
+        layout.addWidget(self.status_label)
+        
+        #Lets get the ippower status, so the 
+        print("Asking for IPPower status...")
+        try:
+            ipstat = json.loads(self.client_socket.send_command("ippower status"))
+            for button in self.ipbuttons:
+                button.setChecked(ipstat[str(button.text())])
+            print("Found IPPower status.")
+        except:
+            print("Error finding IPPower status from server...")
+        
+        #Lets try to get the status of the IFU
+        print("Asking for IFU position status...")
+        try:
+            ifu_fixed = self.client_socket.send_command("inject zgetfixed").split()
+            if (int(ifu_fixed[1])==1 and int(ifu_fixed[2])==1):
+                self.ifu_ref_button.setChecked(True)
+            print("Found IFU status.")
+        except:
+            print("Error finding IFU position status...")
+        
+        self.setLayout(layout)
+        self.setWindowTitle("RHEA@Subaru Spectrograph")
+        self.stimer = QTimer()
+        
+        
+        self.ask_for_status()
+
+    def ifu_ref_button_click(self):
+        command = "inject xyf"
+        if self.sender().isChecked():
+            command += " 1"
+        else:
+            command += " 0"
+        response = self.client_socket.send_command(command)
+        self.response_label.setText(response)
+        return
+
+    def backLED_button_click(self):
+        command = "backLED "
+        if self.sender().isChecked():
+            command += "on"
+        else:
+            command += "off"
+        response = self.client_socket.send_command(command)
+        self.response_label.setText(response)
+        return
+
+    def pulse_button_click(self):
+        command = "pulse "
+        if self.sender().isChecked():
+            command += "on"
+        else:
+            command += "off"
+        response = self.client_socket.send_command(command)
+        self.response_label.setText(response)
+        return
+
+    def ippower_button_click(self):
+        command = "ippower "+str(self.sender().text())
+        if self.sender().isChecked():
+            command += " on"
+        else:
+            command += " off"
+        response = self.client_socket.send_command(command)
+        self.response_label.setText(response)
+        return
+
+    def ask_for_status(self):
+        command = "status"
+        if (self.client_socket.connected):
+            response = self.client_socket.send_command(command)
+            split_response = response.split(" ", 1)
+            if (split_response[0]=="status"):
+                self.update_status(split_response[1])
+            else:
+                self.response_label.setText(response)
+        self.stimer.singleShot(1000, self.ask_for_status)
+
+    def update_status(self,response):
+        try:
+            self.status=json.loads(response)
+        except:
+            pdb.set_trace()
+        self.backLED_button.setChecked(self.status["backLED"])
+        #!!! Make this better.
+        status_text = "CCDT:{0:5.1f} LJT:{1:4.1f} T1:{2:7.4f} T2:{3:6.3f} RH:{4:4.1f} P:{5:6.1f}\n ".\
+            format(self.status["CCDTemp"],self.status["LJTemp"],
+            self.status["T1"],self.status["T2"],self.status["RH"],self.status["P"])
+        if self.status["nexps"]:
+            status_text += "Nexps: {0:d}".format(self.status["nexps"])
+        self.status_label.setText(status_text)
+        return
+
+    def send_to_server(self):
+        if (self.client_socket.connected):
+            response = self.client_socket.send_command(str(self.lineedit.text()))
+            if (response.split(" ", 1)[0]=="image"):
+                self.display_image(response)
+            else:
+                self.response_label.setText(response)
+        else:
+            self.response_label.setText("*** Not Connected ***")
+
+        self.lineedit.setText("")
+
+app = QApplication(sys.argv)
+if len(sys.argv) > 1:
+    myapp = RHEASXGui(IP=sys.argv[1])
+else:
+    myapp = RHEASXGui(IP="rhea-subaru")
+myapp.show()
+sys.exit(app.exec_())      
+            
+
+

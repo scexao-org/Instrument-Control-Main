@@ -1,0 +1,14 @@
+#!/bin/bash
+
+DEST="/media/data1/backup-scexao2"
+
+date=`date "+%Y-%m-%d-%T"`
+SOURCE="/home/scexao/"
+
+rsync -axzP --delete --delete-excluded --exclude='/.*/' --link-dest=scexao@scexao3:${DEST}/current \
+  $SOURCE scexao@scexao3:${DEST}/incomplete_back-$date \
+  && ssh scexao@scexao3 \
+  "mv ${DEST}/incomplete_back-$date ${DEST}/backup-$date \
+  && rm -f ${DEST}/current \
+  && ln -s ${DEST}/backup-$date ${DEST}/current"
+

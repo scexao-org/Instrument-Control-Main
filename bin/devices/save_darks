@@ -1,0 +1,187 @@
+#!/bin/bash
+
+NBARGS=1
+
+
+
+
+function printHELP {
+echo "------------------------------------------------------------------------"
+echo "$(tput bold) $pname : TAKE DARKS $(tput sgr0)"
+echo "------------------------------------------------------------------------"
+echo "  Takes nearIR camera darks"
+echo "   "
+echo " $(tput bold)USAGE:$(tput sgr0)"
+echo "     $0 [-hn] <cam index>"
+echo ""
+echo " $(tput bold)OPTIONS:$(tput sgr0)"
+echo "     $(tput bold)-h$(tput sgr0)             help"
+echo "     $(tput bold)-n$(tput sgr0) <NBframes>  Number of exposures averaged (default = 100)"
+echo ""
+echo " $(tput bold)INPUT:$(tput sgr0)"
+echo "     <Cam index>     1: focal plane camera, 2: LOWFS camera"
+echo ""
+echo " $(tput bold)OUTPUT:$(tput sgr0)"
+echo "     /media/data/<timestamp>/ircam<index>log/darks/*     dark files"
+echo ""
+echo "------------------------------------------------------------------------"
+}
+
+
+printHELP1 ()
+{
+    printf "%20s       Take darks\n" "$0" 
+}
+
+
+
+
+# Transform long options to short ones
+singlelinehelp=0
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    "--help") set -- "$@" "-h" ;;
+    "--help1") 
+set -- "$@" "-h" 
+singlelinehelp=1;
+;;
+    *)        set -- "$@" "$arg"
+  esac
+done
+
+
+
+NBframes="100" # default
+while getopts :hn: FLAG; do
+  case $FLAG in
+    n)  #  set number of frames
+      NBframes=$OPTARG
+      ;;
+    h)  #show help
+      if [ "$singlelinehelp" -eq "0" ]; then
+      printHELP
+      else
+      printHELP1
+      fi
+      exit
+      ;;
+    \?) #unrecognized option - show help
+      echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed."
+      printHELP
+      ;;
+  esac
+done
+
+shift $((OPTIND-1))  
+
+
+
+
+
+
+
+
+
+
+if [ "$1" = "help" ] || [ "$#" -ne $NBARGS ]; then
+if [ "$#" -ne $NBARGS ]; then
+    echo "$(tput setaf 1)$(tput bold) Illegal number of parameters ($NBARGS params required, $# entered) $(tput sgr0)"
+fi
+printHELP
+        exit
+fi
+
+
+
+
+
+
+
+
+
+
+timestamp=$(date -u +'%Y%m%d')
+timestamp2=$(date -u +'%H%M%S')
+
+echo "moving filter wheel..."
+if [ $1 = 1 ]
+then
+    ircam_block
+    scexaostatus set darkchuck "ALL DARKS       "
+    scexaostatus set darkchuck_co "0"
+    log "Chuckcam: Saving darks"
+    sleep 2
+    mkdir -p /media/data/${timestamp}/ircam1log
+    darkpath1="${timestamp}/ircam1log/darks/${timestamp2}"
+    darkpath="/media/data/${darkpath1}"
+    mkdir -p $darkpath
+    chuckbias="/home/scexao/conf/chuckcam_aux"
+else
+    lowfs_block
+    sleep 1
+    log "Rajnicam: Saving darks"
+    darkpath1="${timestamp}/ircam2log/darks/${timestamp2}"
+    darkpath="/media/data/${darkpath1}"
+    mkdir -p $darkpath
+    rajnibias="/home/scexao/conf/rajnicam_aux"
+fi
+
+if [ $1 = 1 ]
+then
+    echo "Exposure time (us)"
+    for expT in 1 2 5 10 20 50 100 200 500 1000 2000 5000 10000 16000 24000 37000 57000 89000 139000 210000 330000 510000
+    
+    do
+	#echo $expT1
+	#expT=$(echo "($expT1+0.5)/1" | bc)
+	echo $expT
+	ircam_expT $1 $expT
+	sleep 4
+	
+	NBframes2=$((NBframes < (50000000/expT) ? NBframes : (50000000/expT)))
+	echo $NBframes2
+	expT2=$(printf "%07d" $expT)
+	rm ${chuckbias}/bias${expT2}.fits
+	
+	save_darks_Cfits $1 $NBframes2 ${darkpath} ${expT2} ${chuckbias}
+ 
+    done
+    
+    
+    
+else
+    echo "test"
+    for expT in 1 2 5 10 20 50 100 200 500 1000 2000 5000 7000 10000 16000 24000 37000 57000 89000 140000 210000 330000 510000
+    
+    do
+	#echo $expT1
+	#expT=$(echo "($expT1+0.5)/1" | bc)
+	echo $expT
+	ircam_expT $1 $expT
+	sleep 2
+	
+	NBframes2=$((NBframes < (50000000/expT) ? NBframes : (50000000/expT)))
+	echo $NBframes2
+	expT2=$(printf "%06d" $expT)
+	rm ${rajnibias}/bias${expT2}.fits
+	
+	save_darks_Cfits $1 $NBframes2 ${darkpath} ${expT2} ${rajnibias}
+	
+    done
+    
+fi
+
+echo "badpixmap $1 ${darkpath1}/"
+badpixmap $1 "${darkpath1}/"
+
+if [ $1 = 1 ]
+then
+    ircam_block
+    scexaostatus set darkchuck "OFF             "
+    scexaostatus set darkchuck_co "1"
+    log "Chuckcam: Done saving darks"
+else
+    lowfs_block
+    log "Rajnicam: Done saving darks"
+fi

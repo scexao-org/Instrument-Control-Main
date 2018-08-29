@@ -1,0 +1,5 @@
+1;SuperK narrowbd ;20.30;2
+2;1523 nm HeNe    ;32.70;2
+3;SuperK broadbnd ;43.00;1
+4;SuperK faint    ;43.12;2
+5;Halogen lamp    ;52.50;2

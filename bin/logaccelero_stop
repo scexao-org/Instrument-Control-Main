@@ -1,0 +1,4 @@
+#! /bin/bash
+
+logshimkill labjack1
+logshimkill labjack2

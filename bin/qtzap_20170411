@@ -1,0 +1,890 @@
+#!/usr/bin/env python
+
+''' ---------------------------------------------------------------------
+In this version, I try to integrate Eric Jeschke's lib to better handle
+the multi-thread.
+--------------------------------------------------------------------- '''
+
+from QtMain import QtMain, QApplication
+from PyQt4 import QtCore, QtGui, uic
+from PyQt4.QtCore import QThread
+
+import pyqtgraph as pg
+import sys
+import numpy as np
+from numpy.linalg import solve
+import xaosim as xs
+
+from xaosim.zernike import zer_mode_bank_2D
+import xara
+import time
+import os
+
+import matplotlib.cm as cm
+from scipy.interpolate import griddata
+import pyfits as pf
+import commands
+
+from scipy.fftpack import fft2
+simulation = False#True#
+
+home = os.getenv('HOME')
+conf_dir = home+'/.config/fpao/qtzap/'
+if not os.path.exists(conf_dir):
+    os.makedirs(conf_dir)
+
+def cam_get_etime():
+    etime = int(cam.get_expt())
+    return(etime)
+
+sys.path.append(home+'/src/lib/python/')
+from scexao_shm import shm
+
+#from xaosim.shmlib import shm
+
+
+if simulation:
+    # ----------------------------------------------------------------------
+    #                           SIMULATED EXPERIMENT
+    # ----------------------------------------------------------------------
+    pscale = 9.0
+    frad = 56.0 # fourier-plane filter
+    cam = shm('/tmp/ircam.im.shm')
+    dmc = shm('/tmp/dmdisp5.im.shm')
+
+    def cam_get_etime():
+        ''' Fake camera call for simulation'''
+        return(1000)
+
+else:
+    # ----------------------------------------------------------------------
+    #                             THE REAL DEAL
+    # ----------------------------------------------------------------------
+    pscale = 16.7
+    frad   = 70.#97.0#70#50.0 # fourier-plane filter
+    #from xaosim.scexao_shm import shm
+    cam = shm('/tmp/ircam1.im.shm', verbose=False)
+    drk = shm('/tmp/ircam1_dark.im.shm', verbose=False)
+    dmc = shm('/tmp/dm00disp04.im.shm', verbose=False)
+    # ----------------------------------------------------------------------
+
+mycmap     = cm.jet
+dms        = 50   # DM size
+
+sgrad      = 30.0 # super-gaussian filter
+irange     = 0.5  # radian range for the uv and pupil phase maps
+sz         = 256
+dz         = sz/2
+
+index      = cam.get_counter()
+(ysz, xsz) = cam.get_data(False, True).shape
+dxsz       = (xsz - sz) / 2
+dysz       = (ysz - sz) / 2
+
+fmask       = xs.pupil.uniform_disk((sz, sz), frad)
+sgauss     = xara.core.super_gauss(sz, sz, sz/2, sz/2, sgrad)
+
+
+# Fourier slope filtering
+xsl, ysl = np.meshgrid(np.arange(sz)-sz/2, np.arange(sz)-sz/2) * fmask
+xsl_sum2 = np.sum(xsl * xsl)
+ysl_sum2 = np.sum(ysl * ysl)
+
+# image coordinates
+xx,yy = np.meshgrid(np.arange(sz)-sz/2, np.arange(sz)-sz/2)
+
+# =====================================================================
+xi, yi = np.mgrid[-4:4:0.05, -4:4:0.05] # interpolation grid for WFT
+wfsz   = xi.shape
+dist   = np.hypot(xi, yi)
+prad   = xi.shape[0]/2
+wfmask = xs.pupil.subaru_asym(xi.shape, prad, PA=165.0)
+
+# ==========================================================
+# ==========================================================
+myqt = 0 # to have myqt as a global variable
+
+def main():
+    global myqt
+    myqt = QtMain() # E.Jeschke's magic tool
+    gui = MyWindow()
+    myqt.mainloop()
+    myqt.gui_quit()
+    sys.exit()
+
+# =====================================================================
+#                          Tools 
+# =====================================================================
+def fast_recenter(im0):
+    temp = (im0 - im0[:15,:15].mean()) * sgauss
+    dx = np.sum(temp * xx) / np.sum(temp)
+    dy = np.sum(temp * yy) / np.sum(temp)
+    return(sgauss * np.roll(np.roll(im0, -int(dx), axis=1), -int(dy), axis=0))
+    
+def arr2im(arr, vmin=False, vmax=False, pwr=1.0, cmap=None):
+    ''' ------------------------------------------
+    convert numpy array into image for display
+
+    limits dynamic range, power coefficient and
+    applies colormap
+    ------------------------------------------ '''
+    arr2 = arr#.astype('float')
+    if not vmin:
+        mmin,mmax = arr2.min(), arr2.max()
+    else:
+        mmin,mmax = vmin,vmax
+
+    arr2 -= mmin
+    if mmax != mmin:
+        arr2 /= (mmax-mmin)
+
+    arr2 = arr2**pwr
+    if cmap is None:
+        mycmap = cm.jet
+    else:
+        mycmap = cmap
+        
+    return(mycmap(arr2))
+
+# =====================================================================
+#                         Thread specifics
+# =====================================================================
+class GenericThread(QtCore.QThread):
+    ''' ---------------------------------------------------
+    generic thread class used to externalize the execution
+    of a function (calibration, closed-loop) to a separate
+    thread.
+    --------------------------------------------------- '''
+    def __init__(self, function, *args, **kwargs):
+        QtCore.QThread.__init__(self)
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+ 
+    def __del__(self):
+        self.wait()
+ 
+    def run(self):
+        self.function(*self.args,**self.kwargs)
+        return
+ 
+# =====================================================================
+#                     Main GUI object
+# =====================================================================
+
+class MyWindow(QtGui.QMainWindow):
+    ''' ------------------------------------------------------
+    This is the meat of the program: the class that drives
+    the GUI.
+    ------------------------------------------------------ '''
+    def __init__(self):
+        global index
+        
+        super(MyWindow, self).__init__()
+        if not os.path.exists(conf_dir + 'zap.ui'):
+            uic.loadUi('zap.ui', self)
+        else:
+            uic.loadUi(conf_dir + 'zap.ui', self)
+        self.pixmap = QtGui.QPixmap(conf_dir + 'MrT_LWE.png')
+        self.lbl_MrT.setPixmap(self.pixmap)
+
+        self.nsamp = self.spinB_nbav.value()
+        self.nlog  = 100 # size of the residual log graph
+        self.neig  = 100 # number of eigen values kept
+        self.wavel = 1.6 # default wavelength
+        self.select_LWE_basis()
+
+        self.load_model(fname=conf_dir + "scexao_asym_15deg.kpi.gz")
+
+        self.pwr = 0.2 # default: non-linear display
+        self.abort_flag = False # generic abort flag
+
+        try:
+            fname = "RESP_%s_wvl_%3.1f_neig_%03d.fits" % (
+                self.bank_type, self.wavel, self.neig,)
+            self.LL = pf.getdata(conf_dir + fname)
+            self.LTL = np.dot(self.LL, self.LL.T)
+        except:
+            self.LL = None
+            self.LTL = None
+
+        # ==============================================
+        #        prepare the 3 image displays
+        # ==============================================
+        self.refresh_dark()
+
+        # --- camera image ---
+        self.gView_img.hideAxis('left')
+        self.gView_img.hideAxis('bottom')
+
+        self.imv_img = pg.ImageItem()
+        self.gView_img.addItem(self.imv_img)
+        self.data_img = cam.get_data(False, True) - self.bias
+        self.refresh_img()
+
+        # --- Fourier image ---
+        self.gView_fou.hideAxis('left')
+        self.gView_fou.hideAxis('bottom')
+
+        self.imv_fou = pg.ImageItem()
+        self.gView_fou.addItem(self.imv_fou)
+        self.imv_fou.setImage(mycmap(fmask), border=2)
+
+        # --- pupil image ---
+        self.gView_pup.hideAxis('left')
+        self.gView_pup.hideAxis('bottom')
+        
+        self.imv_pup = pg.ImageItem()
+        self.gView_pup.addItem(self.imv_pup)
+
+        # --- residual plot ---
+        for i in xrange(self.nm):
+            exec 'self.curv%d = self.gView_plot.plot(0.1 * i + np.zeros(self.nlog), pen=(255, 255, 255))' % (i,)
+        # ==============================================
+
+        self.comB_wavel.addItem("1.0 um")
+        self.comB_wavel.addItem("1.25 um")
+        self.comB_wavel.addItem("1.6 um")
+        self.comB_wavel.activated[str].connect(self.updt_wavel)
+        self.comB_wavel.setCurrentIndex(2)
+
+        self.dspinB_cal_amp.valueChanged[float].connect(self.updt_atest)
+        self.atest = self.dspinB_cal_amp.value()
+
+        self.cva   = np.zeros((self.nsamp, self.nm))
+        self.cvlog = np.zeros((self.nlog,  self.nm))
+
+        # ==============================================
+        self.connect(self.spinB_nbav,
+                     QtCore.SIGNAL("valueChanged(int)"),
+                     self.update_nsamp)
+
+        self.pB_recal.clicked.connect(self.calibrate_call)
+        self.pB_cloop.clicked.connect(self.close_loop_call)
+        self.pB_abort.clicked.connect(self.abort_now)
+        self.pB_dark.clicked.connect(self.refresh_dark)
+
+        self.pB_memo.clicked.connect(self.memorize_dmc)
+        self.pB_switch.clicked.connect(self.memory_switch)
+        self.pB_erase.clicked.connect(self.erase_channel)
+
+        self.actionQuit.triggered.connect(sys.exit)
+        self.actionQuit.setShortcut('Ctrl+Q')
+
+        self.actionLoadModel.triggered.connect(self.load_model)
+
+        self.actionDM_load.triggered.connect(self.load_dm_map)
+        self.actionDM_save.triggered.connect(self.save_dm_map)
+
+        self.action_select_LWE.triggered.connect(self.select_LWE_basis)
+        self.action_select_ZER.triggered.connect(self.select_ZER_basis)
+        self.action_select_HYB1.triggered.connect(self.select_HYB1_basis)
+        self.action_select_HYB2.triggered.connect(self.select_HYB2_basis)
+        self.actionHelp.triggered.connect(self.print_help)
+        self.actionHelp.setShortcut('Ctrl+H')
+        
+        self.connect(self.cB_nonlinear,
+                     QtCore.SIGNAL("stateChanged(int)"),
+                     self.refresh_img)
+        self.cB_nonlinear.setChecked(True)
+
+        
+        self.mode_bases = ["Zernike", "Fourier", "LWE"]
+
+        # ==============================================
+        
+        self.memorized_state = np.zeros_like(dmc.get_data())
+        self.show()
+
+        self.log("QtZAP ready to fly!")
+        
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.refresh)
+        self.timer.start(50)
+
+    # =========================================================
+    def closeEvent(self, event):
+        ''' ---------------------------------------------------------------
+        close event handler: triggered when the user hit x on the titlebar
+        --------------------------------------------------------------- '''
+        sys.exit()
+        
+    # =========================================================
+    def updt_atest(self, ):
+        self.atest = self.dspinB_cal_amp.value()
+
+    # =========================================================
+    def updt_wavel(self, text):
+        self.wavel = float(str(text).split()[0])
+        self.log("Select wavelength: %s" % (text,), "orange")
+
+        self.m2pix   = xara.core.mas2rad(pscale * sz / (self.wavel * 1e-6))
+        self.uv_samp = self.model.uv * self.m2pix + dz # uv sample coords (pxls)
+
+        self.xsamp = np.cast['int'](np.round(self.uv_samp[:,0]))
+        self.ysamp = np.cast['int'](np.round(self.uv_samp[:,1]))
+
+        try:
+            fname = "RESP_%s_wvl_%3.1f_neig_%03d.fits" % (
+                self.bank_type, self.wavel, self.neig,)
+            self.LL = pf.getdata(conf_dir + fname)
+            self.LTL = np.dot(self.LL, self.LL.T)
+            self.log("Prior calibration restored", "blue")
+        except:
+            self.LL = None
+            self.LTL = None
+            self.log("No prior calibration", "orange")
+
+    # =========================================================
+    def complete_basis_config(self):
+        ''' ---------------------------------------------------
+        Called after selecting a new basis of modes:
+
+        - Prepare logging arrays, 
+        - Load pre-existing matrices (if any),
+        - Inform the user of current status
+        --------------------------------------------------- '''
+        self.nm = self.bank_dm_modes.shape[0]
+        self.gains = np.ones(self.nm).astype('float32')
+        self.cva   = np.zeros((self.nsamp, self.nm))
+        self.cvlog = np.zeros((self.nlog,  self.nm))
+
+        self.log("%s basis selected" % (self.bank_type,), "blue")
+        
+        if self.bank_type == "HYBRID1":
+            self.gains[10:] *= 0.5
+
+        if self.bank_type == "HYBRID2":
+            self.gains[10:] *= 0.1
+
+        try:
+            fname = "RESP_%s_wvl_%3.1f_neig_%03d.fits" % (
+                self.bank_type, self.wavel, self.neig,)
+            self.LL = pf.getdata(conf_dir + fname)
+            self.LTL = np.dot(self.LL, self.LL.T)
+            self.log("Prior calibration restored", "blue")
+        except:
+            self.LL = None
+            self.LTL = None
+            self.log("No prior calibration", "orange")
+
+    # =========================================================
+    def select_HYB1_basis(self):
+        ''' ---------------------------------------------------
+        Use Olivier's LWE modes optimized for the pyramid
+        --------------------------------------------------- '''
+        self.bank_type = "HYBRID1"
+        self.bank_dm_modes = pf.getdata(conf_dir +
+                                        'hybrid1.fits').astype('float32') 
+        self.complete_basis_config()
+
+    # =========================================================
+    def select_HYB2_basis(self):
+        ''' ---------------------------------------------------
+        Use Olivier's LWE modes optimized for the pyramid
+        --------------------------------------------------- '''
+        self.bank_type = "HYBRID2"
+        self.bank_dm_modes = pf.getdata(conf_dir +
+                                        'hybrid2.fits').astype('float32') 
+        self.complete_basis_config()
+
+    # =========================================================
+    def select_LWE_basis(self):
+        ''' ---------------------------------------------------
+        Use Olivier's LWE modes optimized for the pyramid
+        --------------------------------------------------- '''
+        self.bank_type = "LWE"
+        self.bank_dm_modes = pf.getdata(conf_dir +
+                                        'fmodes1_06.fits').astype('float32') 
+        self.complete_basis_config()
+
+    # =========================================================
+    def select_ZER_basis(self):
+        ''' ---------------------------------------------------
+        Use a set of ZERNIKE modes centered on the DM/pupil
+        --------------------------------------------------- '''
+        self.bank_type = "Zernike"        
+        i0, i1 = 4, 14
+        nzer = i1-i0
+        dmpz = 46 # pupil size in dm actuators
+        temp = zer_mode_bank_2D(dmpz, i0, i1)
+        self.bank_dm_modes = np.zeros((nzer, dms, dms)).astype('float32')
+        for i in xrange(nzer):
+            self.bank_dm_modes[i, 0:dmpz, 1:dmpz+1] = temp[i]
+        self.complete_basis_config()
+            
+    # =========================================================
+    def dummy(self):
+        print('OK')
+
+    def print_help(self):
+        help_msg = '''Feeling a little lost? Well there, Mr. T is here to help...
+        
+Those pesky low order aberrations, including the nefarious LWE modes are 
+really a pain in the butt... but with my help, they shall trouble you no 
+more! By the Power of the Great Skull (and a little bit of help by an 
+asymmetric pupil mask), it is possible to use the focal image for wavefront
+sensing purposes.
+
+1. In the top-menu, select the basis of modes you want Mr. T to beat the crap
+   out of for you. At the moment, two options only: LWE or Zernike (default is
+   LWE)
+
+2. Select the wavelength of operation.
+   three options: 1.0, 1.25 and 1.6 um (default is 1.6 um)
+   Don't be stupid and ensure that what you select matches the current filter.
+   You don't want to be the fool Mr. T pities!
+
+3. Set calibration amplitude, gain and averaging parameters to your liking,
+   but don't go nuts: calibration amplitude should be kept below 0.1 at all
+   times (or Mr. T goes non linear and the action can get a little messy!)
+
+4. Read the information provided in the left hand side of the main window:
+   Maybe the mode you want to use hasn't been calibrated yet? This will tell
+   you whether you can proceed. Beware of anything written in orange or red:
+   Mr. T may just be trying to share some important information with you.
+
+5. Calibration: if you haven't calibrated already, or if you want to renew it,
+   fine: press the "RECAL" button and watch the basis of mdes you've selected
+   being modulated while a response is being recorded. Wait for the procedure
+   to be over (read Mr. T's informative messages!) and you are ready to go.
+
+6. Closed-loop: If you've set your loop gain and the averaging of frames to
+   a reasonable value, Mr. T grants you the right to click on the "CLOSE LOOP"
+   button. Enjoy the show.
+
+7. OK, despite the pure awesomeness of what you've just witnessed, 
+   somebody (and I won't say anybody's name) is being a cry-baby because he
+   missed the action and wants to see quickly how Mr. T's correction compare
+   to what was on before... well, you are in luck for three buttons "MEMO",
+   "ERASE" and "SWAP" make it possible to achieve just this:
+
+   - memorize the current DM channel state with "MEMO"
+   - temporarily erase all of Mr. T's hard work with "ERASE"
+   - click on "SWAP" as many times as you wish to alternate between before
+     and after.
+
+Don't you just love it when a plan comes together?
+'''
+        
+        self.myHelp = QtGui.QMessageBox()
+        self.myHelp.setWindowTitle("Help me Mr. T!")
+        #self.myHelp.setIconPixmap(self.pixmap)
+        self.myHelp.setText(help_msg)
+        self.myHelp.exec_()
+        
+    # =========================================================
+    # Empty shell for now: anticipate the need to load a general
+    # configuration file for variables like pscale, shm files,
+    # etc.
+    # =========================================================
+    def load_config(self, fname=None):
+        if fname is None:
+            self.neig = 100
+        else:
+            self.lstWdgt_status.addItem("Tried to load %s" % (fname,))
+
+    # =========================================================
+    def load_dm_map(self):
+        fname = QtGui.QFileDialog.getOpenFileName(self, 'Load DM map', 
+                                                  home+'/conf/dm_patterns/')
+        dmc.set_data(pf.getdata(str(fname)).astype('float32'))
+
+    # =========================================================
+    def save_dm_map(self):
+        fname = str(QtGui.QFileDialog.getSaveFileName(self, 'Save DM map', 
+                                                      home+'/conf/dm_patterns/'))
+        if fname != "":
+            pf.writeto(fname, dmc.get_data())
+
+    # =========================================================
+    def load_model(self, fname=None):
+        ''' ----------------------------------------------------------
+             Load a Fourier-phase model (expected extension: .kpi.gz)
+        And do all the associated computations
+        ---------------------------------------------------------- '''
+        if fname == False:
+            self.model_fname = str(
+                QtGui.QFileDialog.getOpenFileName(self, 
+                                                  'Load XARA model', 
+                                                  './'))
+            msg = "Loading %s model" % (self.model_fname,)
+        else:
+            msg = "Loading default %s model" % (fname,)
+            self.model_fname = fname
+            
+        self.log(msg)
+        self.model              = xara.KPI(self.model_fname)
+        self.U, self.S, self.Vh = np.linalg.svd(self.model.TFM.T, 
+                                                full_matrices=0)
+        self.neigm              = self.S.size
+
+        self.update_pinv()
+
+        self.m2pix   = xara.core.mas2rad(pscale * sz / (self.wavel * 1e-6))
+        self.uv_samp = self.model.uv * self.m2pix + dz # uv sample coords (pxls)
+
+        self.xsamp = np.cast['int'](np.round(self.uv_samp[:,0]))
+        self.ysamp = np.cast['int'](np.round(self.uv_samp[:,1]))
+
+    # =========================================================
+    def update_pinv(self):
+        ''' ----------------------------------------------------------
+        Updates the pseudo-inverse:
+
+        Use it after loading the Fourier-phase model, or changing
+        the number of eigen modes kept in the pseudo-inverse
+        ---------------------------------------------------------- '''
+        self.S1         = np.zeros_like(self.S)
+        self.iS1        = np.diag(1/self.S)
+        self.iS1[self.neig:] = 0.0
+        self.pinv      = np.dot(np.dot(self.Vh.T,self.iS1),self.U.T)
+
+    # =========================================================
+    def refresh_img(self):
+        self.pwr = 1.0
+        if self.cB_nonlinear.isChecked():
+            self.pwr = 0.3
+        self.imv_img.setImage(arr2im(self.data_img.T, 
+                                     pwr=self.pwr, #vmin=0, vmax=20000,
+                                     cmap=mycmap), border=2)
+
+    # =========================================================
+    def refresh(self):
+        ''' ----------------------------------------------------------
+        Refresh the display
+
+        Independently from the "under the hood" engine, the display
+        gets refreshed every now and then, to give visual feedback
+        to the user.
+        ---------------------------------------------------------- '''
+        
+        global index
+        global myqt
+        
+        temp = myqt.gui_call(self.text_log.textCursor, )
+        myqt.gui_do(self.text_log.setTextCursor, temp)
+
+        test = cam.get_counter()
+        if test != index:
+            index = test
+
+            # ---  the camera image  ---
+            self.data_img = cam.get_data(False, True) - self.bias
+            self.refresh_img()
+
+            if self.cB_refresh_fou.isChecked():
+                uvphase = self.get_fourier_vect(
+                    self.data_img[dysz:dysz+sz,dxsz:dxsz+sz])
+                self.imv_fou.setImage(arr2im(self.fou_phi.T, vmin=-irange, 
+                                             vmax=irange), border=2)
+
+            if self.cB_refresh_pup.isChecked():
+                phase = self.get_pupil_vect(vector=uvphase)
+                mywft = griddata((self.model.mask[1:,0], self.model.mask[1:,1]), 
+                                 phase, (xi, yi), method='linear')
+                mywft[wfmask < 0.5] = 0.0
+                self.imv_pup.setImage(arr2im(mywft.T, vmin=-irange, 
+                                             vmax=irange), border=2)
+
+            # refresh the graphical residul log plot
+            for i in xrange(min(self.nm, 11)):
+                exec 'self.curv%d.setData(0.1 * i + self.cvlog[:,i])' % (i,)
+
+    # =========================================================
+    def get_fourier_vect(self, sub_img):
+        ''' --------------------------------------------------
+        Extract the Fourier-phase of an image
+
+        The resulting vector is then used by the Fourier-phase
+        linear model to be converted into a wavefront
+        -------------------------------------------------- '''
+        temprs = fast_recenter(sub_img)
+        fou_tmp = xs.shift(fft2(xs.shift(temprs)))
+        phi_tmp = fmask * np.arctan2(fou_tmp.imag, fou_tmp.real)
+
+        x0 = np.sum(phi_tmp * xsl) / xsl_sum2
+        y0 = np.sum(phi_tmp * ysl) / ysl_sum2
+        self.fou_phi = phi_tmp - (x0 * xsl + y0 * ysl)
+
+        uvphase = -self.fou_phi[self.ysamp, self.xsamp]
+        return(uvphase)
+    
+    # =========================================================
+    def get_pupil_vect(self, **kwargs):
+        ''' --------------------------------------------------
+        Give me that wavefront!
+
+        Possible arguments are:
+        ----------------------
+        
+        - image: a 2D array containing a near centered PSF
+        - vector: a 1D vector of pre-extracted Fourier-phase
+
+        Examples:
+        --------
+
+        - test = self.get_pupil_vect(image=myimg)
+        - test = self.get_pupil_vect(vector=myFourierVector)
+        -------------------------------------------------- '''
+        if ('vector' in kwargs):
+            uvphase = kwargs['vector']
+        
+        elif ('image' in kwargs):
+            img = kwargs['image']
+            uvphase = self.get_fourier_vect(img)
+
+        else:
+            return(None)
+            self.log("Cannot extract phase?", "red")
+            self.abort_now()
+        phase   = np.dot(uvphase, self.pinv)
+        phase  -= phase.mean()
+        return(phase)
+    
+    # =========================================================
+    def log(self, message="", color="black", crt=True):
+        ''' --------------------------------------------------
+        Convenient logging function.
+
+        Parameter: 
+        - msg   : the string to log (html text)
+        - color : a valid html color name (default "black")
+        - crt   : a flag for carriage return (default: True)
+        
+        For now, this is just printed in the GUI window,
+        but later, this could be also added to a log-file.
+        -------------------------------------------------- '''
+        global myqt
+        myline = "<b><font color='%s'>%s</font></b>" % (color, message)
+        if crt:
+            myline += "<br>"
+        try:
+            myqt.gui_do(self.text_log.insertHtml, myline)
+        except:
+            print("strange: MrT couldn't log ...")
+            pass
+
+        # these two lines scroll the text display down
+        #temp = myqt.gui_do(self.text_log.textCursor, )
+        #myqt.gui_do(self.text_log.setTextCursor, temp)
+
+    # =========================================================
+    def erase_channel(self):
+        dmc.set_data(np.zeros_like(dmc.get_data()))
+        self.log("DM channel command erased", "orange")
+
+    # =========================================================
+    def memorize_dmc(self):
+        self.memorized_state = dmc.get_data()
+        self.log("Current DM state memorized", "green")
+
+    # =========================================================
+    def memory_switch(self):
+        temp = dmc.get_data()
+        dmc.set_data(self.memorized_state)
+        self.memorized_state = temp
+        self.log("DM state swapped with memorized", "green")
+
+    # =========================================================
+    def calibrate_call(self):
+        ''' ------------------------------------------------
+        Callback associated to the "Recalibrate" button.
+
+        Starts a new thread that oversees the calibration
+        ------------------------------------------------ ''' 
+        self.pB_cloop.setEnabled(False)
+        self.pB_recal.setEnabled(False)
+        self.action_select_LWE.setEnabled(False)
+        self.action_select_ZER.setEnabled(False)
+
+        self.log("Calibration w/ the %s basis" % (self.bank_type), "orange")
+        self.calThread = GenericThread(self.calibrate, delay=1.0)
+        self.calThread.start()
+        
+    # =========================================================
+    def calibrate(self, delay=2.0):
+        ''' ------------------------------------------------
+        Procedure called when (re-)calibrating the sensor.
+        
+        Cycles through the series of modes contained in
+        the bank of modes *bank_dm_modes*, and records
+        the corresponding signature.
+        ------------------------------------------------ ''' 
+        global myqt
+        global dmc
+        
+        istate = dmc.get_data()
+        nm  = self.nm # number of modes
+        nav = 50 # number of averaged images
+
+        img = (cam.get_data(False, True) - self.bias)[dysz:dysz+sz,dxsz:dxsz+sz]
+        #pf.writeto("img_ref_index_00.fits", img, clobber=True) # !!! 4 MAM !!!
+        uvphase_ref = self.get_fourier_vect(img)
+        phase_ref = self.get_pupil_vect(vector=uvphase_ref)
+        
+        for jj in xrange(0, nav-1):
+            time.sleep(1e-6*self.etime)
+            img = (cam.get_data(False, True) - self.bias)[dysz:dysz+sz,dxsz:dxsz+sz]
+            #pf.writeto("img_ref_index_%02d.fits" % (jj+1,), img, clobber=True) # !!! 4 MAM !!!
+            phase_ref += self.get_pupil_vect(image=img)
+        phase_ref /= float(nav)
+
+        pupresp = np.zeros((nm, phase_ref.size))
+        
+        for ii in xrange(nm):
+            self.log("calibrating mode %d" % (ii,), "orange")
+            if self.abort_flag:
+                self.abort_flag = False
+                break
+            
+            dmc.set_data(self.atest * self.bank_dm_modes[ii])
+            time.sleep(1.0)#5e-6*self.etime)
+            img  = (cam.get_data(False, True) - self.bias)[dysz:dysz+sz,dxsz:dxsz+sz]
+            #pf.writeto("img_mode_%02d_camp_%+04d_neig_%03d_index_00.fits" % (ii, int(self.atest*1000), int(self.neig)), img) # !!!!! 4 MAMADOU !!!!
+            pupresp[ii] = self.get_pupil_vect(image=img) - phase_ref
+
+            for jj in xrange(0, nav-1):
+                time.sleep(1e-6*self.etime)
+                img = (cam.get_data(False, True) - self.bias)[dysz:dysz+sz,dxsz:dxsz+sz]
+                #pf.writeto("img_mode_%02d_camp_%+04d_neig_%03d_index_%02d.fits" % (ii, int(self.atest*1000), int(self.neig), jj+1), img) # !!!! 4 MAMADOU !!!!
+                pupresp[ii] += self.get_pupil_vect(image=img) - phase_ref
+            pupresp[ii] /= float(nav)
+
+        self.LL = pupresp / self.atest
+        self.LTL = np.dot(self.LL, self.LL.T)
+        
+        self.log("Calibration over.")
+        fname = "RESP_%s_wvl_%3.1f_neig_%03d.fits" % (
+            self.bank_type, self.wavel, self.neig,)
+
+        pf.writeto(conf_dir + "LTL.fits", self.LTL, clobber=True) # debug
+        pf.writeto(conf_dir + fname, self.LL, clobber=True)
+        dmc.set_data(istate)
+        myqt.gui_call(self.pB_cloop.setEnabled,          True)
+        myqt.gui_call(self.pB_recal.setEnabled,          True)
+        myqt.gui_call(self.action_select_LWE.setEnabled, True)
+        myqt.gui_call(self.action_select_ZER.setEnabled, True)
+
+    # =========================================================        
+    def abort_now(self):
+        ''' --------------------------------------------------
+        Callback connected to the "Abort" button.
+        -------------------------------------------------- '''
+        if not self.abort_flag:
+            self.abort_flag = True
+            self.log("Abort!", "red")
+
+    # =========================================================
+    def refresh_dark(self):
+        ''' --------------------------------------------------
+        Callback connected to the "Dark" button.
+        -------------------------------------------------- '''
+        self.etime = cam_get_etime()
+        if self.etime == -1:
+            time.sleep(2)
+            self.etime = cam_get_etime()
+        if not simulation:
+            bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (self.etime,)
+            self.bias = pf.getdata(bname).astype('float32')
+            #self.bias = drk.get_data(False, True)
+        else:
+            self.bias = np.zeros((ysz, xsz)).astype('float32')
+        self.log("Updated dark", "blue")
+        self.log("exp.time = %d us" % (self.etime,), "blue")
+
+    # =========================================================
+    def update_nsamp(self):
+        ''' --------------------------------------------------
+        Callback connected to the "Aver. # frames" spinbox.
+
+        Updates the array of values storing the sensor's
+        mode coefficients.
+        -------------------------------------------------- '''
+        nsamp1 = self.spinB_nbav.value()
+        temp = self.cva.copy()
+
+        self.cva = np.zeros((nsamp1, self.nm))
+        if (nsamp1 > self.nsamp):
+            self.cva[:self.nsamp] = temp
+        else:
+            self.cva[:] = temp[:nsamp1]
+        self.nsamp = nsamp1
+
+    # =========================================================
+    def close_loop_call(self):
+        ''' --------------------------------------------------
+        Callback connected to the "Close Loop" button.
+
+        Starts a new thread that oversees closed-loop operation.
+        -------------------------------------------------- '''
+        if self.LL is None:
+            self.log("No calibration available!", "orange")
+            return(None)
+
+        self.log("Loop closed!", "green")
+        self.action_select_LWE.setEnabled(False)
+        self.action_select_ZER.setEnabled(False)
+        self.spinB_nbav.setEnabled(False)
+        self.pB_cloop.setEnabled(False)
+        self.pB_recal.setEnabled(False)
+
+        self.calThread = GenericThread(self.close_loop)
+        self.calThread.start()
+
+    # =========================================================
+    def close_loop(self):
+        ''' --------------------------------------------------
+        Closed-loop wavefront control
+
+        Passed to a separate thread: repeats wavefont control
+        iteration until the "Abort" button is pressed.
+        -------------------------------------------------- '''
+        global myqt
+        while not self.abort_flag:
+            self.iteration(delay=1e-6*self.etime)#0.01)
+
+        myqt.gui_call(self.action_select_LWE.setEnabled, True)
+        myqt.gui_call(self.action_select_ZER.setEnabled, True)
+        myqt.gui_call(self.spinB_nbav.setEnabled, True)
+        myqt.gui_call(self.pB_cloop.setEnabled, True)
+        myqt.gui_call(self.pB_recal.setEnabled, True)
+        self.abort_flag = False
+        self.log("Loop opened.", "green")
+
+    # =========================================================
+    def iteration(self, delay=0.1):
+        ''' --------------------------------------------------
+        Wavefront control iteration
+
+        Repeated over and over during closed-loop operation.
+        Parameter: delay (in seconds)
+        -------------------------------------------------- '''
+        global myqt
+        global dmc
+        
+        self.gain   = myqt.gui_call(self.dspinB_loop_gain.value,) # gain updated on the fly?
+
+        img         = (cam.get_data(False, True) - self.bias)[dysz:dysz+sz,dxsz:dxsz+sz]
+        wft         = self.get_pupil_vect(image=img)
+        coeffs      = solve(self.LTL, np.dot(self.LL, wft))
+
+        # this is to do a rolling average of signal (smooth correction)
+        self.cva    = np.roll(self.cva, 1, axis=0)
+        self.cva[0] = coeffs
+        self.coeffs = np.mean(self.cva, 0)
+
+        # this is to build a graphical residual log
+        self.cvlog  = np.roll(self.cvlog, 1, axis=0)
+        self.cvlog[0] = coeffs
+
+        mydisp      = dmc.get_data()
+        correc      = np.zeros_like(mydisp)
+
+        for ii in xrange(self.nm):
+            correc -= self.coeffs[ii] * self.gains[ii] * self.bank_dm_modes[ii]
+
+        dmc.set_data((0.99 * (mydisp + self.gain * correc)).astype('float32'))
+        
+if __name__ == "__main__":
+    main()

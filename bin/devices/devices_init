@@ -1,0 +1,149 @@
+#!/bin/bash
+
+echo "Calibration source fiber:"
+src_fib in2 &
+sleep 1
+echo "Calibration source selection:"
+src_select 3
+sleep 2
+echo "Calibration source flux:"
+src_flux irnd 6
+sleep 0.1
+src_flux optnd 5
+sleep 0.1
+src_flux filter 1
+sleep 0.1
+echo "OAP1:"
+oap1 int2
+sleep 0.1
+echo "Dichroic:"
+dichroic in &
+sleep 1
+echo "Pupil mask:"
+pupil x 2
+sleep 1
+pupil y 2
+sleep 1
+pupil 1 &
+sleep 1
+echo "PIAA lenses #1:"
+piaa1 x 2
+sleep 1
+piaa1 y 2
+sleep 1
+piaa1 1 &
+sleep 1
+echo "PIAA lenses #2:"
+piaa2 x 2 
+sleep 1
+piaa2 y 2
+sleep 1
+piaa2 f 2
+sleep 1
+piaa2 1 &
+sleep 1
+echo "GLINT pickoff:"
+nuller_pickoff out &
+sleep 1
+echo "Fiber injection pickoff:"
+fibinj_pickoff out &
+sleep 1
+echo "Focal plane mask:"
+fpm 01
+sleep 0.1
+echo "Inverse PIAA:"
+invpiaa x 2
+sleep 1
+invpiaa y 2
+sleep 1
+invpiaa 1 &
+sleep 1
+echo "Lyot mask:"
+lyot x 3
+sleep 1
+lyot y 3
+sleep 1
+lyot 1 &
+sleep 1
+echo "Lyot mask:"
+invpiaa 1 &
+sleep 1
+echo "OAP4:"
+oap4 onaxis &
+sleep 1
+echo "Pt Grey 1 pickoff:"
+PG1_pickoff
+sleep 0.1
+PG1_pickoff
+sleep 0.1
+echo "Integrating sphere pickoff:"
+intsphere
+sleep 0.1
+intsphere
+sleep 0.1
+echo "CHARIS pickoff:"
+charis_pickoff 2 &
+sleep 1
+echo "MKIDS pickoff:"
+mkids_pickoff 2 &
+sleep 1
+echo "IR cams filter:"
+ircam_filter 6
+sleep 0.1
+echo "IR cams focus:"
+ircam_fcs chuck
+sleep 0.1
+echo "Chuck pupil lens focus:"
+chuck_pup_fcs pupil &
+sleep 1
+echo "IR cams block:"
+ircam_block
+sleep 0.1
+ircam_block
+sleep 0.1
+echo "LLOWFS block:"
+lowfs_block
+sleep 0.1
+lowfs_block
+sleep 0.1
+echo "FIRST pickoff:"
+first_pickoff 1 &
+sleep 1
+echo "Post-coro fiber injection pickoff:"
+pcfi_pickoff out &
+sleep 1
+echo "Post-coro fiber injection lens:"
+pcfi_len smi &
+sleep 1
+echo "Post-coro fiber injection fiber:"
+pcfi_fib smi &
+sleep 1
+echo "SAPHIRA pickoff:"
+saphira_pickoff out &
+sleep 1
+echo "PyWFS pickoff:"
+pywfs_pickoff 7 &
+echo "PyWFS filter:"
+pywfs_filter 3
+sleep 0.1
+echo "LOWFS focus:"
+lowfs_fcs 1
+echo "IRCAM focus:"
+ircam_fcs chuck
+echo "Fiber Injection:"
+fibinj_fib smi
+echo "Pt Grey 2 pickoff:"
+PG2_pickoff
+sleep 0.1
+PG2_pickoff
+sleep 0.1
+echo "PyWFS col lens:"
+pywfs_col 1
+echo "PyWFS focus:"
+pywfs_fcs 1
+echo "PyWFS pup x:"
+pywfs_pup x 1
+echo "PyWFS pup y:"
+pywfs_pup y 1
+echo "RHEA pickoff:"
+rhea_pickoff out

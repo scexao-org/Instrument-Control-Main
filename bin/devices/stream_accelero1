@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+
+from labjack import ljm
+import time
+import sys, os
+from datetime import datetime
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+"/src/lib/python/")
+from scexao_shm import shm
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+labid = 1 #LabJack identifier
+
+if not os.path.isfile("/tmp/labjack%d.im.shm" % (labid,)):
+    os.system("creashmim labjack%d 3 1" % (labid,))
+if not os.path.isfile("/tmp/labjack%d_stream.im.shm" % (labid,)):
+    os.system("creashmim labjack%d_stream 1 1" % (labid,))
+
+aishm = shm("/tmp/labjack%d.im.shm" % (labid,)) #SHM of data
+strshm = shm("/tmp/labjack%d_stream.im.shm" % (labid,)) #SHM of flag
+
+
+# ------------------------------------------------------------------
+#                Configure LabJack communication
+# ------------------------------------------------------------------
+
+# Open first found LabJack
+handle = ljm.open(ljm.constants.dtANY, ljm.constants.ctETHERNET, "labjack1")
+
+info = ljm.getHandleInfo(handle)
+print("Opened a LabJack with Device type: %i, Connection type: %i,\n" \
+    "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" % \
+    (info[0], info[1], info[2], ljm.numberToIP(info[3]), info[4], info[5]))
+
+# Stream Configuration
+aScanListNames = ["AIN1", "AIN2", "AIN3"] #Scan list names to stream
+numAddresses = len(aScanListNames)
+aScanList = ljm.namesToAddresses(numAddresses, aScanListNames)[0]
+scanRate = 170
+scansPerRead = 1
+
+try:
+    # Configure the analog inputs' negative channel, range, settling time and
+    # resolution.
+    # Note when streaming, negative channels and ranges can be configured for
+    # individual analog inputs, but the stream has only one settling time and
+    # resolution.
+    aNames = ["AIN_ALL_NEGATIVE_CH", "AIN_ALL_RANGE", "STREAM_SETTLING_US",
+              "STREAM_RESOLUTION_INDEX"]
+    aValues = [ljm.constants.GND, 1.0, 0, 0] #single-ended, +/-10V, 0 (default),
+                                              #0 (default)
+    ljm.eWriteNames(handle, len(aNames), aNames, aValues)
+
+    # Configure and start stream
+    scanRate = ljm.eStreamStart(handle, scansPerRead, numAddresses, aScanList, scanRate)
+    print("\nStream started with a scan rate of %0.0f Hz." % scanRate)
+
+    totScans = 0
+    totSkip = 0 # Total skipped samples
+    flag = strshm.get_data()
+    while flag[0]:
+        ret = ljm.eStreamRead(handle)
+        data = np.array(ret[0])
+        #data = data.reshape((3,scansPerRead))
+        #data = np.mean(data, axis=1)
+        aishm.set_data0(data)
+        flag = strshm.get_data()
+        #scans = len(data)/numAddresses
+        #totScans += scans
+        # Count the skipped samples which are indicated by -9999 values. Missed
+        # samples occur after a device's stream buffer overflows and are
+        # reported after auto-recover mode ends.
+        #curSkip = data.count(-9999.0)
+        #totSkip += curSkip
+        #time.sleep(0.005)
+        
+        
+        
+        #if (totScans % scanRate) == 0:
+        #    print("Skipped scans = %0.0f" % (totSkip/numAddresses))
+        #    print("Scan number = %0.0f" % (totScans))
+            
+   
+except ljm.LJMError:
+    ljme = sys.exc_info()[1]
+    print(ljme)
+except Exception:
+    e = sys.exc_info()[1]
+    print(e)
+
+print "Stop Stream" 
+ljm.eStreamStop(handle)
+strshm.set_data0(np.ones(1)) # put back the flag to one
+
+# Close handle
+ljm.close(handle)

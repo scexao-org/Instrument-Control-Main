@@ -1,0 +1,251 @@
+#!/usr/bin/env python
+
+# ====================================================== #
+#    ___       __    __  ___  __                      _  #
+#   / _ \_   _/ / /\ \ \/ __\/ _\     /\/\   ___   __| | #
+#  / /_)/ | | \ \/  \/ / _\  \ \     /    \ / _ \ / _` | #
+# / ___/| |_| |\  /\  / /    _\ \   / /\/\ \ (_) | (_| | #
+# \/     \__, | \/  \/\/     \__/   \/    \/\___/ \__,_| #
+#        |___/                                           #
+#  __      _                                             #
+# / _\ ___| |_ _   _ _ __                                #
+# \ \ / _ \ __| | | | '_ \                               #
+# _\ \  __/ |_| |_| | |_) |                              #
+# \__/\___|\__|\__,_| .__/                               #
+#                   |_|                                  #
+#                                                        #
+# ====================================================== #
+
+import serial
+import os
+import time
+import binascii
+import sys
+import pdb
+
+
+home = os.getenv('HOME')
+sys.path.append(home+'/bin/devices/')
+import analog_output
+import modulator
+sys.path.append(home+'/src/lib/python/')
+import logit #Custom logging library
+
+
+delay=0.5
+delaylong=2
+relative=False
+aoname="/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AH01JW35-if00-port0"
+modname='/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A600KPDY-if00-port0'
+
+def usage():
+    print """---------------------------------------
+Usage: pywfs_mod_setup <arg> <arg>
+---------------------------------------
+arg 1:\n-----
+    frequnecy (500, 1000, 1500, 2000,
+              2500, 3000, 3500 Hz) or
+              on/off\n
+arg 2:\n-----
+    amplitude (0-1)\n    
+examples:\n--------
+    pywfs_mod_setup 500 0.8
+    pywfs_mod_setup 3000 0.3 
+    pywfs_mod_setup on \n
+limits:\n------
+Frequency   Amplitude\n---------------------
+500         0-1
+1000        0-1
+1500        0-1
+2000        0-1
+2500        0-1
+3000        0-1
+3500        0-1
+--------------------------------------- """
+    sys.exit()
+
+def quickhelp():
+    print "%20s       Setup PyWFS modulator" % ("pywfs_mod_setup",)
+
+# =====================================================================
+# =====================================================================
+
+def main():
+    args = sys.argv[1:]  # list of read arguments
+    na = args.__len__()  # number of arguments
+    
+    #if (na != 1) or (na != 2):
+    #    print 'test' 
+    #    print usage()
+    
+    if ((na == 1) and (isinstance(args[0],str))):
+        if "--help1" in args[0].lower():
+            quickhelp()
+
+        elif  args[0]=='on':
+                os.system('nps_on2 5')   #tip/tilt electronics
+                time.sleep(delaylong)
+                os.system('analog_output.py voltage A 3.3')
+                time.sleep(delay)
+                os.system('analog_output.py voltage B -0.5')
+                time.sleep(delay)
+                os.system('analog_output.py voltage C -5.0')
+                time.sleep(delay)
+                os.system('analog_output.py voltage D -5.0')
+                time.sleep(delay)
+                os.system('nps_on1 3')    #HV driver
+                time.sleep(delaylong)
+                os.system('nps_on2 4')    #OCAM power
+                print "OCAM, tip/tilt modulator and HV electronics are on" 
+                sys.exit()
+        elif args[0]=='off':
+                os.system('nps_off2 4')   #OCAM power
+                time.sleep(delay)        
+                os.system('nps_off1 3')  #HV driver
+                time.sleep(delay)        
+                os.system('nps_off2 5')  #tip/tilt electronics
+                time.sleep(delay)
+                print "OCAM, tip/tilt modulator and HV electronics are off" 
+                sys.exit()
+        else:
+            print usage()
+
+    elif ((na == 2) and (isinstance(int(args[0]),int))):     
+        if isinstance(float(args[1]),float):
+            if (int(args[0])==500) and (float(args[1])>=0) and (float(args[1])<=1):
+                ao = analog_output.aoutput(aoname)
+                compvolt=-1.0*float(args[1])#95
+                #print compvolt
+                ao.voltage('B',compvolt)
+                ao.close()
+                modulate = modulator.mod(modname)
+                freq=float(int(args[0])/1000000.)
+                modulate.frequency(2,freq)
+                modulate.frequency(3,freq)
+                modulate.amplitude(2,float(args[1]))
+                modulate.amplitude(3,float(args[1]))
+                modulate.save()
+                time.sleep(delay)
+                modulate.reset()
+                modulate.close()
+                logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')
+            elif (int(args[0])==1000) and (float(args[1])>=0) and (float(args[1])<=1.0):
+                ao = analog_output.aoutput(aoname)
+                compvolt=-0.9*float(args[1]) #81
+                ao.voltage('B',compvolt)
+                ao.close()
+                modulate = modulator.mod(modname)
+                freq=float(int(args[0])/1000000.)
+                modulate.frequency(2,freq)
+                modulate.frequency(3,freq)
+                modulate.amplitude(2,float(args[1]))
+                modulate.amplitude(3,float(args[1]))
+                modulate.save()
+                time.sleep(delay)
+                modulate.reset()
+                modulate.close()
+                logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')
+            elif (int(args[0])==1500) and (float(args[1])>=0) and (float(args[1])<=1.0):
+                ao = analog_output.aoutput(aoname)
+                compvolt=-0.8*float(args[1])                 
+                ao.voltage('B',compvolt)
+                ao.close()
+                modulate = modulator.mod(modname)
+                freq=float(int(args[0])/1000000.)
+                modulate.frequency(2,freq)
+                modulate.frequency(3,freq)
+                modulate.amplitude(2,float(args[1]))
+                modulate.amplitude(3,float(args[1]))
+                modulate.save()
+                time.sleep(delay)
+                modulate.reset()
+                modulate.close()
+                logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')
+            elif (int(args[0])==2000) and (float(args[1])>=0) and (float(args[1])<=1.0):
+                ao = analog_output.aoutput(aoname)
+                compvolt=-0.6*float(args[1])
+                ao.voltage('B',compvolt)
+                ao.close()
+                modulate = modulator.mod(modname)
+                freq=float(int(args[0])/1000000.)
+                modulate.frequency(2,freq)
+                modulate.frequency(3,freq)
+                modulate.amplitude(2,float(args[1]))
+                modulate.amplitude(3,float(args[1]))
+                modulate.save()
+                time.sleep(delay)
+                modulate.reset()
+                modulate.close()
+                logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')                    
+            elif (int(args[0])==2500) and (float(args[1])>=0) and (float(args[1])<=1.0):
+                ao = analog_output.aoutput(aoname)
+                compvolt=-0.35*float(args[1])
+                ao.voltage('B',compvolt)
+                ao.close()
+                modulate = modulator.mod(modname)
+                freq=float(int(args[0])/1000000.)
+                modulate.frequency(2,freq)
+                modulate.frequency(3,freq)
+                modulate.amplitude(2,float(args[1]))
+                modulate.amplitude(3,float(args[1]))
+                modulate.save()
+                time.sleep(delay)
+                modulate.reset()
+                modulate.close()
+                logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')
+            elif (int(args[0])==3000) and (float(args[1])>=0) and (float(args[1])<=1.0):
+                ao = analog_output.aoutput(aoname)                 
+                compvolt=-0.3*float(args[1])
+                ao.voltage('B',compvolt)
+                ao.close()
+                modulate = modulator.mod(modname)
+                freq=float(int(args[0])/1000000.)
+                modulate.frequency(2,freq)
+                modulate.frequency(3,freq)
+                modulate.amplitude(2,float(args[1]))
+                modulate.amplitude(3,float(args[1]))
+                modulate.save()
+                time.sleep(delay)
+                modulate.reset()
+                modulate.close()
+                logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')
+            elif (int(args[0])==3500) and (float(args[1])>=0) and (float(args[1])<=1.0):
+                ao = analog_output.aoutput(aoname)
+                compvolt=-0.3*float(args[1])
+                ao.voltage('B',compvolt)
+                ao.close()
+                modulate = modulator.mod(modname)
+                freq=float(int(args[0])/1000000.)
+                modulate.frequency(2,freq)
+                modulate.frequency(3,freq)
+                modulate.amplitude(2,float(args[1]))
+                modulate.amplitude(3,float(args[1]))
+                modulate.save()
+                time.sleep(delay)
+                modulate.reset()
+                modulate.close()
+                logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')
+            else:
+                print usage()
+        else:
+            print usage()
+    else:
+        print usage()
+        
+    
+       
+    
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+#500   -0.924
+#1000  -0.707
+#1500  -0.382
+#2000  -0.03
+#2500  -0.03
+#3000  -0.03
+#3500  -0.03

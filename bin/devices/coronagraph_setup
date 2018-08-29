@@ -1,0 +1,1547 @@
+#!/bin/bash
+
+tempfile=`tempfile 2>/dev/null` || tempfile=/tmp/test_coro$$
+trap "rm -f $tempfile" 0 1 2 5 15
+
+# ===============================================================
+# READ POSITIONS
+
+echo "reading PIAA1 positions"
+filep1="/home/scexao/bin/devices/conf/conf_piaa1.txt"
+nlp1=$(cat $filep1 | wc -l)
+IFS=$'\n'
+declare -a np1
+declare -a dp1
+declare -a ap1
+declare -a xp1
+declare -a yp1
+declare -a cp1
+i=1
+for line in `cat $filep1`
+do
+    np1[$i]=`echo $line |cut -d\; -f1`
+    dp1[$i]=`echo $line |cut -d\; -f2`
+    ap1[$i]=`echo $line |cut -d\; -f3`
+    xp1[$i]=`echo $line |cut -d\; -f4`
+    yp1[$i]=`echo $line |cut -d\; -f5`
+    cp1[$i]=`echo $line |cut -d\; -f6`
+    i=$(($i+1))
+done
+
+echo "reading PIAA2 positions"
+filep2="/home/scexao/bin/devices/conf/conf_piaa2.txt"
+nlp2=$(cat $filep2 | wc -l)
+IFS=$'\n'
+declare -a np2
+declare -a dp2
+declare -a ap2
+declare -a xp2
+declare -a yp2
+declare -a fp2
+declare -a cp2
+i=1
+for line in `cat $filep2`
+do
+    np2[$i]=`echo $line |cut -d\; -f1`
+    dp2[$i]=`echo $line |cut -d\; -f2`
+    ap2[$i]=`echo $line |cut -d\; -f3`
+    xp2[$i]=`echo $line |cut -d\; -f4`
+    yp2[$i]=`echo $line |cut -d\; -f5`
+    fp2[$i]=`echo $line |cut -d\; -f6`
+    cp2[$i]=`echo $line |cut -d\; -f7`
+    i=$(($i+1))
+done
+
+echo "reading Inverse PIAA positions"
+fileip="/home/scexao/bin/devices/conf/conf_invpiaa.txt"
+nlip=$(cat $fileip | wc -l)
+IFS=$'\n'
+declare -a nip
+declare -a dip
+declare -a xip
+declare -a yip
+declare -a tip
+declare -a pip
+declare -a cip
+i=1
+for line in `cat $fileip`
+do
+    nip[$i]=`echo $line |cut -d\; -f1`
+    dip[$i]=`echo $line |cut -d\; -f2`
+    xip[$i]=`echo $line |cut -d\; -f3`
+    yip[$i]=`echo $line |cut -d\; -f4`
+    tip[$i]=`echo $line |cut -d\; -f5`
+    pip[$i]=`echo $line |cut -d\; -f6`
+    cip[$i]=`echo $line |cut -d\; -f7`
+    i=$(($i+1))
+done
+
+echo "reading FPM positions"
+filef="/home/scexao/bin/devices/conf/conf_fpm.txt"
+nlf=$(cat $filef | wc -l)
+IFS=$'\n'
+declare -a nf
+declare -a df
+declare -a af
+declare -a xf
+declare -a yf
+declare -a zf
+declare -a mf
+declare -a lf
+declare -a cf
+i=1
+for line in `cat $filef`
+do
+    nf[$i]=`echo $line |cut -d\; -f1`
+    df[$i]=`echo $line |cut -d\; -f2`
+    af[$i]=`echo $line |cut -d\; -f3`
+    xf[$i]=`echo $line |cut -d\; -f4`
+    yf[$i]=`echo $line |cut -d\; -f5`
+    zf[$i]=`echo $line |cut -d\; -f6`
+    mf[$i]=`echo $line |cut -d\; -f7`
+    lf[$i]=`echo $line |cut -d\; -f8`
+    cf[$i]=`echo $line |cut -d\; -f9`
+    i=$(($i+1))
+done
+
+echo "reading Lyot positions"
+filel="/home/scexao/bin/devices/conf/conf_lyot.txt"
+nll=$(cat $filel | wc -l)
+IFS=$'\n'
+declare -a nl
+declare -a dl
+declare -a al
+declare -a xl
+declare -a yl
+declare -a cl
+i=1
+for line in `cat $filel`
+do
+    nl[$i]=`echo $line |cut -d\; -f1`
+    dl[$i]=`echo $line |cut -d\; -f2`
+    al[$i]=`echo $line |cut -d\; -f3`
+    xl[$i]=`echo $line |cut -d\; -f4`
+    yl[$i]=`echo $line |cut -d\; -f5`
+    cl[$i]=`echo $line |cut -d\; -f6`
+    i=$(($i+1))
+done
+
+echo "reading Pupil positions"
+filep="/home/scexao/bin/devices/conf/conf_pupil.txt"
+nlp=$(cat $filep | wc -l)
+IFS=$'\n'
+declare -a np
+declare -a dp
+declare -a ap
+declare -a xp
+declare -a yp
+declare -a cp
+i=1
+for line in `cat $filep`
+do
+    np[$i]=`echo $line |cut -d\; -f1`
+    dp[$i]=`echo $line |cut -d\; -f2`
+    ap[$i]=`echo $line |cut -d\; -f3`
+    xp[$i]=`echo $line |cut -d\; -f4`
+    yp[$i]=`echo $line |cut -d\; -f5`
+    cp[$i]=`echo $line |cut -d\; -f6`
+    i=$(($i+1))
+done
+
+tmux new-session -d -s LLOWFSconf
+
+#=======================================================================
+# =================== STATE MACHINE ====================================
+
+state="menuconfselect"
+
+
+confnbmax=$nlf
+confnb=0
+confselected=1
+
+menuconfmanage_default=0
+
+
+echo "START STATE MACHINE"
+
+while true; do
+    
+    stateok=0
+    
+    # ================================================================
+    # CHOOSE CONFIGURATION INDEX
+    if [ $state = "menuconfselect" ]; then
+	stateok=1
+	
+	confselected=$(cat "/home/scexao/conf/coro_aux/conf/current_CONFNUMBER.txt")
+	
+	menuname="CONFIGURATION MENU\n [Active conf = ${confselected}]"
+	menuitems=()
+	for i in `seq 1 ${confnbmax}`;
+	do
+	    confnb=$( echo $i|awk '{printf("%02d",$1)}')
+	    menuitems+=( "$confnb" "${df[i]}" )
+	done 
+	
+	menuitems+=( "-" "")
+	menuitems+=( "C" "Configurations")
+	
+	dialog --title "Select Coronagraph" \
+	    --ok-label "Configure" \
+	    --cancel-label "Remove" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${confselected} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	confnb=$(cat $tempfile)
+	
+	case $retval in
+	    0) state="menuconfmanage";; # button 1: configure
+	    1) state="menuconfremove";;  # button 3: Top
+	    2) state="menuexit";; # button 4: Exit
+	    255) ;;#state="menuexit";;
+	esac
+	
+	if [ $state = "menuconfmanage" ]; then
+	    case $confnb in
+		-) ;;
+		C) state="menuconfselect";;
+	    esac
+	fi
+	if [ $state = "menuconfmanage" ]; then
+	    mkdir -p /home/scexao/conf/coro_aux/conf${confnb}
+	fi
+    fi
+    
+    
+    # ============================================================
+    #  CONFIGURATION SETUP MENU
+    if [ $state = "menuconfmanage" ]; then
+	stateok=1
+	confnb1=`echo $confnb|sed 's/^0*//'`  # remove leading zeros
+	
+	menuname="MANAGE CONFIGURATION ${confnb}"
+	
+	coro=${nf[$confnb1]}
+	fpm=${mf[$confnb1]}
+	lyot=${lf[$confnb1]}
+	coroname=${df[$confnb1]}
+	lyotname=${dl[$lyot]}
+
+	if [ $coro -ge 20 ]
+	then
+	    piaan=3
+	    ipnrest=4
+	    piname="PIAACMC"
+	elif [ $coro == 02 ] || [ $coro == 09 ]
+	then
+	    piaan=2
+	    ipnrest=1
+	    piname="MPIAA"
+	fi
+	
+	if [ $coro -ge 3 ] && [ $coro -le 6 ]
+	then
+	    pupiln=5
+	    pname="vAPP 1"
+	elif [ $coro -ge 7 ] && [ $coro -le 8 ]
+	then
+	    pupiln=6
+	    pname="vAPP 2"
+	elif [ $coro -ge 10 ] && [ $coro -le 18 ]
+	then
+	    pupiln=8
+	    pname="shaped pupil"
+	fi
+
+	file="/home/scexao/conf/coro_aux/conf/current_imsize.txt"
+	if [ -a $file ]
+	then
+	    imsize=$(echo "$(cat $file)")
+	else
+	    imsize="--"
+	fi
+	
+	file="/home/scexao/conf/coro_aux/conf/current_nbav.txt"
+	if [ -a $file ]
+	then
+	    nbav=$(echo "$(cat $file)")
+	else
+	    nbav="---"
+	fi
+	
+	file="/home/scexao/conf/coro_aux/crop_param/current_lowfscrop_${coro}.txt"
+	if [ -a $file ]
+	then
+	    lowfscropOK=1
+	else
+	    lowfscropOK=0
+	fi
+	
+	darkfolder="/home/scexao/conf/coro_aux/darks/dark_${coro}*"
+	nbfiles=$(ls $darkfolder | wc -l)
+	
+	if [ $nbfiles -eq 18 ]
+	then
+	    wfsdarkOK=1
+	else
+	    wfsdarkOK=0
+	fi
+	
+	expT=$(echo "$(read_expT 2)")
+	file="/home/scexao/conf/coro_aux/darks/dark_${coro}_$expT.fits"
+	if [ -a $file ]
+	then
+	    wfsSingledarkOK=1
+	else
+	    wfsSingledarkOK=0
+	fi
+	
+	menuitems=( "00" "Coronagraph  :  $coro $coroname")
+	menuitems+=( "01" "Lyot         :  $lyot $lyotname")
+	menuitems+=( "-" "")
+	if [ $coro == 02 ] || [ $coro == 09 ] || [ $coro -ge 20 ]
+	then
+	    menuitems+=( "02" "Move $piname 1 in")
+	    menuitems+=( "03" "Manual $piname 1 alignment")
+	    menuitems+=( "04" "Move $piname 2 in")
+	    menuitems+=( "05" "Manual $piname 2 alignment")
+	    menuitems+=( "-" "")
+	fi
+	if [ $coro -ge 3 ] && [ $coro -le 8 ]
+	then
+	    menuitems+=( "06" "Move the $pname in")
+	    menuitems+=( "07" "Manual vAPP alignment")
+	    menuitems+=( "-" "")
+	fi
+	if [ $coro -ge 10 ] && [ $coro -le 18 ]
+	then
+	    menuitems+=( "06" "Move the shaped pupil in")
+	    menuitems+=( "07" "Manual pupil alignment")
+	    menuitems+=( "-" "")
+	fi
+	menuitems+=( "08" "Move the selected FPM in")
+	menuitems+=( "09" "Manual FPM alignment")
+	menuitems+=( "10" "Move FPM sideways")
+	menuitems+=( "-" "")
+	if [ $coro -le 2 ] || [ $coro -ge 9 ]
+	then
+	    menuitems+=( "11" "Move the Lyot in")
+	    menuitems+=( "12" "Manual Lyot alignment")
+	    menuitems+=( "-" "")
+	fi
+	if [ $coro == 02 ] || [ $coro == 09 ] || [ $coro -ge 20 ]
+	then
+	    menuitems+=( "13" "Move inverse $piname in")
+	    menuitems+=( "14" "Manual inverse $piname alignment")
+	    menuitems+=( "-" "")
+	    menuitems+=( "15" "Move $piname out")
+	fi
+	if [ $coro -ge 3 ] && [ $coro -le 8 ]
+	then
+	    menuitems+=( "16" "Move vAPP out")
+	fi
+	if [ $coro -ge 10 ] && [ $coro -le 18 ]
+	then
+	    menuitems+=( "16" "Move shaped pupil out")
+	fi
+	menuitems+=( "17" "Move FPM out")
+	if [ $coro -le 2 ] || [ $coro -ge 9 ]
+	then
+	    menuitems+=( "18" "Move Lyot out")
+	fi
+	if [ $coro == 02 ] || [ $coro == 09 ] || [ $coro -ge 20 ]
+	then
+	    menuitems+=( "19" "Move inverse $piname out")
+	fi
+	menuitems+=( "-" "")
+	menuitems+=( "20" "Image size :  ${imsize} pixels")
+	menuitems+=( "21" "Nb average :  ${nbav} images")
+	menuitems+=( "22" "[${lowfscropOK}] Get crop parameters (./GetCrop) -> conf_lowfscrop.txt")
+	menuitems+=( "23" "[${lowfscropOK}] Apply crop parameters (./cropshim) -> /tmp/ircam2crop.im.shm")
+	menuitems+=( "24" "[${wfsdarkOK}] Take all darks (./takedark) -> dark_")
+	menuitems+=( "25" "[${wfsSingledarkOK}] Take single dark (./takeSingleDark) -> dark_" )
+	menuitems+=( "-" "")
+	menuitems+=( "C" "Configurations" )
+	
+	dialog --title "Coronagraph alignment" \
+	    --ok-label "Select" \
+	    --extra-button --extra-label "Back" \
+	    --cancel-label "Main" \
+	    --help-button --help-label "Exit" \
+	    --default-item $menuconfmanage_default \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	case $retval in
+	    0)  # button 1:
+		menuconfmanage_default=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    00) state="menuconfmanage";;
+		    01) state="menuconfmanage";;
+   		    02) #moving PIAA1 wheel
+			echo "moving $piname 1 in"
+			log "CORO: moving $piname 1 in"
+			piaa1 $piaan &
+			state="menuconfmanage";;
+		    03) state="menuconf_p1align"
+			log "CORO: Manually aligning $piname 1"
+			manualpiaa1align=0;;
+		    04) # moving PIAA2 wheel
+			echo "moving $piname 2 in"
+			log "CORO: moving $piname 2 in"
+			piaa2 $piaan &
+			state="menuconfmanage";;
+		    05) state="menuconf_p2align"
+			log "CORO: Manually aligning $piname 2"
+			manualpiaa2align=0;;
+		    06) # moving shape pupil/vAPP
+			echo "moving pupil wheel to $pname"
+			log "CORO: moving pupil wheel to $pname"
+			pupil $pupiln &
+			state="menuconfmanage";;
+		    07) state="menuconf_pupilalign"
+			log "CORO: Manually aligning the $pname"
+			manualpupilalign=0;;
+		    08) # moving FPM
+			echo "moving fpm wheel to $coroname"
+			log "CORO: moving fpm wheel to $coroname"
+			fpm ${nf[$confnb1]} &
+			state="menuconfmanage";;
+		    09) state="menuconf_fpmalign"
+			log "CORO: Manually aligning the FPM"
+			manualfpmalign=0;;
+		    10) echo "moving FPM sideways"
+			((yf2=${yf[$confnb1]}-30000))
+			((xf2=${xf[$confnb1]}+6000))
+			fpm y goto $yf2
+			fpm x goto $xf2
+			sleep 0.1
+			log "CORO: moving the FPM sideways"
+			scexaostatus set fpm_st "FPM SIDEWAYS" 3
+			state="menuconfmanage";;
+		    11) # moving lyot stop
+			echo "moving lyot wheel to $lyotname"
+			log "CORO: moving lyot wheel to $lyotname"
+			lyot $lyot &
+			state="menuconfmanage";;
+		    12) state="menuconf_lyotalign"
+			log "CORO: Manually aligning the Lyot mask"
+			manuallyotalign=0;;
+		    13) # moving inverse PIAA stage
+			echo "moving inverse $piname in"
+			log "CORO: moving inverse $piname in"
+			invpiaa $piaan &
+			state="menuconfmanage";;
+		    14) state="menuconf_ipalign"
+			log "CORO: Manually aligning inverse $piname"
+			manualinvpiaaalign=0;;
+		    15) echo "moving $piname out"
+			log "CORO: moving the $piname out"
+			piaa1 1 &
+			sleep 10
+			piaa2 1 &
+			state="menuconfmanage";;
+		    16) echo "moving $pname out"
+			pupil 1 &
+			log "CORO: moving the $pname out"
+			state="menuconfmanage";;
+		    17) echo "moving FPM out"
+			fpm 01 &
+			log "CORO: moving the FPM out"
+			state="menuconfmanage";;
+		    18) echo "moving Lyot out"
+			lyot 1 &
+			log "CORO: moving the Lyot out"
+			state="menuconfmanage";;
+		    19) echo "moving inverse $piname out"
+			log "CORO: moving the inverse $piname out"
+			invpiaa1 $ipnrest &
+			state="menuconfmanage";;
+		    20) state="menuconf_imsize";;
+   		    21) state="menuconf_nbav";;
+		    22)
+			tmux send-keys -t LLOWFSconf "echo \"linking to WFS camera\"" C-m
+			tmux send-keys -t LLOWFSconf "/home/scexao/bin/devices/GetCrop ${coro} ${nbav}" C-m
+			;;
+		    23)
+			readarray -t array < /home/scexao/conf/coro_aux/crop_param/current_lowfscrop_${coro}.txt
+			cropX=${array[0]}
+			cropY=${array[1]}
+			kill -9 $(ps aux | grep 'cropshim*' | awk '{print $2}')
+			rm /tmp/ircam2crop.im.shm
+			/home/scexao/bin/devices/cropshim $imsize $(($cropX - ($imsize / 2))) $(($cropY - ($imsize / 2))) &
+			tmux send-keys -t LLOWFSconf "echo \"linking to WFS camera\"" C-m
+			;;
+		    24)
+			tmux send-keys -t LLOWFSconf "echo \"Checking current exposure time (us)\"" C-m
+			expT=$(echo "$(read_expT 2)")
+			tmux send-keys -t LLOWFSconf "echo $expT" C-m
+			tmux send-keys -t LLOWFSconf "echo \"Taking dark frames\"" C-m
+			tmux send-keys -t LLOWFSconf "/home/scexao/bin/devices/takedark $nbav ${coro}" C-m
+			tmux send-keys -t LLOWFSconf "echo \"Done\"" C-m
+			ircam_expT 2 $expT
+			;;
+		    25)
+			tmux send-keys -t LLOWFSconf "echo \"Checking current exposure time (us)\"" C-m
+			expT=$(echo "$(read_expT 2)")
+			tmux send-keys -t LLOWFSconf "echo \"Taking dark frames\"" C-m
+			tmux send-keys -t LLOWFSconf "/home/scexao/bin/devices/takeSingleDark $nbav ${coro} $expT" C-m
+			sleep 5
+			tmux send-keys -t LLOWFSconf "ssh scexao '/home/scexao/bin/getTCPscexao2im -c ircam2crop_dark 30104'" C-m
+			tmux send-keys -t LLOWFSconf "echo \"Done\"" C-m
+			;; 
+		    C) state="menuconfselect";;  
+		esac;;
+	    3) state="menuconfselect";; # "Back" button
+	    1) state="menuconfselect";; # "Main" button
+	    2) state="menuexit";; # "Exit" button
+	    255) ;; # state="menuexit";;
+	esac
+    fi
+    
+    # ==========================================================
+    #  MANUAL ALIGNMENT PIAA1 
+    if [ $state = "menuconf_p1align" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT PIAA1"
+	
+	file="/home/scexao/conf/coro_aux/conf/current_piaa1amp.txt"
+	if [ -a $file ]
+	then
+	    piaa1amp=$(echo "$(cat $file)")
+	else
+	    piaa1amp="?"
+	fi
+	
+	
+	menuitems=(  "0" "Amplitude : $piaa1amp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+	
+	dialog --title "PIAA1 manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualpiaa1align \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	
+	case $retval in
+	    0) 	manualpiaa1align=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_p1amp";;
+		    1)
+			((yp1[$piaan]+=$piaa1amp))
+			piaa1 y goto ${yp1[$piaan]}
+			sleep 0.1
+			state="menuconf_p1align";;
+		    2)
+			((yp1[$piaan]-=$piaa1amp))
+			piaa1 y goto ${yp1[$piaan]}
+			sleep 0.1
+			state="menuconf_p1align";;
+		    3)
+			((xp1[$piaan]+=$piaa1amp))
+			piaa1 x goto ${xp1[$piaan]}
+			sleep 0.1
+			state="menuconf_p1align";;
+		    4)
+			((xp1[$piaan]-=$piaa1amp))
+			piaa1 x goto ${xp1[$piaan]}
+			sleep 0.1
+			state="menuconf_p1align";;
+		esac
+		;;
+	    1) 
+		log "CORO: $piname 1 aligned"
+		state="menuconf_savep1";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+	
+    fi
+    
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT PIAA1 
+    if [ $state = "menuconf_p1amp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT PIAA1"
+	
+	file="/home/scexao/conf/coro_aux/conf/current_piaa1amp.txt"
+	if [ -a $file ]
+	then
+	    piaa1amp=$(echo "$(cat $file)")
+	else
+	    piaa1amp="?"
+	fi
+	
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+	
+	dialog --title "Amplitude alignment PIAA1" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${piaa1amp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0)piaa1amp=$(cat $tempfile)
+		echo "$piaa1amp" > /home/scexao/conf/coro_aux/conf/current_piaa1amp.txt
+		state="menuconf_p1align";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+    fi
+    
+    # ==========================================================
+    #  MANUAL ALIGNMENT PIAA2 
+    if [ $state = "menuconf_p2align" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT PIAA2"
+	
+	file="/home/scexao/conf/coro_aux/conf/current_piaa2amp.txt"
+	if [ -a $file ]
+	then
+	    piaa2amp=$(echo "$(cat $file)")
+	else
+	    piaa2amp="?"
+	fi
+	
+	
+	menuitems=(  "0" "Amplitude : $piaa2amp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+	
+	dialog --title "PIAA2 manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualpiaa2align \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	
+	case $retval in
+	    0) 	manualpiaa2align=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_p2amp";;
+		    1)
+			((yp2[$piaan]-=$piaa2amp))
+			piaa2 y goto ${yp2[$piaan]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		    2)
+			((yp2[$piaan]+=$piaa2amp))
+			piaa2 y goto ${yp2[$piaan]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		    3)
+			((xp2[$piaan]-=$piaa2amp))
+			piaa2 x goto ${xp2[$piaan]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		    4)
+			((xp2[$piaan]+=$piaa2amp))
+			piaa2 x goto ${xp2[$piaan]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		esac
+		;;
+	    1)
+		log "CORO: $piname 2 aligned"
+		state="menuconf_savep2";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT PIAA2
+    if [ $state = "menuconf_p2amp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT PIAA2"
+
+	file="/home/scexao/conf/coro_aux/conf/current_piaa2amp.txt"
+	if [ -a $file ]
+	then
+	    piaa2amp=$(echo "$(cat $file)")
+	else
+	    piaa2amp="?"
+	fi
+
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+
+	dialog --title "Amplitude alignment PIAA1" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${piaa2amp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+
+	case $retval in
+	    0)piaa2amp=$(cat $tempfile)
+		echo "$piaa2amp" > /home/scexao/conf/coro_aux/conf/current_piaa2amp.txt
+		state="menuconf_p2align";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT PUPIL 
+    if [ $state = "menuconf_pupilalign" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT PUPIL"
+
+	file="/home/scexao/conf/coro_aux/conf/current_pupilamp.txt"
+	if [ -a $file ]
+	then
+	    pupilamp=$(echo "$(cat $file)")
+	else
+	    pupilamp="?"
+	fi
+
+	menuitems=(  "0" "Amplitude : $pupilamp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+
+	dialog --title "PUPIL manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualpupilalign \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+	choiceval=$(cat $tempfile)
+
+	case $retval in
+	    0) 	manualpupilalign=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_pupilamp";;
+		    1)
+			((yp[$pupiln]+=$pupilamp))
+			pupil y goto ${yp[$pupiln]}
+			sleep 0.1
+			state="menuconf_pupilalign";;
+		    2) 
+			((yp[$pupiln]-=$pupilamp))
+			pupil y goto ${yp[$pupiln]}
+			sleep 0.1
+			state="menuconf_pupilalign";;
+		    3) 
+			((xp[$pupiln]-=$pupilamp))
+			pupil x goto ${xp[$pupiln]}
+			sleep 0.1
+			state="menuconf_pupilalign";;
+		    4) 
+			((xp[$pupiln]+=$pupilamp))
+			pupil x goto ${xp[$pupiln]}
+			sleep 0.1
+			state="menuconf_pupilalign";;
+		esac
+		;;
+	    1) 
+		log "CORO: $pname aligned"
+		state="menuconf_savep";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT PUPIL
+    if [ $state = "menuconf_pupilamp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT PUPIL"
+
+	file="/home/scexao/conf/coro_aux/conf/current_pupilamp.txt"
+	if [ -a $file ]
+	then
+	    pupilamp=$(echo "$(cat $file)")
+	else
+	    pupilamp="?"
+	fi
+
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+
+	dialog --title "Amplitude alignment PUPIL" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${pupilamp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+
+	case $retval in
+	    0)pupilamp=$(cat $tempfile)
+		echo "$pupilamp" > /home/scexao/conf/coro_aux/conf/current_pupilamp.txt
+		state="menuconf_pupilalign";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT FPM 
+    if [ $state = "menuconf_fpmalign" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT FPM"
+
+	file="/home/scexao/conf/coro_aux/conf/current_fpmamp.txt"
+	if [ -a $file ]
+	then
+	    fpmamp=$(echo "$(cat $file)")
+	else
+	    fpmamp="?"
+	fi
+
+
+	menuitems=(  "0" "Amplitude : $fpmamp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+	menuitems+=( "5" "Focus in")
+	menuitems+=( "6" "Focus out")
+
+	dialog --title "FPM manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualfpmalign \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+	choiceval=$(cat $tempfile)
+
+	case $retval in
+	    0) 	manualfpmalign=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_fpmamp";;
+		    1) 
+			((yf[$confnb1]-=$fpmamp))
+			fpm y goto ${yf[$confnb1]}
+			sleep 0.1
+			state="menuconf_fpmalign";;
+		    2) 
+			((yf[$confnb1]+=$fpmamp))
+			fpm y goto ${yf[$confnb1]}
+			sleep 0.1
+			state="menuconf_fpmalign";;
+		    3) 
+			((xf[$confnb1]+=$fpmamp))
+			fpm x goto ${xf[$confnb1]}
+			sleep 0.1
+			state="menuconf_fpmalign";;
+		    4) 
+			((xf[$confnb1]-=$fpmamp))
+			fpm x goto ${xf[$confnb1]}
+			sleep 0.1
+			state="menuconf_fpmalign";;
+		    5) 
+			((zf[$confnb1]+=$fpmamp))
+			fpm f goto ${zf[$confnb1]}
+			sleep 0.1
+			state="menuconf_fpmalign";;
+		    6) 
+			((zf[$confnb1]-=$fpmamp))
+			fpm f goto ${zf[$confnb1]}
+			sleep 0.1
+			state="menuconf_fpmalign";;
+		esac
+		;;
+	    1) 
+		log "CORO: FPM aligned"
+		state="menuconf_savef";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT FPM
+    if [ $state = "menuconf_fpmamp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT FPM"
+
+	file="/home/scexao/conf/coro_aux/conf/current_fpmamp.txt"
+	if [ -a $file ]
+	then
+	    fpmamp=$(echo "$(cat $file)")
+	else
+	    fpmamp="?"
+	fi
+
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+
+	dialog --title "Amplitude alignment FPM" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${fpmamp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+
+	case $retval in
+	    0)fpmamp=$(cat $tempfile)
+		echo "$fpmamp" > /home/scexao/conf/coro_aux/conf/current_fpmamp.txt
+		state="menuconf_fpmalign";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT LYOT 
+    if [ $state = "menuconf_lyotalign" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT LYOT"
+
+	file="/home/scexao/conf/coro_aux/conf/current_lyotamp.txt"
+	if [ -a $file ]
+	then
+	    lyotamp=$(echo "$(cat $file)")
+	else
+	    lyotamp="?"
+	fi
+
+
+	menuitems=(  "0" "Amplitude : $lyotamp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+
+	dialog --title "LYOT manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manuallyotalign \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+	choiceval=$(cat $tempfile)
+
+	case $retval in
+	    0) 	manuallyotalign=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_lyotamp";;
+		    1) 
+			((yl[$lyot]-=$lyotamp))
+			lyot y goto ${yl[$lyot]}
+			sleep 0.1
+			state="menuconf_lyotalign";;
+		    2) 
+			((yl[$lyot]+=$lyotamp))
+			lyot y goto ${yl[$lyot]}
+			sleep 0.1
+			state="menuconf_lyotalign";;
+		    3) 
+			((xl[$lyot]+=$lyotamp))
+			lyot x goto ${xl[$lyot]}
+			sleep 0.1
+			state="menuconf_lyotalign";;
+		    4) 
+			((xl[$lyot]-=$lyotamp))
+			lyot x goto ${xl[$lyot]}
+			sleep 0.1
+			state="menuconf_lyotalign";;
+		esac
+		;;
+	    1) 
+		log "CORO: Lyot mask aligned"
+		state="menuconf_savel";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT LYOT
+    if [ $state = "menuconf_lyotamp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT LYOT"
+
+	file="/home/scexao/conf/coro_aux/conf/current_lyotamp.txt"
+	if [ -a $file ]
+	then
+	    lyotamp=$(echo "$(cat $file)")
+	else
+	    lyotamp="?"
+	fi
+
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+
+	dialog --title "Amplitude alignment LYOT" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${lyotamp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+
+	case $retval in
+	    0)lyotamp=$(cat $tempfile)
+		echo "$lyotamp" > /home/scexao/conf/coro_aux/conf/current_lyotamp.txt
+		state="menuconf_lyotalign";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT INVERSE PIAA 
+    if [ $state = "menuconf_ipalign" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT INVERSE PIAA"
+	
+	file="/home/scexao/conf/coro_aux/conf/current_invpiaaamp1.txt"
+	if [ -a $file ]
+	then
+	    invpiaaamp1=$(echo "$(cat $file)")
+	else
+	    invpiaaamp1="?"
+	fi
+
+	file="/home/scexao/conf/coro_aux/conf/current_invpiaaamp2.txt"
+	if [ -a $file ]
+	then
+	    invpiaaamp2=$(echo "$(cat $file)")
+	else
+	    invpiaaamp2="?"
+	fi
+	
+	
+	menuitems=(  "0" "Amplitude Conex : $invpiaaamp1 um")
+	menuitems+=(  "1" "Amplitude Zaber : $invpiaaamp2 steps")
+	menuitems+=( "-" "")
+	menuitems+=( "2" "Move up")
+	menuitems+=( "3" "Move down")
+	menuitems+=( "4" "Move left")
+	menuitems+=( "5" "Move right")
+	menuitems+=( "6" "Tilt up")
+	menuitems+=( "7" "Tilt down")
+	menuitems+=( "8" "Tilt left")
+	menuitems+=( "9" "Tilt right")
+	
+	dialog --title "Inverse PIAA manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualinvpiaaalign \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	
+	case $retval in
+	    0) 	manualinvpiaaalign=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_ipamp1";;
+  		    1) state="menuconf_ipamp2";;
+		    2)
+			yip[$piaan]=$(bc <<< "scale=3;$yip[$piaan]+$invpiaaamp1/1000.")
+			invpiaa y goto ${yip[$piaan]}
+			sleep 0.1
+			state="menuconf_ipalign";;
+		    3) 
+			yip[$piaan]=$(bc <<< "scale=3;$yip[$piaan]-$invpiaaamp1/1000.")
+			invpiaa y goto ${yip[$piaan]}
+			sleep 0.1
+			state="menuconf_ipalign";;
+		    4) 
+			xip[$piaan]=$(bc <<< "scale=3;$xip[$piaan]+$invpiaaamp1/1000.")
+			invpiaa x goto ${xip[$piaan]}
+			sleep 0.1
+			state="menuconf_ipalign";;
+		    5) 
+			xip[$piaan]=$(bc <<< "scale=3;$xip[$piaan]-$invpiaaamp1/1000.")
+			invpiaa x goto ${xip[$piaan]}
+			sleep 0.1
+			state="menuconf_ipalign";;
+		    6)
+			((pip[$piaan]+=$invpiaaamp2))
+			invpiaa phi goto ${pip[$piaan]}
+			sleep 0.1
+			state="menuconf_ipalign";;
+		    7) 
+			((pip[$piaan]-=$invpiaaamp2))
+			invpiaa phi goto ${pip[$piaan]}
+			sleep 0.1
+			state="menuconf_ipalign";;
+		    8) 
+			((tip[$piaan]+=$invpiaaamp2))
+			invpiaa theta goto ${tip[$piaan]}
+			sleep 0.1
+			state="menuconf_ipalign";;
+		    9) 
+			((tip[$piaan]-=$invpiaaamp2))
+			invpiaa theta goto ${tip[$piaan]}
+			sleep 0.1
+			state="menuconf_ipalign";;
+		esac
+		;;
+	    1) 
+		log "CORO: inverse $piname aligned"
+		state="menuconf_saveip";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+	
+    fi
+    
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT CONEX INVERSE PIAA 
+    if [ $state = "menuconf_ipamp1" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT CONEX INVERSE PIAA"
+	
+	file="/home/scexao/conf/coro_aux/conf/current_invpiaaamp1.txt"
+	if [ -a $file ]
+	then
+	    invpiaaamp1=$(echo "$(cat $file)")
+	else
+	    invpiaaamp1="?"
+	fi
+	
+	menuitems=( "1000" " 1000 um")
+	menuitems+=( "500" " 500 um")
+	menuitems+=( "200" " 200 um")
+	menuitems+=( "100" " 100 um")
+	menuitems+=( "50" " 50 um")
+	menuitems+=( "20" " 20 um")
+	menuitems+=( "10" " 10 um")
+	menuitems+=( "5" " 5 um")
+	menuitems+=( "2" " 2 um")
+	menuitems+=( "1" " 1 um")
+	
+	dialog --title "Amplitude alignment Conex inverse PIAA" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${invpiaaamp1} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0)invpiaaamp1=$(cat $tempfile)
+		echo "$invpiaaamp1" > /home/scexao/conf/coro_aux/conf/current_invpiaaamp1.txt
+		state="menuconf_ipalign";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+    fi
+    
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT ZABER INVERSE PIAA 
+    if [ $state = "menuconf_ipamp2" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT ZABER INVERSE PIAA"
+	
+	file="/home/scexao/conf/coro_aux/conf/current_invpiaaamp2.txt"
+	if [ -a $file ]
+	then
+	    invpiaaamp2=$(echo "$(cat $file)")
+	else
+	    invpiaaamp2="?"
+	fi
+	
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+	
+	dialog --title "Amplitude alignment Zaber inverse PIAA" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${invpiaaamp2} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0)invpiaaamp2=$(cat $tempfile)
+		echo "$invpiaaamp2" > /home/scexao/conf/coro_aux/conf/current_invpiaaamp2.txt
+		state="menuconf_ipalign";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;; # state="menuexit";;
+	esac
+    fi
+    
+    # ==========================================================
+    #  SAVE POSITION PIAA1
+    if [ $state = "menuconf_savep1" ]; then
+	stateok=1
+
+	cp $filep1 /home/scexao/bin/devices/conf/archive/
+	rm $filep1
+	for i in $(seq 1 $nlp1)
+	do
+	    printf '%s;%s;%s;%-6s;%-6s;%s\n' ${np1[$i]} ${dp1[$i]} ${ap1[$i]} ${xp1[$i]} ${yp1[$i]} ${cp1[$i]} >> $filep1
+	done
+	    
+	echo "saving PIAA1 position"
+	piaa1 status &
+
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION PIAAA2
+    if [ $state = "menuconf_savep2" ]; then
+	stateok=1
+
+	cp $filep2 /home/scexao/bin/devices/conf/archive/
+	rm $filep2
+	for i in $(seq 1 $nlp2)
+	do
+	    printf '%s;%s;%s;%-6s;%-6s;%-6s;%s\n' ${np2[$i]} ${dp2[$i]} ${ap2[$i]} ${xp2[$i]} ${yp2[$i]} ${fp2[$i]} ${cp2[$i]} >> $filep2
+	done
+
+	echo "saving PIAA2 position"
+	piaa2 status &
+
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION PUPIL
+    if [ $state = "menuconf_savep" ]; then
+	stateok=1
+
+	cp $filep /home/scexao/bin/devices/conf/archive/
+	rm $filep
+	for i in $(seq 1 $nlp)
+	do
+	    printf '%s;%s;%s;%-6s;%-6s;%s\n' ${np[$i]} ${dp[$i]} ${ap[$i]} ${xp[$i]} ${yp[$i]} ${cp[$i]} >> $filep
+	done
+
+	echo "saving pupil position"
+	pupil status &
+
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION LYOT
+    if [ $state = "menuconf_savel" ]; then
+	stateok=1
+
+	cp $filel /home/scexao/bin/devices/conf/archive/
+	rm $filel
+	for i in $(seq 1 $nll)
+	do
+	    printf '%s;%s;%s;%-6s;%-6s;%s\n' ${nl[$i]} ${dl[$i]} ${al[$i]} ${xl[$i]} ${yl[$i]} ${cl[$i]} >> $filel
+	done
+
+	echo "saving Lyot positions"
+	lyot status &
+
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION FPM
+    if [ $state = "menuconf_savef" ]; then
+	stateok=1
+
+	cp $filef /home/scexao/bin/devices/conf/archive/
+	rm $filef
+	for i in $(seq 1 $nlf)
+	do
+	    printf '%s;%s;%s;%-6s;%-6s;%-6s;%s;%s;%s\n' ${nf[$i]} ${df[$i]} ${af[$i]} ${xf[$i]} ${yf[$i]} ${zf[$i]} ${mf[$i]} ${lf[$i]} ${cf[$i]} >> $filef
+	done
+
+	echo "saving FPM position"
+	fpm status &
+
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  CONFIGURATION IMAGE SIZE
+    if [ $state = "menuconf_imsize" ]; then
+	stateok=1
+	menuname="CONFIGURATION ${coroname} - IMAGE SIZE"
+	
+	file="/home/scexao/conf/coro_aux/conf/current_imsize.txt"
+	if [ -a $file ]
+	then
+	    imsize=$(echo "$(cat $file)")
+	else
+	    imsize="?"
+	fi
+	
+	menuitems=( "20" "20")
+	menuitems+=( "24" "24")
+	menuitems+=( "28" "28")
+	menuitems+=( "32" "32")
+	menuitems+=( "36" "36")
+	menuitems+=( "40" "40")
+	
+	dialog --title "LLOWFS configuration" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${imsize} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0) state="menuconfmanage"
+		imsize=$(cat $tempfile)
+		echo "$imsize" > /home/scexao/conf/coro_aux/conf/current_imsize.txt
+		;; # button 1:
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) state="menuexit";;
+	esac
+	
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION INVERSE PIAA
+    if [ $state = "menuconf_saveip" ]; then
+	stateok=1
+
+	cp $fileip /home/scexao/bin/devices/conf/archive/
+	rm $fileip
+	for i in $(seq 1 $nlip)
+	do
+	    printf '%s;%s;%s;%s;%-6s;%-6s;%s\n' ${nip[$i]} ${dip[$i]} ${xip[$i]} ${yip[$i]} ${tip[$i]} ${pip[$i]} ${cp1[$i]} >> $fileip
+	done
+	    
+	echo "saving Inverse PIAA position"
+	invpiaa status &
+
+	state="menuconfmanage"
+    fi
+    
+    # ==========================================================
+    #  CONFIGURATION NB AVERAGE
+    if [ $state = "menuconf_nbav" ]; then
+	stateok=1
+	menuname="CONFIGURATION ${coroname} - NB AVERAGE"
+	
+	file="/home/scexao/conf/coro_aux/conf/current_nbav.txt"
+	if [ -a $file ]
+	then
+	    nbav=$(echo "$(cat $file)")
+	else
+	    nbav="?"
+	fi
+	
+	menuitems=("010" "10 images")
+	menuitems+=("020" "20 images")
+	menuitems+=("050" "50 images")
+	menuitems+=("100" "100 images")
+	menuitems+=("200" "200 images")
+	menuitems+=("500" "500 images")
+	
+	dialog --title "LLOWFS configuration" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${nbav} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0) state="menuconfmanage"
+		nbav=$(cat $tempfile)
+		echo "$nbav" > /home/scexao/conf/coro_aux/conf/current_nbav.txt
+		;; # button 1:
+	    1) state="menuconfmanage";;  
+	    2) state="menuexit";; 
+	    255) state="menuexit";;
+	esac
+	
+    fi
+
+    # ==========================================================
+    # REMOVE CORONAGRAPH
+    if [ $state = "menuconfremove" ]; then
+	stateok=1
+	echo "remove all"
+
+	if [ $coro == 02 ] || [$coro == 07] || [ $coro -ge 17 ]
+	then
+	    piaa1 1 &
+	    sleep 0.5
+	    piaa2 1 &
+	    sleep 0.5
+	fi
+	
+	if [ $coro -ge 3 ] && [ $coro -le 6 ]
+	then
+	    pupil 1 &
+	    sleep 0.5
+	fi
+	
+	if [ $coro -ge 8 ] && [ $coro -le 16 ]
+	then
+	    pupil 1 &
+	    sleep 0.5
+	fi
+
+	if [ $coro -le 2 ] || [ $coro -ge 7 ]
+	then
+	    lyot 1 &
+	    sleep 0.5
+	fi
+	fpm 01
+	
+	log "CORO: Removing the full coronagraph"
+	
+	state="menuconfselect"
+    fi
+    
+    # ==========================================================
+    # EXIT MODE
+    if [ $state = "menuexit" ]; then
+	stateok=1
+	echo "exit"
+	exit
+    fi
+    
+    # ==========================================================
+    #  ERROR MODE
+    if [ $stateok = 0 ]; then
+	echo "state \"$state\" not recognized ... exit"
+	exit
+    fi
+done

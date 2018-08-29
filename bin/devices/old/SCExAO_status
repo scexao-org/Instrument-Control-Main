@@ -1,0 +1,43 @@
+#!/bin/bash
+
+cal_src status
+sleep 0.1
+oap1 x status
+sleep 0.1
+oap1 y status
+sleep 0.1
+dichroic status
+sleep 0.1
+pupil wheel status
+sleep 0.1
+piaa1 wheel status
+sleep 0.1
+piaa2 wheel status
+sleep 0.1
+nuller_pickoff status
+sleep 0.1
+fibinj_pickoff status
+sleep 0.1
+fpm wheel status
+sleep 0.1
+lyot wheel status
+sleep 0.1
+charis_pickoff status
+sleep 0.1
+mkids_pickoff status
+sleep 0.1
+vampfirst_splitter status
+sleep 0.1
+pcfi_pickoff status
+sleep 0.1
+pcfi_len status
+sleep 0.1
+pcfi_fib x status
+sleep 0.1
+pcfi_fib y status
+sleep 0.1
+pcfi_fib f status
+sleep 0.1
+saphira_pickoff status
+sleep 0.1
+pywfs_pickoff status

@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import numpy as np
+import pyfits as pf
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+
+from   scexao_shm   import shm
+import zernike
+
+auxdir = home + "/conf/dm_patterns/"
+
+hmsg = """ --------------------------------------------------------------
+dm_save_channel: saves the current channel to a fits file
+
+Command syntax:
+--------------
+
+>> dm_save_channel chn file.fits
+
+Parameters:
+----------
+
+- chn: the DM channel to save
+- file.fits: a fits file name to write (default: channel%02d.fits)
+-------------------------------------------------------------- """
+
+args = sys.argv[1:]
+
+if args == []: 
+    print(hmsg)
+    sys.exit()
+
+# -----------------------
+
+try:
+    chn = int(args[0])
+except:
+    print(hmsg)
+    sys.exit()
+
+# -----------------------
+
+try:
+    fname = args[1]
+except:
+    fname = "channel%02d.fits" % (chn,)
+
+
+# -----------------------
+dmc  = shm('/tmp/dm00disp%02d.im.shm' % (chn,), verbose=False) # DM channel
+
+disp = dmc.get_data()
+
+pf.writeto(auxdir+fname, disp, clobber=True)
+
+
+

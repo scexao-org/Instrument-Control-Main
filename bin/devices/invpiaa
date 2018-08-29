@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+
+# =============================================================== #
+#   _____                                  ___ _____  _      _    #
+#   \_   \_ ____   _____ _ __ ___  ___    / _ \\_   \/_\    /_\   #
+#    / /\/ '_ \ \ / / _ \ '__/ __|/ _ \  / /_)/ / /\//_\\  //_\\  #
+# /\/ /_ | | | \ V /  __/ |  \__ \  __/ / ___/\/ /_/  _  \/  _  \ #
+# \____/ |_| |_|\_/ \___|_|  |___/\___| \/   \____/\_/ \_/\_/ \_/ #
+#                                                                 #
+# =============================================================== #
+
+import os
+import sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from devices import devices
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+devname = "invpiaa"
+
+conexids = ["usb-Newport_CONEX-AGP_A606QDMA-if00-port0", "usb-Newport_CONEX-AGP_A6Z9D9QL-if00-port0"]
+conexnames = ["x", "y"]
+
+zaberchain = "irback"
+zaberids = [6, 7]
+zabernames = ["theta", "phi"]
+
+description = "Inverse PIAA stage"
+
+defpos = ["1", "2", "3", "4", "5"]
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+devices(devname, conexids, conexnames, zaberchain, zaberids, zabernames, args, description, defpos, color_st=True)

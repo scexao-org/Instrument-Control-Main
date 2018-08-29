@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+
+# ============================================================= #
+#    __    ___  __    __  ___  __     _     _            _      #
+#   / /   /___\/ / /\ \ \/ __\/ _\   | |__ | | ___   ___| | __  #
+#  / /   //  //\ \/  \/ / _\  \ \    | '_ \| |/ _ \ / __| |/ /  #
+# / /___/ \_//  \  /\  / /    _\ \   | |_) | | (_) | (__|   <   # 
+# \____/\___/    \/  \/\/     \__/   |_.__/|_|\___/ \___|_|\_\  #
+# ============================================================= #
+
+import os,sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from flipmount import flipmount
+
+
+# SPECIFIC PARAMETERS FOR THIS STAGE
+
+stagename = "charis_fieldstop"
+flipid = "H"
+description = "Filed stop for CHARIS"
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+flipmount(stagename, flipid, args, description)

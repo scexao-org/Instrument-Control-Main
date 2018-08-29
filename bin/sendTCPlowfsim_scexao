@@ -1,0 +1,20 @@
+#!/bin/bash
+
+tmux kill-session -t lowfsimTCPsend
+ssh scexao@scexao "tmux kill-session -t lowfsimTCPrcv"
+
+Cfits << EOF
+readshmimsize $1 _size.txt
+quit
+EOF
+sizestring=$( cat _size.txt )
+rm _size.txt
+
+ssh scexao@scexao "/home/scexao/bin/creashmim $1 $sizestring"
+sleep 1
+
+ssh scexao@scexao "/home/scexao/bin/lowfsimTCPrcv"
+sleep 2
+
+tmux new-session -d -s lowfsimTCPsend
+tmux send-keys -t lowfsimTCPsend "shmimTCPtransmit $1 10.20.20.2 30101" C-m

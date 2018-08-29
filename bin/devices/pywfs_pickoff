@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+
+# ================================================================= #
+#    ___       __    __  ___  __     ___ _      _      ___  __  __  #
+#   / _ \_   _/ / /\ \ \/ __\/ _\   / _ (_) ___| | __ /___\/ _|/ _| #
+#  / /_)/ | | \ \/  \/ / _\  \ \   / /_)/ |/ __| |/ ///  // |_| |_  #
+# / ___/| |_| |\  /\  / /    _\ \ / ___/| | (__|   </ \_//|  _|  _| #
+# \/     \__, | \/  \/\/     \__/ \/    |_|\___|_|\_\___/ |_| |_|   #
+#        |___/                                                      #
+#                                                                   #
+# ================================================================= #
+
+import os
+import sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from devices import devices
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+devname = "pywfs_pickoff"
+
+conexids = ["usb-Newport_CONEX-AGP_A6WVRW6W-if00-port0"]
+conexnames = ["wheel"]
+
+description = "Pyramid WFS pickoff"
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+devices(devname, conexids, conexnames, args=args, description=description, color_st=True)

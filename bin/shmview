@@ -1,0 +1,293 @@
+#!/usr/bin/env python
+
+
+''' --------------------------------------------------------------------------
+20170730: 
+--------
+
+Shared memory viewer.
+
+-------------------------------------------------------------------------- '''
+
+from xaosim.QtMain import QtMain, QApplication
+from PyQt4 import QtCore, QtGui, uic
+from PyQt4.QtCore import QThread
+from PyQt4.QtGui import QLabel, QImage
+
+import threading
+
+import pyqtgraph as pg
+import sys
+import numpy as np
+from numpy.linalg import solve
+from xaosim.shmlib import shm
+import matplotlib.cm as cm
+
+import os
+import shutil
+import platform
+
+import Image
+
+# =====================================================================
+home = os.getenv('HOME')
+conf_dir = home+'/.config/xaosim/'
+
+# =====================================================================
+# =====================================================================
+myqt = 0 # to have myqt as a global variable
+
+def main():
+    global myqt
+    myqt = QtMain()
+    gui = MyWindow()
+    myqt.mainloop()
+    myqt.gui_quit()
+    sys.exit()
+
+# =====================================================================
+#                               Tools 
+# =====================================================================
+def arr2im(arr, vmin=False, vmax=False, pwr=1.0, cmap=None, gamma=1.0):
+    ''' ------------------------------------------
+    convert numpy array into image for display
+
+    limits dynamic range, power coefficient and
+    applies colormap
+    ------------------------------------------ '''
+    arr2 = arr.astype('float')
+    if vmin is False:
+        mmin = arr2.min()
+    else:
+        mmin = vmin
+
+    if vmax is False:
+        mmax = arr2.max()
+    else:
+        mmax = vmax
+
+    arr2 -= mmin
+    if mmax != mmin:
+        arr2 /= (mmax-mmin)
+
+    arr2 = arr2**pwr
+
+    #cm.jet.set_gamma(0.1)
+    if cmap == None:
+        mycmap = cm.jet
+    else:
+        mycmap = cmap
+
+    res = mycmap(arr2)
+    res[:,:,3] = gamma
+    return(res)
+
+
+# =====================================================================
+#                          Main GUI object
+# =====================================================================
+args = sys.argv[1:]
+
+class MyWindow(QtGui.QMainWindow):
+    ''' ------------------------------------------------------
+    This is the meat of the program: the class that drives
+    the GUI.
+    ------------------------------------------------------ '''
+    def __init__(self):
+        global index
+        self.mySHM = None # handle for mmapped SHM file
+        self.vmin  = False
+        self.vmax  = False
+        self.pwr   = 1.0
+        self.mycmap = cm.gray
+
+        self.packed = True
+        if "scexao" in platform.node():
+            self.packed = False
+
+        super(MyWindow, self).__init__()
+        if not os.path.exists(conf_dir + 'shmimview.ui'):
+            uic.loadUi('shmimview.ui', self)
+        else:
+            uic.loadUi(conf_dir + 'shmimview.ui', self)
+
+        # ==============================================
+        # prepare the display
+        # ==============================================
+        self.gView_shm.hideAxis('left')
+        self.gView_shm.hideAxis('bottom')
+
+        self.imv_data = pg.ImageItem()
+        self.overlay  = pg.GraphItem()
+        
+        self.gView_shm.addItem(self.imv_data)
+        
+        # ==============================================
+        #             GUI widget actions 
+        # ==============================================
+        self.dspB_disp_min.valueChanged[float].connect(self.update_vmin)
+        self.dspB_disp_max.valueChanged[float].connect(self.update_vmax)
+
+        self.chB_min.stateChanged[int].connect(self.update_vmin)
+        self.chB_min.stateChanged[int].connect(self.update_vmax)
+
+        self.chB_nonlinear.stateChanged[int].connect(self.update_nonlinear)
+
+        self.chB_dark_sub.stateChanged[int].connect(self.update_dark_state)
+        
+        self.cmB_cbar.addItems(['gray', 'hot', 'cool', 'bone', 'jet',
+                                'viridis', 'magma'])
+        self.cmB_cbar.activated[str].connect(self.update_cbar)
+        self.cmB_cbar.setCurrentIndex(0)
+
+        # ==============================================
+        #             top-menu actions
+        # ==============================================
+        self.actionQuit.triggered.connect(sys.exit)
+        self.actionQuit.setShortcut('Ctrl+Q')
+
+        self.actionOpen.triggered.connect(self.load_shm)
+        self.actionLoadDark.triggered.connect(self.load_shm_drk)
+        
+        if args is not []:
+            try:
+                self.mySHM = shm(str(args[0]), packed=self.packed)
+                self.live_counter = -1
+                self.naxis = self.mySHM.mtdata['naxis']
+                #print(self.mySHM.kwds)
+            except:
+                self.mySHM = None
+            try:
+                self.myslice = int(args[1])
+                self.myslice = min(self.myslice, self.mySHM.mtdata['size'][-1]-1)
+            except:
+                self.myslice = 0
+
+        self.myDRK = None
+        # ==============================================
+        self.show()
+        
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.refresh_all)
+        self.timer.start(50)
+
+    # =========================================================
+    def closeEvent(self, event):
+        sys.exit()
+
+    # =========================================================
+    def update_cbar(self):
+        cbar = str(self.cmB_cbar.currentText()).lower()
+        try:
+            exec 'self.mycmap = cm.%s' % (cbar,)
+        except:
+            self.mycmap = cm.jet
+
+    # =========================================================
+    def update_vmin(self):
+        self.vmin = False
+        if self.chB_min.isChecked():
+            self.vmin = self.dspB_disp_min.value()
+        
+    # =========================================================
+    def update_vmax(self):
+        self.vmax = False
+        if self.chB_max.isChecked():
+            self.vmax = self.dspB_disp_max.value()
+
+    # =========================================================
+    def update_nonlinear(self):
+        self.pwr = 1.0
+        if self.chB_nonlinear.isChecked():
+            self.pwr = 0.3
+
+    # =========================================================
+    def update_dark_state(self):
+        if self.live_counter == self.mySHM.get_counter():
+            self.live_counter -= 1
+        pass
+    
+    # =========================================================
+    def refresh_img(self):
+        self.imv_data.setImage(arr2im(self.data_img.T,
+                                      vmin=self.vmin, vmax=self.vmax,
+                                      pwr=self.pwr,
+                                      cmap=self.mycmap), border=2)
+
+    # =========================================================
+    def refresh_stats(self):
+
+        pt_levels = [0, 5, 10, 20, 50, 75, 90, 95, 99, 100]
+        pt_values = np.percentile(self.data_img, pt_levels)
+        
+        msg = "<pre>\n"
+
+        for ii,kwd in enumerate(self.mySHM.kwds):
+            msg += "%10s : %10s \n" % (kwd['name'], kwd['value'])
+
+        for i, ptile in enumerate(pt_levels):
+            msg += "p-tile %3d = %8.2f\n" % (ptile, pt_values[i])
+        msg += "</pre>"
+        self.lbl_stats.setText(msg)
+
+    # =========================================================
+    def load_shm(self):
+        fname = QtGui.QFileDialog.getOpenFileName(self, 'Load SHM file', 
+                                                  '/tmp/*.im.shm')
+        if self.mySHM is not None:
+            self.mySHM.close()
+            
+        self.mySHM = shm(str(fname), packed=self.packed)
+        self.live_counter = -1
+        self.naxis = self.mySHM.mtdata['naxis']
+        self.myslice = 0
+        self.myDRK = np.zeros_like(self.mySHM.get_data())
+        
+    # =========================================================
+    def load_shm_drk(self):
+        fname = QtGui.QFileDialog.getOpenFileName(self, 'Load SHM file', 
+                                                  '/tmp/*.im.shm')
+        temp = shm(str(fname), packed=self.packed)
+        self.myDRK = temp.get_data()
+        self.myGOOD = np.ones_like(self.myDRK)
+        rms = np.std(self.myDRK)
+        mu = np.median(self.myDRK)
+        self.myGOOD[self.myDRK > mu + 3.5*rms] = 0.0
+        self.myGOOD[self.myDRK < mu - 3.5*rms] = 0.0
+        temp.close()
+
+    # =========================================================
+    def refresh_all(self):
+        ''' ----------------------------------------------------------
+        Refresh the display
+        ---------------------------------------------------------- '''
+        self.test = 0
+        if self.mySHM is not None:
+
+            if self.live_counter < self.mySHM.get_counter():
+                if self.naxis == 2:
+                    self.data_img = self.mySHM.get_data(False, True)
+                else:
+                    self.data_img = self.mySHM.get_data(False, True)[self.myslice]
+
+                self.data_img = self.data_img.astype(np.float)
+                self.live_counter = self.mySHM.get_counter()
+                
+                if self.chB_dark_sub.isChecked():
+                    try:
+                        self.data_img -= self.myDRK
+                    except:
+                        pass
+
+                try:
+                    self.data_img *= self.myGOOD
+                except:
+                    pass
+
+            self.refresh_img()
+            self.refresh_stats()
+            
+# ==========================================================
+# ==========================================================
+if __name__ == "__main__":
+    main()

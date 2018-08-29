@@ -1,0 +1,62 @@
+#!/usr/bin/python
+
+import os
+import sys
+import time
+from pyqtgraph.Qt import QtGui, QtCore
+import numpy as np
+import pyqtgraph as pg
+from pyqtgraph.ptime import time as timenow
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from   scexao_shm   import shm
+
+app = QtGui.QApplication([])
+
+args = sys.argv[1:]
+
+if args == []:
+    sys.exit()
+
+shmname = args[0]
+
+p = pg.plot()
+p.setWindowTitle('Display of Shared Memory data: %s' % (shmname,))
+#p.setRange(QtCore.QRectF(0, -10, 5000, 20)) 
+p.setLabel('bottom', 'Frequency', units='Hz')
+p.setLabel('left', 'PSD', units='unit^2/Hz')
+curve = p.plot()
+
+
+datashm = shm("/tmp/%s.im.shm" % (shmname,))
+datadarkshm = shm("/tmp/%s_dark.im.shm" % (shmname,))
+ptr = 0
+lastTime = timenow()
+fps = None
+def update():
+    global ptr, lastTime, fps
+    data = datashm.get_data(check=True)
+    dark = datadarkshm.get_data(check=False)
+    curve.setData(data[127,:]-dark[127,:])
+    ptr += 1
+    now = timenow()
+    dt = now - lastTime
+    lastTime = now
+    if fps is None:
+        fps = 1.0/dt
+    else:
+        s = np.clip(dt*3., 0, 1)
+        fps = fps * (1-s) + (1.0/dt) * s
+    p.setTitle('%0.2f fps' % fps)
+    app.processEvents()  ## force complete redraw for every plot
+    #time.sleep(1)
+timer = QtCore.QTimer()
+timer.timeout.connect(update)
+timer.start(0)
+    
+
+
+## Start Qt event loop unless running in interactive mode.
+if __name__ == '__main__':
+    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+        QtGui.QApplication.instance().exec_()

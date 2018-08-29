@@ -1,0 +1,12 @@
+#! /bin/bash
+
+scexaoIP="10.20.20.2"
+
+tmux kill-session -t lowfsimTCPsend
+
+tmux new-session -d -s lowfsimTCPsend
+
+tmux send-keys "shmimTCPtransmit ircam2crop $scexaoIP 30101" C-m
+
+
+

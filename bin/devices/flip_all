@@ -1,0 +1,23 @@
+#!/bin/bash
+
+echo "Pt Grey 1 pickoff:"
+PG1_pickoff
+sleep 0.1
+echo "Integrating sphere pickoff:"
+intsphere
+sleep 0.1
+echo "IR cams block:"
+ircam_block
+sleep 0.1
+echo "Chuckcam Pupil lens:"
+chuck_pup
+sleep 0.1
+echo "SAPHIRA Pupil lens:"
+saphira_pup
+sleep 0.1
+echo "LLOWFS block:"
+lowfs_block
+sleep 0.1
+echo "Pt Grey 2 pickoff:"
+PG2_pickoff
+sleep 0.1

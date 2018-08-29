@@ -1,0 +1,27 @@
+#! /bin/bash
+
+scexaoIP="10.20.20.2"
+
+#/home/scexao/bin/dmmkdispchan
+#sleep 0.1
+
+
+
+cmd="/home/scexao/bin/shmimTCPtransmit"
+
+
+$cmd dm00disp00 $scexaoIP 30010
+$cmd dm00disp01 $scexaoIP 30011
+$cmd dm00disp02 $scexaoIP 30012
+$cmd dm00disp03 $scexaoIP 30013
+$cmd dm00disp04 $scexaoIP 30014
+$cmd dm00disp05 $scexaoIP 30015
+$cmd dm00disp06 $scexaoIP 30016
+$cmd dm00disp07 $scexaoIP 30017
+$cmd dm00disp08 $scexaoIP 30018
+$cmd dm00disp09 $scexaoIP 30019
+$cmd dm00disp10 $scexaoIP 30020
+$cmd dm00disp11 $scexaoIP 30021
+
+
+

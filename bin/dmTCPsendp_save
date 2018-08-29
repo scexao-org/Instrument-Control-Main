@@ -1,0 +1,64 @@
+#! /bin/bash
+
+scexaoIP="10.20.20.2"
+
+#/home/scexao/bin/dmmkdispchan
+#sleep 0.1
+
+
+
+
+tmux kill-session -t dmTCPsend-$1
+
+tmux new-session -d -s dmTCPsend-$1
+tmux split-window -v
+tmux split-window -v
+tmux select-layout even-vertical
+tmux split-window -v
+tmux select-layout even-vertical
+tmux split-window -v
+tmux select-layout even-vertical
+tmux split-window -v
+tmux select-layout even-vertical
+
+
+
+
+cmd="shmimTCPtransmit"
+
+
+if [ "$1" -eq "0" ]; then
+tmux select-pane -t 0
+tmux send-keys "$cmd dm00disp00 $scexaoIP 30000" C-m
+tmux select-pane -t 1
+tmux send-keys "$cmd dm00disp01 $scexaoIP 30001" C-m
+tmux select-pane -t 2
+tmux send-keys "$cmd dm00disp02 $scexaoIP 30002" C-m
+tmux select-pane -t 3
+tmux send-keys "$cmd dm00disp03 $scexaoIP 30003" C-m
+tmux select-pane -t 4
+tmux send-keys "$cmd dm00disp04 $scexaoIP 30004" C-m
+tmux select-pane -t 5
+tmux send-keys "$cmd dm00disp05 $scexaoIP 30005" C-m
+fi
+
+
+
+
+if [ "$1" -eq "1" ]; then
+tmux select-pane -t 0
+tmux send-keys "$cmd dm00disp06 $scexaoIP 30006" C-m
+tmux select-pane -t 1
+tmux send-keys "$cmd dm00disp07 $scexaoIP 30007" C-m
+tmux select-pane -t 2
+tmux send-keys "$cmd dm00disp08 $scexaoIP 30008" C-m
+tmux select-pane -t 3
+tmux send-keys "$cmd dm00disp09 $scexaoIP 30009" C-m
+tmux select-pane -t 4
+tmux send-keys "$cmd dm00disp10 $scexaoIP 30010" C-m
+tmux select-pane -t 5
+tmux send-keys "$cmd dm00disp11 $scexaoIP 30011" C-m
+fi
+
+
+

@@ -1,0 +1,8 @@
+#!/bin/bash
+if [ -z "$1" ];
+  then
+    echo -e "\n\033[31mlog \033[32mwhatever you want, even with spaces\033[0m\nwill log your comment into the 'comments' log\nUse \033[31mdisplog\033[0m to display logs. Type \033[31mdisplog -h \033[0mfor help\nUse \033[31mdolog\033[0m for automated logging. Type \033[31mdolog\033[0m for help\n"
+  else
+    tolog=$(echo $* | sed -e "s/ / /")
+    /home/scexao/bin/dolog comments "$tolog"
+fi

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+echo
+echo "Installing OWL cameras drivers"
+echo "------------------------------"
+
+LINUX_DEST=/lib/modules/$(uname -r)/kernel/misc
+#echo $LINUX_DEST
+
+if [[ `lsmod | grep pixci` != '' ]]
+then
+    echo "OWL cameras driver already loaded"
+else
+    #sudo cp /usr/local/xcap/drivers/x86_64/src_3.x/pixci_x86_64.ko /lib/modules/$(uname -r)/kernel/misc/
+    #echo modprobe pixci_x86_64.ko
+    #sudo /sbin/depmod -a
+    #sudo /sbin/modprobe -f pixci_x86_64 PIXCIPARM=-DM_3 || exit 1
+    sudo insmod /usr/local/xcap/drivers/x86_64/$(uname -r)/pixci_x86_64.ko PIXCIPARM=-DM_3
+    sudo rm -f /dev/pixci
+    sudo mknod /dev/pixci c $(cat /proc/devices | grep PIXCI\(R\) | awk '{print $1}') 0
+    sudo chmod 666 /dev/pixci
+    echo "Loaded OWL cameras module"
+fi

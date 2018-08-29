@@ -1,0 +1,461 @@
+#!/usr/bin/env python
+
+# ------------------------------------------------ #
+#     ___             _ _           _              #
+#    /   \/\/\     __| (_)___ _ __ | | __ _ _   _  #
+#   / /\ /    \   / _` | / __| '_ \| |/ _` | | | | #
+#  / /_// /\/\ \ | (_| | \__ \ |_) | | (_| | |_| | #
+# /___,'\/    \/  \__,_|_|___/ .__/|_|\__,_|\__, | #
+#                            |_|            |___/  #
+# ------------------------------------------------ #
+
+import pygame, sys
+from pygame.locals import *
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import pdb
+import threading
+import mmap
+import struct
+import os
+import Image
+import time
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+
+from scexao_shm import shm
+
+
+hmsg = """
+DM DISPLAY INSTRUCTIONS
+-----------------------
+
+controls:
+---------
+0-9,a,b,c,d : select channel for display
+CTRL+0-9,a,b: zero the selected channel
+f           : flatten/unflatten the DM
+y           : insert/remove DM bullseye
+
+
+"""
+
+args = sys.argv[1:]
+zoom0 = 2    # zoom for the display of the maps (default is 4)
+if args != []:
+    if isinstance(int(args[0]),int):
+        zoom0 = int(args[0])
+        zoom0 = min(3,max(1,zoom0))
+zoom = zoom0+1
+
+# ---------------------------------------------------------------
+# shared memory data structures are described in the Subaru wiki:
+# http://wiki.subaru.nao.ac.jp/wiki/Shared_memory_SCExAO
+# ---------------------------------------------------------------
+
+# ------------------------------------------------------------------
+#                       global variables
+# ------------------------------------------------------------------
+nch = 12                     # number of channels
+dms = 50                    # dm diameter (in actuator)
+sz  = 4*dms*dms             # short hand for array size in bytes
+sm_fname = []               # shared memory file names for channels
+sm_cntr  = np.zeros(nch) -1 # shared memory frame counter for channels
+gb_cntr  = -1               # combined counter
+vm_cntr  = -1               # counter for the voltmap                   
+lsize = zoom//2
+chi = 12
+dmflat = 0
+dmbull = False
+init = True
+
+# -----------------------
+#   set up the window
+# -----------------------
+pygame.init()
+
+FPS = 20                        # frames per second setting
+fpsClock = pygame.time.Clock()  # start the pygame clock!
+XW, YW = 250*zoom+4*lsize+40*zoom, 150*zoom+3*lsize+10*zoom     # window size
+screen = pygame.display.set_mode((XW, YW), 0, 32)#FULLSCREEN, 32)
+pygame.display.set_caption('DM multi-channel display!')
+scounter = 0                    # save counter
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+
+for i in xrange(nch):
+    exec "disp%02d = shm('/tmp/dm00disp%02d.im.shm', verbose=False)" % (i,i)
+
+disp = shm('/tmp/dm00disp.im.shm', False)
+volt = shm('/tmp/dmvolt.im.shm', False)
+
+# ------------------------------------------------------------------
+#             short hands for shared memory data access
+# ------------------------------------------------------------------
+def get_counter_channel(chn):
+    ''' ----------------------------------------
+    Return the current channel counter value.
+    Reads from the already-opened shared memory
+    data structure.
+    ---------------------------------------- '''
+    if chn < 8:
+        exec "cnt = disp%02d.get_counter()" % (chn,)
+    elif chn == 8:
+        cnt = disp.get_counter()
+    else:
+        cnt = volt.get_counter()
+    return cnt
+
+# ===
+# ===
+
+def get_data_channel(chn):
+    ''' ----------------------------------------
+    Return the current channel data content,
+    formatted as a 2D numpy array.
+    ---------------------------------------- '''
+    if chn < 12:
+        exec "arr = disp%02d.get_data()" % (chn,)
+    elif chn == 12:
+        arr = disp.get_data()
+    else:
+        arr = volt.get_data()
+        arr = np.int64(arr*300./16384.)
+
+    return(arr)
+
+# ------------------------------------------------------------------
+#  another short hand to convert numpy array into image for display
+# ------------------------------------------------------------------
+def arr2im(arr, vmin=None, vmax=None):
+    
+    mmin,mmax = arr.min(), arr.max()
+
+    img = Image.fromarray(arr.astype('float'))
+    rimg = img.resize((zoom*dms, zoom*dms))
+    rarr = np.asarray(rimg)
+
+    arr2 = rarr.copy()
+
+    if vmin == None:
+        arr2 -= mmin
+        arr2 /= (mmax-mmin+1e-9)
+    else:
+        arr2 -= vmin
+        arr2 /= (vmax-vmin)
+        
+    test = cm.jet(arr2)
+    return((255*test[:,:,:3]).astype('int'))
+
+# ------------------------------------------------------------------
+#              !!! now we are in business !!!!
+# ------------------------------------------------------------------
+
+zo = np.zeros((dms, dms))
+for i in xrange(nch):
+    exec "ch%02d = arr2im(zo)" % (i,)
+
+WHITE = (255, 255, 255)
+GREEN = (  0, 255,   0) 
+BLUE  = (  0,   0, 255)
+RED   = (255,   0,   0)
+BLK   = (  0,   0,   0)
+
+dstep = zoom*dms
+
+# ----------------------------
+#   auxilliary coordinates
+# ----------------------------
+xx, yy = np.zeros(14), np.zeros(14)
+
+for ii in xrange(4):
+    for jj in xrange(3):
+        xx[ii+jj*4] = ii*dstep+ii*lsize
+        yy[ii+jj*4] = jj*dstep+jj*lsize
+
+xx[12], yy[12] = 4*dstep+4*lsize, 0
+xx[13], yy[13] = 4*dstep+4*lsize, dstep+lsize
+
+# ----------------------------
+#          labels
+# ----------------------------
+
+fontsize = 8+(zoom-2)*2
+myfont = pygame.font.Font('freesansbold.ttf', fontsize) 
+fontsize2 = 10+(zoom-2)*3
+myfont2 = pygame.font.Font('freesansbold.ttf', fontsize2) 
+
+path_cartoon = "/home/scexao/conf/dm_displee_aux/bruce_lee%d.png" % (zoom,)
+cartoon1 = pygame.image.load(path_cartoon).convert_alpha()
+rect_cartoon = cartoon1.get_rect()
+rect_cartoon.topright = XW+9*zoom, 41*zoom
+screen.blit(cartoon1,  rect_cartoon)
+
+lbls = ["00: offset (flat)", 
+        "01: PyWFS TT LQG", 
+        "02: PyWFS RM", 
+        "03: PyWFS control",
+        "04: ZAP (ZPO)",
+        "05: LLOWFS (ZPO)",
+        "06: SC probes (ZPO)",
+        "07: Speckle Control (ZPO)",
+        "08: Zernike offset (ZPO)",
+        "09: Astrogrid",
+        "10: Turbulence",
+        "11: AO simulator",
+        "12: Combined",
+        "13: Voltage"]
+
+for i in xrange(nch+2):
+    exec "lbl%02d = myfont.render(lbls[%d], True, WHITE, BLK)" % (i, i)
+    exec "rct%02d = lbl%02d.get_rect()" % (i,i)
+    exec "rct%02d.bottomleft = (xx[%d], dstep+yy[%d])" % (i,i,i)
+
+UD, LR = 0, 0 # up-down and left-right flags (they can be combined)
+
+pygame.display.update()
+
+while True: # the main game loop
+
+    for i in xrange(nch):
+        test = get_counter_channel(i)
+        #print i, test
+        if test != sm_cntr[i]:
+                sm_cntr[i] = test
+                exec "temp%02d = get_data_channel(%d)" % (i,i)
+                if i == chi or init:
+                    exec "minc%02d = np.min(temp%02d)" % (i,i)
+                    exec "maxc%02d = np.max(temp%02d)" % (i,i)
+                    exec "medc%02d = np.mean(temp%02d)" % (i,i)
+                    exec "stdc%02d = np.std(temp%02d)" % (i,i)
+                exec "ch%02d = arr2im(temp%02d)" % (i,i)
+                exec "surf%02d = pygame.surface.Surface((zoom*dms, zoom*dms))" % (i,)
+                exec "pygame.surfarray.blit_array(surf%02d, ch%02d)" % (i,i)
+                #exec "rct_dm%02d = surf%02d.get_rect()" % (i,i)
+                exec "screen.blit(surf%02d, (%02d, %02d))" % (i, xx[i], yy[i])
+                
+    test = get_counter_channel(12)
+    if test != gb_cntr:
+        gb_cntr = test
+        temp12 = get_data_channel(12)
+        if chi == 12 or init:
+            minc12 = np.min(temp12)
+            maxc12 = np.max(temp12)
+            medc12 = np.mean(temp12)
+            stdc12 = np.std(temp12)
+        ch12 = arr2im(temp12, vmin=0.01, vmax=1.2842)
+        surf12 = pygame.surface.Surface((dstep, dstep))
+        pygame.surfarray.blit_array(surf12, ch12)
+        #rct_dm8 = surf8.get_rect()
+        screen.blit(surf12, (xx[12], yy[12]))
+
+    test = get_counter_channel(13)
+    if test != vm_cntr:
+        vm_cntr = test
+        temp13 = get_data_channel(13)
+        if chi == 13 or init:
+            minc13 = np.min(temp13)
+            maxc13 = np.max(temp13)
+            medc13 = np.mean(temp13)
+            stdc13 = np.std(temp13)
+        ch13 = arr2im(temp13, vmin=0.01, vmax=120.)
+        surf13 = pygame.surface.Surface((dstep, dstep))
+        pygame.surfarray.blit_array(surf13, ch13)
+        #rct_dm9 = surf9.get_rect()
+        screen.blit(surf13, (xx[13], yy[13]))
+    
+    if init:
+        init = False
+        
+    for i in xrange(3):
+        Y0 = (i+1)*dstep+i*lsize
+        if i < 2:
+            XM = 5*dstep+4*lsize
+            pygame.draw.line(screen, WHITE, (0, Y0), (XM, Y0), lsize)
+        else:
+            pygame.draw.line(screen, WHITE, (0, Y0), (XW, Y0), lsize)
+            
+    for i in xrange(5):
+        X0 = (i+1)*dstep+i*lsize
+        if i < 4:
+            pygame.draw.line(screen, WHITE, (X0, 0), (X0, 3*dstep+2*lsize), lsize)
+        else:
+            pygame.draw.line(screen, WHITE, (X0, 0), (X0, 2*dstep+lsize), lsize)
+            
+
+    for i in xrange(nch+2):
+        exec "screen.blit(lbl%02d, rct%02d)" % (i,i)
+    
+    #channel statistics
+    exec "minc = minc%02d" % (chi,)
+    exec "maxc = maxc%02d" % (chi,)
+    exec "medc = medc%02d" % (chi,)
+    exec "stdc = stdc%02d" % (chi,)
+    stat = "     channel #%02d:   min=%.3f,   max=%.3f,   mean=%.3f,   std=%.3f     " % (chi,minc,maxc,medc,stdc)
+    lbst = myfont2.render(stat, True, WHITE, BLK)
+    rctst = lbst.get_rect()
+    rctst.center = ((5*dstep+4*lsize)//2, 3*dstep+3*lsize+5*zoom)
+    screen.blit(lbst, rctst)
+
+    # =====================================
+    for event in pygame.event.get():
+
+        if event.type == QUIT:
+            pygame.quit()
+
+            # close shared memory access
+            # --------------------------
+            for i in xrange(nch):
+                exec "disp%02d.close()" % (i,)
+
+            disp.close()
+            volt.close()
+
+            print("dm_displee has ended normally.")
+            sys.exit()
+        elif event.type == KEYDOWN:
+
+            if event.key == K_ESCAPE:
+                pygame.quit()
+                # close shared memory access
+                # --------------------------
+                for i in xrange(nch):
+                    exec "disp%02d.close()" % (i,)
+
+                disp.close()
+                volt.close()
+
+                print("dm_displee has ended normally.")
+                sys.exit()
+
+            if event.key == K_0:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 00")
+                    if dmflat > 0:
+                        dmflat = 0
+                else:
+                    chi = 0
+            
+            if event.key == K_1:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 01")
+                else:
+                    chi = 1
+            
+            if event.key == K_2:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 02")
+                else:
+                    chi = 2
+            
+            if event.key == K_3:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 03")
+                else:
+                    chi = 3
+            
+            if event.key == K_4:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 04")
+                    if dmbull:
+                        dmbull = False
+                else:
+                    chi = 4
+            
+            if event.key == K_5:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 05")
+                else:
+                    chi = 5
+            
+            if event.key == K_6:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 06")
+                else:
+                    chi = 6
+            
+            if event.key == K_7:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 07")
+                else:
+                    chi = 7
+            
+            if event.key == K_8:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 08")
+                else:
+                    chi = 8
+            
+            if event.key == K_9:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 09")
+                else:
+                    chi = 9
+            
+            if event.key == K_a:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 10")
+                else:
+                    chi = 10
+            
+            if event.key == K_b:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    os.system("dmdispzero 00 11")
+                else:
+                    chi = 11
+            
+            if event.key == K_c:
+                chi = 12
+            
+            if event.key == K_d:
+                chi = 13
+
+
+            if event.key == K_f:
+                dmflat += 1
+                dmflat %= 3
+                if dmflat == 1:
+                    os.system("dmflat")
+                elif dmflat == 2:
+                    os.system("dmflatAO188")
+                else:
+                    os.system("dmdispzero 00 00")
+
+            if event.key == K_y:
+                dmbull = not dmbull
+                if dmbull:
+                    os.system("dm_bullseye0 0.5 1.5")
+                else:
+                    os.system("dmdispzero 00 04")
+
+            if event.key == K_h:
+                print(hmsg)
+
+        elif event.type == KEYUP:
+            LR = 0
+            UD = 0
+
+    pygame.display.update()#[rct0, rct1, rct2, rct3, rct4, rct5, rct6, rct7, rct8, rct9, rct_dm0, rct_dm1, rct_dm2, rct_dm3, rct_dm4, rct_dm5, rct_dm6, rct_dm7, rct_dm8, rct_dm9, rctst])
+    fpsClock.tick(FPS)
+    scounter += 1
+    if scounter == FPS:
+        scounter = 0
+
+pygame.quit()
+sys.exit()

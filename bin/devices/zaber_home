@@ -1,0 +1,50 @@
+#!/bin/bash
+
+echo "OAP1 f:"
+oap1 f home
+echo "Pupil mask x:"
+pupil x home
+echo "Pupil mask y:"
+pupil y home
+echo "PIAA lenses #1 x:"
+piaa1 x home
+echo "PIAA lenses #1 y:"
+piaa1 y home
+echo "PIAA lenses #2 x:"
+piaa2 x home
+echo "PIAA lenses #2 y:"
+piaa2 y home
+echo "PIAA lenses #2 f:"
+piaa2 f home
+echo "Focal plane mask x:"
+fpm x home
+echo "Focal plane mask y:"
+fpm y home
+echo "Focal plane mask f:"
+fpm f home
+echo "Lyot mask x:"
+lyot x home
+echo "Lyot mask y:"
+lyot y home
+echo "inverse PIAA theta:"
+invpiaa theta home
+echo "inverse PIAA phi:"
+invpiaa phi home
+echo "IRCAM focus:"
+ircam_fcs f1 home
+echo "LOWFS focus:"
+lowfs_fcs home
+echo "Fiber Injection x:"
+fibinj_fib x home
+echo "Fiber Injection y:"
+fibinj_fib y home
+echo "Fiber Injection f:"
+fibinj_fib f home
+echo "PyWFS col lens:"
+pywfs_col home
+echo "PyWFS focus:"
+pywfs_fcs home
+echo "PyWFS pupil x:"
+pywfs_pup x home
+echo "PyWFS pupil y:"
+pywfs_pup y home

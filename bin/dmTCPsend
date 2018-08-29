@@ -1,0 +1,59 @@
+#! /bin/bash
+
+scexaoIP="10.20.20.2"      # direct fiber link
+
+/home/scexao/bin/dmmkdispchan
+sleep 0.1
+
+tmux kill-session -t dmTCPsend
+
+tmux new-session -d -s dmTCPsend
+tmux split-window -v
+tmux split-window -h
+tmux select-pane -t 0
+tmux split-window -h
+tmux select-pane -t 0
+tmux split-window -v
+tmux select-pane -t 2
+tmux split-window -v
+tmux select-pane -t 4
+tmux split-window -v
+tmux select-pane -t 6
+tmux split-window -v
+tmux split-window -v
+tmux select-pane -t 0
+tmux split-window -v
+tmux split-window -v
+
+
+tmux select-layout even-vertical
+
+
+tmux select-pane -t 0
+tmux send-keys "shmimTCPtransmit dm00disp00 $scexaoIP 30010" C-m
+tmux select-pane -t 1
+tmux send-keys "shmimTCPtransmit dm00disp01 $scexaoIP 30011" C-m
+tmux select-pane -t 2
+tmux send-keys "shmimTCPtransmit dm00disp02 $scexaoIP 30012" C-m
+tmux select-pane -t 3
+tmux send-keys "shmimTCPtransmit dm00disp03 $scexaoIP 30013" C-m
+tmux select-pane -t 4
+tmux send-keys "shmimTCPtransmit dm00disp04 $scexaoIP 30014" C-m
+tmux select-pane -t 5
+tmux send-keys "shmimTCPtransmit dm00disp05 $scexaoIP 30015" C-m
+tmux select-pane -t 6
+tmux send-keys "shmimTCPtransmit dm00disp06 $scexaoIP 30016" C-m
+tmux select-pane -t 7
+tmux send-keys "shmimTCPtransmit dm00disp07 $scexaoIP 30017" C-m
+tmux select-pane -t 8
+tmux send-keys "shmimTCPtransmit dm00disp08 $scexaoIP 30018" C-m
+tmux select-pane -t 9
+tmux send-keys "shmimTCPtransmit dm00disp09 $scexaoIP 30019" C-m
+tmux select-pane -t 10
+tmux send-keys "shmimTCPtransmit dm00disp10 $scexaoIP 30020" C-m
+tmux select-pane -t 11
+tmux send-keys "shmimTCPtransmit dm00disp11 $scexaoIP 30021" C-m
+
+
+
+

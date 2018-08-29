@@ -1,0 +1,4 @@
+1;SAPHIRA IN      ;23.0;2
+2;IRD IN          ;26.0;2
+3;KCAM IN         ;23.1;2    
+4;OUT             ;0.0 ;1

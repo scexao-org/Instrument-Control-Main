@@ -1,0 +1,2 @@
+cd /home/scexao/rhea/rhea_subaru
+xterm -fg green -bg black -e ./rhea_inject &

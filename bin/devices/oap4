@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+# ========================== #
+#    ___  _      ___ _  _    #
+#   /___\/_\    / _ \ || |   #
+#  //  ///_\\  / /_)/ || |_  #
+# / \_//  _  \/ ___/|__   _| #
+# \___/\_/ \_/\/       |_|   #
+#                            #
+# ========================== #
+
+import os
+import sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from devices import devices
+
+#scale in theta is 7.563 arcsec per degree
+#scale in phi   is 1.255 arcsec per degree
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+devname = "oap4"
+
+conexids = ["usb-Newport_CONEX-AGP_A61MB80N-if00-port0", "usb-FTDI_FT232R_USB_UART_AL01V7AB-if00-port0"]
+conexnames = ["theta", "phi"]
+
+description = "OAP4 orientation"
+
+defpos = ["onaxis", "vapp1", "vapp1w", "vapp2"]
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+devices(devname, conexids, conexnames, args=args, defpos=defpos, description=description, color_st=True)

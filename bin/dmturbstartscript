@@ -1,0 +1,4 @@
+Cfits0 -n dmturb << EOF
+aoloopcontrolDMturb
+exit
+EOF

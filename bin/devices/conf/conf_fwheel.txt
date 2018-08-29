@@ -1,0 +1,6 @@
+1;OPEN            
+2;1550nm, 10nm BW 
+3;1550nm, 25nm BW 
+4;1550nm, 50nm BW 
+5;J-band          
+6;H-band (deflt)  

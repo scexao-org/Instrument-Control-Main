@@ -1,0 +1,43 @@
+#!/bin/bash
+
+cal_src home
+sleep 0.1
+oap1 x home
+sleep 0.1
+oap1 y home
+sleep 0.1
+dichroic home
+sleep 0.1
+pupil wheel home
+sleep 0.1
+piaa1 wheel home
+sleep 0.1
+piaa2 wheel home
+sleep 0.1
+nuller_pickoff home
+sleep 0.1
+fibinj_pickoff home
+sleep 0.1
+fpm wheel home
+sleep 0.1
+lyot wheel home
+sleep 0.1
+charis_pickoff home
+sleep 0.1
+mkids_pickoff home
+sleep 0.1
+vampfirst_splitter home
+sleep 0.1
+pcfi_pickoff home
+sleep 0.1
+pcfi_len home
+sleep 0.1
+pcfi_fib x home
+sleep 0.1
+pcfi_fib y home
+sleep 0.1
+pcfi_fib f home
+sleep 0.1
+saphira_pickoff home
+sleep 0.1
+pywfs_pickoff home

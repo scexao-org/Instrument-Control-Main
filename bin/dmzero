@@ -1,0 +1,5 @@
+Cfits << EOF
+readshmim dmvolt
+imzero dmvolt
+quit
+EOF

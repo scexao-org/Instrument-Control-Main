@@ -1,0 +1,1368 @@
+#!/usr/bin/env python
+
+import pygame, sys
+from pygame.locals import *
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import pdb
+import threading
+import mmap
+import struct
+import os
+import array
+import Image
+import time
+import datetime
+import pyfits as pf
+
+simulation = False #True
+
+home = os.getenv('HOME')
+auxdir = home+"/conf/speckle_aux/"
+
+sys.path.append(home+'/Progs/python/libs/') # Frantz's laptop
+sys.path.append(home+'/src/lib/python/')    # SCExAO's main computer
+from spkl_tools   import *
+from img_tools    import *
+#from dm_tools     import *
+
+from scexao_shm   import shm
+
+from numpy.linalg import solve
+
+plt.ion()
+
+utcnow = datetime.datetime.utcnow
+
+hmsg = """
+############################################################
+SPECKLE NULLING CONTROL SOFTWARE
+--------------------------------
+
+- h : print this help menu
+- F1: FULL-SCREEN MODE
+
+- LEFT  -> : select left ROI
+- RIGHT -> : select right ROI
+- UP    -> : increase ROI exclusion radius
+- DOWN  -> : decrease ROI exclusion radius
+
+- q/a      : +/- default spk probe ampl
+- w/s      : +/- number of tracked speckles
+- e/d      : +/- speckle loop gain
+- r/f      : +/- number of speckle probes
+
+############################################################
+"""
+
+# -----------------------
+#   set up the window
+# -----------------------
+pygame.init()
+conf = Config()
+conf.read_conf_file()
+conf.stat_sz = 50
+conf.summary()
+
+FPS = 20                        # frames per second setting
+fpsClock = pygame.time.Clock()  # start the pygame clock!
+XW, YW = 990, 800               # window size
+screen = pygame.display.set_mode((XW, YW), 0, 32)
+pygame.display.set_caption('Speckle Massacre GUI')
+
+os.system("scexaostatus set sn_loop OPEN 1")
+    
+# ------------------------------------------------------------------
+#                       global variables
+# ------------------------------------------------------------------
+camid    = 1               # camera identifier (1: science cam)
+nch      = 8               # number of channels
+dms      = 50              # dm diameter (in actuator)
+xs, ys   = 320, 256        # image size
+sz       = 4*dms*dms       # short hand for array size in bytes
+sm_fname = []              # shared memory file names for channels
+sm_cntr  = np.zeros(nch)-1 # shared memory frame counter for channels
+gb_cntr  = -1              # combined counter
+vm_cntr  = -1              # counter for the voltmap
+zoom     =  4              # zoom for the display of the maps
+
+xc,yc    = np.meshgrid(np.arange(dms)-dms/2, # dm coordinates 
+                       np.arange(dms)-dms/2) # 
+
+frms_cub = np.zeros((conf.stat_sz, ys*xs))# frames used for stats
+frms_ave = np.zeros((ys,xs))
+frms_std = np.zeros((ys,xs))
+
+updt_stats = True                 # flag for thread
+tgt_lock   = False                # flag for speckle nulling behavior
+abort_loop = False                # flag for speckle loop
+flscreen   = False                # flag for full-screen
+nspmax     = 10                   # max number of speckles targeted
+pnt_track  = False                # flag for the pointing tracking!
+satx       = [160, 159,  76, 245] # coordinates of satellites speckles
+saty       = [208,  44, 128, 128] # --
+
+#satx       = [160, 159,  44, 276] # coordinates of satellites speckles
+#saty       = [244,  12, 128, 128] # --
+
+ROI_xr = 20
+ROI_or = 110
+ROI = mkROI((xs, ys), (conf.orix, conf.oriy), 
+            ori=conf.orient, xr=ROI_xr).astype(float)
+mask = 1.0 - mkdisk((xs, ys), (conf.orix, conf.oriy), int(1.5*ROI_xr))
+
+#sat_mask = pf.getdata(auxdir+"sat_mask.fits")
+sat_mask = 1.0 * mk_sat_mask((xs, ys), satx, saty)
+#pf.writeto(auxdir+"sat_mask.fits", sat_mask, clobber=True)
+ROI *= (1 - sat_mask)
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+for i in xrange(nch):
+    exec "disp%02d = shm('/tmp/dm00disp%02d.im.shm', verbose=False)" % (i,i)
+
+
+if not simulation:
+    cam  = shm("/tmp/ircam%d.im.shm" % (camid,), verbose=False)
+else:
+    cam  = shm("/tmp/cam.im.shm", verbose=False)
+
+# ------------------------------------------------------------------
+# ------------------------------------------------------------------
+def test_thread():
+    print "Good for you: You can click!!"
+    exit(0)
+    
+# ------------------------------------------------------------------
+#             short hands for shared memory data access
+# ------------------------------------------------------------------
+def init_DM_channel(chn=7):
+    exec "disp%02d.set_data(np.zeros((dms,dms)).astype('float32'))" % (chn,)
+    return(True)
+
+def get_data_channel(chn):
+    ''' ----------------------------------------
+    Return the current channel data content,
+    formatted as a 2D numpy array.
+    ---------------------------------------- '''
+    exec "arr = disp%02d.get_data()" % (chn,)
+
+    return(arr)
+
+def DM_sine(amp, kx, ky, phi=0.0):
+    ''' ----------------------------------------
+    calculate sine DM displacement map:
+    - amp:    speckle amplitude in um
+    - kx, ky: x,y-spatial frequency
+    - phi:    phase offset of the sine wave
+    ---------------------------------------- '''
+    phase = 2*np.pi*(kx * xc + ky * yc) + phi
+    return(amp * np.sin(phase))
+
+
+def add_DM_sine(amp, kx, ky, phi=0.0, chn=6):
+    ''' -----------------------------------------
+    adds a sine wave to the DM channel "chn"
+    ----------------------------------------- '''
+    dispm = DM_sine(amp, kx, ky, phi)
+    add_DM_disp(dispm, chn)
+
+def add_DM_disp(dispm, chn=6):
+    ''' -----------------------------------------
+    adds a displ map to the DM channel "chn"
+    ----------------------------------------- '''
+    map0 = get_DM_disp(chn)
+    disp_2_DM(dispm+map0, chn)
+
+def get_DM_disp(chn=6):
+    exec "map0 = disp%02d.get_data(False, True)" % (chn,)
+    return(map0)
+
+def disp_2_DM(dispm, chn=6):
+    exec "disp%02d.set_data(dispm.astype('float32'))" % (chn,)
+
+class SpkProbe():
+    '''--------------------------------------------------
+    Speckle probe abstraction, for speckle nulling.
+
+    Follows the convention established by OG and FM:
+    kx, ky: (x,y) spatial frequencies on the DM
+    amp   : amplitude in microns
+    phi   : phase 
+    -------------------------------------------------- '''
+    def __init__(self,kx,ky,amp,phi):
+        self.kx = kx
+        self.ky = ky
+        self.amp = amp
+        self.phi = phi
+
+# ====================================================================
+# ====================================================================
+
+def mk_probe(spks):
+    ''' --------------------------------------------------
+    create a 2d disp map from a list of speckle probes
+    -------------------------------------------------- '''
+    x,y = np.meshgrid(np.arange(dms)-dms/2, np.arange(dms)-dms/2)
+
+    res = get_DM_disp(6)
+    for i in range(np.size(spks)):
+        phase = 2.0*np.pi*(x*spks[i].kx + y*spks[i].ky)+spks[i].phi
+        res += spks[i].amp*np.sin(phase)
+    return res
+
+# ===
+# ===
+
+def getimg(check=False, reform=True):
+    ''' ----------------------------------------
+    Return the current image data content,
+    formatted as a 2D numpy array.
+    ---------------------------------------- '''
+    return(cam.get_data(check, reform).astype('float'))
+
+# ------------------------------------------------------------------
+#  another short hand to convert numpy array into image for display
+# ------------------------------------------------------------------
+def arr2im(arr, vmin=-0.5, vmax=0.5, zoom=zoom):
+    
+    arr2 = arr.astype('float')
+    vmin, vmax = arr2.min(), arr2.max()
+
+    vmax = np.percentile(arr, 99.9)
+
+    prange = vmax-vmin
+
+    arr2 -= vmin
+    arr2 /= prange+1e-9
+
+    test = cm.jet(arr2)
+
+    return((255*(test[:,:,:3])).astype('int'))
+
+# ------------------------------------------------------------------
+#  this is a thread that maintains the statistics of the images
+# ------------------------------------------------------------------
+def update_im_stats():
+    global updt_stats
+    global frms_cub
+    global frms_ave
+    global frms_std
+    global conf
+    global bias_frm
+    global xs, ys
+    cntr = 0
+
+    while updt_stats:
+        if cntr == 50:
+            cntr = 0
+
+        img = getimg(False, False) - bias_frm.ravel()   
+        frms_cub[cntr] = img
+        
+        if (cntr % 10) == 0:
+            tmp = np.mean(frms_cub, 0)
+            frms_ave = tmp.reshape((ys, xs))
+
+            tmp = np.std(frms_cub, 0)
+            frms_std = tmp.reshape((ys, xs))
+
+        time.sleep(0.01)
+        cntr += 1
+    exit(0)
+
+# --------------------------------------------------------
+#  this function maintains the target speckle information
+# --------------------------------------------------------    
+def updt_spk_pos(img):
+    global conf
+    global tgt_lock
+    global xs, ys
+
+    ns = conf.nspk_2_track
+    (spx, spy) = locate_speckles(img, ns, xr=10.0, nbit=0)
+
+    conf.spxs[:ns]  = spx  # for display in the window
+    conf.spys[:ns]  = spy  # -------
+
+    if (tgt_lock):
+        (kx, ky) = (conf.kxs, conf.kys)
+    else:
+        (kx, ky) = spk_2_spf(spx, spy)
+        
+    irad = 3.0
+    cont = np.zeros(ns)
+    Iarr = np.zeros(ns)
+    for i in range(ns):
+        spmask = mkdisk((xs,ys), (spx[i],spy[i]), irad)
+        Is = np.mean(img[spmask > 0])
+        Iarr[i] = Is
+        cont[i] = conf.c0*(Is/conf.I0)
+
+    txt = "Target speckle props:\n"
+    for i in range(ns):
+        txt += "(%+.3f, %+.3f): I = %7.1f con=%.4f, a = %.4f\n" % \
+            (kx[i], ky[i], Iarr[i], cont[i], (0.4/np.pi)*np.sqrt(cont[i]))
+
+    conf.kxs   = kx   # write these values in config data structure
+    conf.kys   = ky   # for iterations to come.
+    conf.conts = cont # contrasts
+
+    print txt
+    return(0)
+
+# =============================================================
+# =============================================================
+# This section marks the beginning of the threads and functions
+# called when clicking in the appropriate regions of the window
+# =============================================================
+# =============================================================
+
+def recal_sats():
+    ''' ------------------------------------------------
+    Recalibrate the satellite speckles properties.
+    Doesn't do much yet, but should help auto-set the
+    ideal probe amplitude.
+    ------------------------------------------------ '''
+    global conf
+    global satx, saty
+    global sat_mask
+    global etime
+    global loop_mesg
+
+    delay = np.max((etime*1e-6, 0.01))
+
+    amp      = conf.prbamp  # starting amplitude
+    kx1, ky1 = 0.0, 0.5     # frequencies of the two pairs
+    kx2, ky2 = 0.5, 0.0     # of statellite speckles
+
+    init_DM_channel(4)      # initialize the channel 4 (astrometry)
+    time.sleep(0.1)
+    im0 = getimg(False, True) # first image
+
+    time.sleep(delay)
+
+    add_DM_sine(amp, kx1, ky1, np.pi/2, chn=4)
+    add_DM_sine(amp, kx2, ky2, np.pi/2, chn=4)
+
+    time.sleep(0.1)
+
+    spks = sat_mask * (getimg(False, True) - im0) # image with satellites
+    (satx, saty) = locate_speckles(spks.astype('float'), 4, xr=10.0, nbit=0)
+    sat_mask = 1.0 * mk_sat_mask((xs, ys), satx, saty, xr=10)
+
+    pf.writeto(auxdir+"sat_mask.fits", sat_mask, clobber=True)
+    #print np.round(satx, 2)
+    #print np.round(saty, 2)
+
+    conf.orix = np.mean(satx)
+    conf.oriy = np.mean(saty)
+    print( conf.orix, conf.oriy)
+    loop_mesg = " origin: (%.1f, %.1f) " % (conf.orix, conf.oriy)
+    exit(0)
+
+def get_etime():
+    if not simulation:
+        etime = int(cam.get_expt())
+    else:
+        etime = 50000
+    return(etime)
+
+# ============================================================
+def updt_bias():                   # refreshes the bias
+    global bias_frm
+
+    etime = get_etime()
+    bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (etime,)
+    bias_frm = pf.getdata(bname)
+
+    exit(0)
+
+# ============================================================
+def origin():                      # redetermine origin
+    ''' --------------------------------------------------
+    Locate the center of the FOV despite the presence of a
+    focal plane mask, by adding strong pairs of speckles
+    around it.
+    -------------------------------------------------- '''
+    global conf
+    global ROI
+    global ROI_xr
+    global loop_mesg
+
+    os.system("scexaostatus set sn_loop 'CALIB ORIGIN' 0")
+    im0 = getimg(False, True) # first image
+
+    (x0, y0) = find_psf_center(im0, verbose=False)
+
+    amp = conf.prbamp
+    kx1, ky1 = 0.00, 0.35 # frequencies of the two
+    kx2, ky2 = 0.35, 0.00 # test speckles
+    
+    nphi = 4
+    test_phase = 2*np.pi * np.arange(nphi) / float(nphi)
+
+    ims = np.zeros_like(im0) # img for speckles
+        
+    # modulate DM and stack speckled images
+    for i, phi in enumerate(test_phase):
+        add_DM_sine(amp, kx1, ky1, phi, chn=6)
+        add_DM_sine(amp, kx2, ky2, phi, chn=6)
+        
+        ims += getimg(False, True)
+
+        add_DM_sine(amp, kx1, ky1, phi+np.pi, chn=6)
+        add_DM_sine(amp, kx2, ky2, phi+np.pi, chn=6)
+
+
+    spks = ims/float(nphi) - im0
+    spks *= (1 - mkdisk((320, 256), (x0, y0), 10.0))
+    pf.writeto(auxdir+'test.fits', spks, clobber=True)
+    (spx, spy) = locate_speckles(spks, 4, xr=10.0)
+
+    conf.orix = np.mean(spx)
+    conf.oriy = np.mean(spy)
+    loop_mesg = '(%5.2f,%5.2f)' % (conf.orix, conf.oriy)
+    ROI       = mkROI((xs, ys), (conf.orix, conf.oriy), 
+                      ori=conf.orient, xr=ROI_xr).astype(float)
+    conf.save_conf_file()
+    clear_channel_6()
+    exit(0)
+
+# ============================================================
+def find_pix2spf():
+    ''' -----------------------------------------------
+    Determine the transfer matrix that converts spatial
+    frequencies into pixel offsets: PIX2SPF
+    ----------------------------------------------- '''
+    global conf
+    etime = get_etime()
+    delay = np.max((etime*1e-6, 0.01))
+
+    os.system("scexaostatus set sn_loop 'CALIB PIX2SPF' 0")
+
+    # test-speckles characteristics
+    nphi = 20
+    ncadd = 30
+    test_phase = 2*np.pi * np.arange(nphi) / float(nphi)
+    skx = np.array([0.3,-0.2, 0.3, 0.2, 0.1, 0.0, 0.4]) # speckle kx
+    sky = np.array([0.1, 0.2,-0.3,-0.1, 0.2, 0.3, 0.0]) # speckle ky
+    amp = conf.prbamp              # speckle amplitude
+    nspk = skx.size                      # number of test-speckles
+
+    im0 = getimg(False, True).astype('float') # first image
+    for i in xrange(ncadd-1):
+        im0 += getimg(False, True).astype('float')
+        time.sleep(delay)
+    im0 /= float(ncadd)
+    time.sleep(delay)    
+
+    ims = np.zeros((nspk, ys, xs))
+
+    for ii in range(nspk):
+        for i, phi in enumerate(test_phase):
+            add_DM_sine(amp, skx[ii], sky[ii], phi, chn=6)
+            time.sleep(0.01)
+            for ll in xrange(ncadd):
+                ims[ii] += getimg(False, True)
+                time.sleep(delay)
+
+            add_DM_sine(amp, skx[ii], sky[ii], phi+np.pi, chn=6)
+
+        ims[ii] = ims[ii] / float(nphi*ncadd) - im0 # added speckles only
+        ims[ii] *= 1 - sat_mask
+        #pf.writeto(auxdir+'sp%d.fits' % (ii+1,), ims[ii], clobber=True)
+
+    # processing the data to find PIX2SPF
+    # -----------------------------------
+    SPX = np.zeros((nspk))        # arrays for least square
+    SPY = np.zeros((nspk))        # idem
+    AA  = np.transpose([skx,sky]) # idem
+
+    for ii in range(nspk):
+        (sp_x, sp_y) = locate_speckles(ims[ii], 2)
+            
+        signx, signy = np.sign(skx[ii]), np.sign(sky[ii])
+
+        SPX[ii] = signx * np.abs((sp_x[0]-sp_x[1])/2.0)
+        SPY[ii] = signy * np.abs((sp_y[0]-sp_y[1])/2.0)
+            
+    SPF2PIX = np.array([solve(np.dot(AA.T,AA), np.dot(AA.T, SPX)),
+                        solve(np.dot(AA.T,AA), np.dot(AA.T, SPY))])
+
+
+    #SPF2PIX      = np.array([[166.89, -0.13],
+    #                         [0.39, 165.03]])
+
+    PIX2SPF = np.matrix(SPF2PIX).I
+    np.set_printoptions(suppress=True)
+    print '---'
+    print np.round(skx, 2)
+    print np.round(SPX, 2)
+    print '---'
+    print np.round(sky, 2)
+    print np.round(SPY, 2)
+    print '---'
+        
+    np.set_printoptions(precision=3)
+    print np.round(SPF2PIX, 2)
+    print '---'
+    print np.round(PIX2SPF, 2)
+    np.set_printoptions(precision=8)
+
+    conf.SPF2PIX = SPF2PIX # store the transformation matrices
+    conf.PIX2SPF = PIX2SPF # for later use!
+    clear_channel_6()
+    exit(0)
+
+# ============================================================
+def spk_2_spf(spx, spy):
+    global conf
+    ''' ---------------------------------------------
+    Small utility to convert speckle coordinates
+    to spatial frequencies on the DM.
+    --------------------------------------------- '''
+    ns = np.size(spx) # number of speckles
+    kx = []
+    ky = []
+
+    # ---------------
+
+    for i in range(ns):
+        test = np.dot(conf.PIX2SPF, 
+                      [conf.orix-spx[i], conf.oriy-spy[i]]).flatten()
+
+        kx.append(test[0, 0])
+        ky.append(test[0, 1])
+    return(kx, ky)
+
+def spf_2_spk(kx, ky):
+    global conf
+    ''' ---------------------------------------------
+    Small utility to convert spatial frequencies on
+    the DM into speckle coordinates.
+    --------------------------------------------- '''
+    ns = np.size(kx) # number of speckles
+    spx = []
+    spy = []
+    for i in range(ns):
+        test = np.dot(conf.SPF2PIX, 
+                      [kx[i], ky[i]]).flatten()
+        spx.append(test[0] + conf.orix)
+        spy.append(test[1] + conf.oriy)
+    return(spx, spy)
+
+# ============================================================
+def siter():                      # speckle nulling iteration
+    ''' ----------------------------------------------------
+    This function is really the heart of the speckle nulling
+    code. It is called by the loop thread over and over.
+    ---------------------------------------------------- '''
+    global conf
+    global ROI
+    global etime
+    global bias_frm
+    etime = get_etime()
+
+    delay = np.max((etime*1e-6, 0.01))
+    cmax = 11000.0 # camera saturation level 
+
+    phitest = 2*np.pi * np.arange(conf.nphi) / float(conf.nphi)
+    a0 = conf.prbamp
+    nav = 50 # number of frames to average
+
+    im0 = getimg(False, True).astype('float') # first image
+    for i in xrange(nav-1):
+        im0 += getimg(True, True).astype('float')
+        time.sleep(delay)
+    im0 /= float(nav)
+    time.sleep(delay)    
+
+    updt_spk_pos((ROI*(1-sat_mask)*(im0-bias_frm)).astype('float'))
+
+    # ----------------------------------
+    # build a list of speckle properties
+    # ----------------------------------
+    ns = conf.nspk_2_track # number of speckles
+    spk_props = []         # empty array to start
+    a0s = np.zeros(ns)     # probe amplitudes
+    
+    a0s = 1.6 * np.sqrt(conf.conts) / (4*np.pi)
+
+    Is = conf.I0*(conf.conts)/conf.c0
+
+    #print("DEBUG: Is  ", Is)
+    #print("DEBUG: a0s ", a0s)
+    #a0s[0] = 0.02 # for debugging purposes: one speckle, one known probe amp
+
+    for i in xrange(ns):
+        spk_props.append((conf.kxs[i], conf.kys[i], a0s[i]))
+
+    data = probe_speckles(spk_props, conf.nphi, verbose=False) # intensities
+
+    # --- MODEL THE SPECKLES ---
+    model = [] # empty list of speckle models
+    for ii in xrange(ns):
+        model.append(CAsolver(ii, data[ii], a0s[ii]))
+        model[ii][1] = model[ii][1] % (2*np.pi)
+        print("Speckle: (amp, phi, coeff) = (%.6f, %.2f, %10.1f)" % \
+                  (model[ii][0], model[ii][1], model[ii][2]))
+
+    # --- APPLY CORRECTIONS ---
+    x,y = np.meshgrid(np.arange(dms)-dms/2, np.arange(dms)-dms/2)
+    disp = np.zeros_like(get_DM_disp(7))
+    for ii in xrange(ns):
+        phase = 2.0*np.pi*(x*spk_props[ii][0] + y*spk_props[ii][1])+\
+            model[ii][1]
+
+        a1   = model[ii][0]
+        disp = conf.lpgain*a1*np.sin(phase+np.pi)
+
+        add_DM_disp(disp, 7)
+    return(0)
+
+# ============================================================
+def calib_contrast():
+    ''' --------------------------------------------------
+    Calibrate contrast in a given image.
+    Using a theoretical formula:
+    con = (pi*2*a_test/lambda)**2
+    -------------------------------------------------- '''
+    global conf
+    global bias_frm
+    global ROI
+    global xs, ys
+    global loop_mesg
+
+    os.system("scexaostatus set sn_loop 'CALIB CONTRAST' 0")
+    nphi       = 20
+    test_phase = 2*np.pi * np.arange(nphi) / float(nphi)
+    irad       = 3.0 # TB optimized !!!
+    ncadd      = 10
+    cmax       = 4500.0
+
+    etime = get_etime()
+    delay = np.max((etime*1e-6, 0.01))
+    im0   = getimg(True, True).astype('float') # first image
+
+    for i in xrange(39):
+        im0 += getimg(True, True).astype('float')
+        time.sleep(delay)
+    im0 /= 40.
+
+    time.sleep(delay)
+
+    kx, ky, amp = 0.3, 0.3, conf.prbamp
+
+    saturate = True
+
+    c0tr = [] # trace for the contrasts
+    I0tr = [] # trace for the intensity
+    a0tr = [] # trace for the amplitude
+
+    cmax = np.max((im0-bias_frm)[ROI > 0]) * 2.0
+
+    print("CMAX = ", cmax)
+    while saturate:
+        ims = np.zeros_like(im0)
+        for k, phi in enumerate(test_phase):
+            add_DM_sine(amp, kx, ky, phi, chn=6)
+            time.sleep(0.01)
+            ims += getimg(True, True).astype('float')
+            time.sleep(delay)
+            add_DM_sine(amp, kx, ky, phi+np.pi, chn=6)
+
+        spks = ((ims / float(nphi)) - im0)* ROI
+        
+        #pf.writeto("a2int.fits", spks ,clobber=True)
+        (spx, spy) = locate_speckles(spks, 1, xr=10.0)
+        spmask     = mkdisk((xs,ys), (spx[0],spy[0]), irad)
+
+        c0 = (np.pi* 2 * (2*amp) / 1.6)**2 # x2 reflection mirror?
+        I0 = np.mean(spks[spmask > 0])
+
+        c0tr.append(c0)
+        I0tr.append(I0)
+        a0tr.append(amp)
+
+        if I0 < cmax:
+            saturate = False
+        else:
+            amp /= 1.2
+
+    (kxt, kyt) = spk_2_spf(spx, spy)
+    print("kx,ky=(%.2f, %.2f): a = %.3f => I = %7.2f, con=%.5f" % \
+              (kxt[0], kyt[0],amp, I0, c0))
+
+    loop_mesg = "(%.2f, %.2f): a=%.3f, I=%7.2f, con=%.5f" % (kxt[0], kyt[0],amp, I0, c0)
+    np.save(auxdir+"cont_calib_log", np.array([a0tr, c0tr, I0tr]))
+
+    conf.c0 = c0
+    conf.I0 = I0
+    conf.a0 = amp
+    init_DM_channel(6)    
+    exit(0)
+
+# ============================================================
+def sloop():                      # speckle nulling loop
+    global abort_loop
+    global loop_mesg
+    loop_mesg = "      Loop closed!      "
+    os.system("scexaostatus set sn_loop 'CLOSED ON %s' 3" % (conf.orient,))
+    while not abort_loop:
+        siter()
+    loop_mesg = "          idle          "
+    os.system("scexaostatus set sn_loop 'OPEN' 1")
+    abort_loop = False
+    exit(0)
+
+# ============================================================
+def sabort():                     # abort the speckle loop
+    global abort_loop
+    global loop_mesg
+    abort_loop = True
+    loop_mesg = "    Aborting loop !     "
+    os.system("scexaostatus set sn_loop 'OPEN' 1")
+    exit(0)
+
+# ============================================================
+def tlock():                      # lock on speckles
+    global tgt_lock 
+    tgt_lock = True
+    exit(0)
+
+# ============================================================
+def tfree():                      # fire at will
+    global tgt_lock
+    tgt_lock = False
+    exit(0)
+
+# ============================================================
+def letgo_sats():                 # stop tracking satellites
+    global pnt_track
+    pnt_track = False
+    print("lettin go")
+    exit(0)
+
+# ============================================================
+def track_sats():                 # start tracking satellites
+    ''' ---------------------------------------------------
+    Thread that tracks 2 pairs of far away speckles to keep
+    doing speckle nulling despites failures of the CLOWFS.
+    --------------------------------------------------- '''
+    global conf
+    global satx, saty
+    global pnt_track
+    global sat_mask
+    global mask
+    global ROI
+    global ROI_xr
+    global etime
+
+    delay = np.max((etime*1e-6, 0.01))
+
+    if pnt_track: # safety measure
+        exit(0)
+
+    pnt_track = True
+
+    kx1, ky1 = 0.0, 0.5 # frequencies of the two pairs
+    kx2, ky2 = 0.5, 0.0 # of statellite speckles
+
+    while pnt_track:
+
+        init_DM_channel(4) # initialize the channel 4 (astrometry)
+
+        im0 = getimg(False, True) # first image
+        add_DM_sine(conf.prbamp, kx1, ky1, np.pi/2, chn=4)
+        add_DM_sine(conf.prbamp, kx2, ky2, np.pi/2, chn=4)
+        time.sleep(delay)
+
+        spks = sat_mask * (getimg(False, True) - im0) # image with satellites
+        time.sleep(delay)
+
+        (satx, saty) = locate_speckles0(spks.astype('float'),4,xr=10.0,nbit=0)
+
+        tempx = np.mean(satx)
+        tempy = np.mean(saty)
+
+        if ((np.abs(tempx-conf.orix) < 10.0) and 
+            (np.abs(tempy-conf.oriy) < 10.0)):
+            conf.orix = np.mean(satx)
+            conf.oriy = np.mean(saty)
+        else:
+            print("Problem!")
+            pf.writeto("test.fits", spks, clobber=True)
+        ROI = mkROI((xs, ys), (conf.orix, conf.oriy), 
+                    ori=conf.orient, xr=ROI_xr).astype(float)
+        ROI *= (1 - sat_mask)
+    exit(0)
+
+# ============================================================
+def clear_channel_5():
+    global loop_mesg
+    init_DM_channel(5)
+    loop_mesg = " cleared DM channel 5!  "
+    time.sleep(1)
+    loop_mesg = "          idle          "
+    exit(0)
+# ============================================================
+def clear_channel_6():
+    global loop_mesg
+    init_DM_channel(6)
+    loop_mesg = " cleared DM channel 6!  "
+    time.sleep(1)
+    loop_mesg = "          idle          "
+    exit(0)
+# ============================================================
+def clear_channel_7():
+    global loop_mesg
+    init_DM_channel(7)
+    loop_mesg = " cleared DM channel 7!  "
+    time.sleep(1)
+    loop_mesg = "          idle          "
+    exit(0)
+# ============================================================
+
+
+
+# ============================================================
+
+def probe_field(probes, verbose=True, ncd=1):
+    ''' -------------------------------------------------------
+    probe the image with the provided probes (2D disp maps)
+    returns #probes + 1 (ref) images
+    ------------------------------------------------------- '''
+    im0 = getimg(True, True) # first image
+    #global conf
+    global etime
+    global bias_frm
+
+    delay = np.max((etime*1e-6, 0.01))
+
+    time.sleep(0.05)
+    res   = []                  # empty list
+    res.append(im0)             # reference image
+    k     = 6                   # disp map used (default = 5)
+    npb   = np.shape(probes)[0] # number of probes
+    disp0 = get_DM_disp(k)      # original disp map
+
+    for i in xrange(npb):
+        # --- apply probe to DM ---
+        disp_2_DM(probes[i], k)
+
+        # --- get image by camera ---
+        time.sleep(delay) ####### !!!!!!!!!!!
+        im = getimg(True, True)
+        for j in range(ncd-1):
+            im += getimg(True, True)
+        im /= float(ncd)
+        res.append(im-bias_frm)
+        tt = utcnow()
+        if verbose:
+            sys.stdout.write("img %2d, %s\n" % (i,tt.isoformat(),))
+            sys.stdout.flush()
+
+    disp_2_DM(disp0, k) # restore the DM shape
+    return (res)
+
+# ============================================================
+def probe_speckles(spks, nmod=4, verbose=True):
+    ''' -------------------------------------
+    Probe given list of speckles properties.
+    Each speckle is a 3-element tuple :
+    - (kx, ky, amplitude)
+
+    Optional arguments:
+    - nmod: number of phase modulation steps 
+            (between 0 and 2pi)
+            default is 4 (0, pi/2, pi, 3pi/2)
+
+    Returns: a list of arrays with interferences
+
+    Example:    
+    probe_speckles([(kx1, ky1, ap], (kx2, ky2)])
+    -------------------------------------------- '''
+    global conf
+    nspk = np.size(spks)
+
+    # --- create the DM probes ---
+    prbs = [] # empty list of DM probes
+    for i in xrange(nmod):
+        phi = 2 * np.pi / float(nmod) * i
+        spp = [] # empty list of SpkProbe objects
+        for ii, spk in enumerate(spks):
+            spp.append(SpkProbe(spk[0], spk[1], spk[2], phi))
+        prbs.append(mk_probe(spp))
+
+    # --- get the data ---
+    a = probe_field(prbs, verbose)
+    #print a
+    #a.dtype()
+
+    #pf.writeto(auxdir+"spkl.fits", np.array(a), clobber=True)
+    xs,ys = a[0].shape[1], a[0].shape[0]
+    #(ys, xs) = a[0].shape
+
+    # --- extract the speckle intensity functions ---
+    res = [] # empty list of results
+
+    irad = 3.0 # TB optimized !!!
+
+    for ii, spk in enumerate(spks):
+        [px, py] = [conf.orix, conf.oriy] - \
+            np.dot(conf.SPF2PIX, [spk[0], spk[1]])
+
+        spmask = mkdisk((xs,ys), (px,py), irad)
+        spf = np.zeros((nmod+1))
+
+        # note for later: the simple mean can most certainly
+        # be replaced by a quantity more robust to noise....
+
+        for i in range(nmod+1):
+            spf[i] = np.mean((a[i][spmask>0])) # speckle intef. flux
+        res.append(spf)
+    return res
+
+
+# ------------------------------------------------------------------
+#              !!! now we are in business !!!!
+# ------------------------------------------------------------------
+
+#zo = np.zeros((dms, dms))
+#for i in xrange(nch):
+#    exec "ch%d = arr2im(zo)" % (i,)
+
+WHITE = (255, 255, 255)
+GREEN = (  0, 255,   0) 
+BLUE  = (  0,   0, 255)
+RED   = (255,   0,   0)
+BLK   = (  0,   0,   0)
+
+dstep = zoom*dms
+
+FGCOL = WHITE  # foreground color (text)
+BGCOL = BLK    # background color
+BTCOL = BLUE   # *button* color
+
+etime = get_etime()
+bias_frm = np.zeros((ys, xs))
+if not simulation:
+    bname = home+"/conf/chuckcam_aux/bias%07d.fits" % (etime,)
+    bias_frm = pf.getdata(bname)
+
+# ----------------------------
+#   auxilliary coordinates
+# ----------------------------
+xx, yy = np.zeros(10), np.zeros(10)
+
+for ii in xrange(4):
+    for jj in xrange(2):
+        xx[ii+jj*4] = ii * dstep
+        yy[ii+jj*4] = jj * dstep
+
+xx[8], yy[8] = 4*dstep, 0
+xx[9], yy[9] = 4*dstep, dstep
+
+# ----------------------------
+#          labels
+# ----------------------------
+font1 = pygame.font.SysFont("default",   24)
+font2 = pygame.font.SysFont("default",   20)
+font3 = pygame.font.SysFont("monospace", 16)
+
+loop_mesg = "          idle          "
+pic1 = pygame.image.load('/home/scexao/conf/speckle_aux/rambo.png')
+#pic1 = pygame.image.load('/home/scexao/conf/sparkle_aux/Nem.png')
+
+titl1 = font1.render("live image / calibrations", True, FGCOL)
+titl2 = font1.render("  speckle nulling",         True, FGCOL)
+titl3 = font1.render("statistics / metrics",      True, FGCOL)
+
+rect1 = titl1.get_rect()
+rect2 = titl1.get_rect()
+rect3 = titl3.get_rect()
+rect4 = pic1.get_rect()
+rect4.x, rect4.y = 0, 600
+
+rect1.center = (165, 10)
+rect2.center = (XW/2, 10)
+rect3.center = (665+160, 10)
+
+lbls = ["BIAS", "ORIGIN", "PIX2SPF",
+        "AMP2INT", "Contrast"]
+
+vspc = 30 # vertical spacing for labels and "buttons"
+lb_x = np.zeros(6) + 40
+lb_y = np.arange(6) * vspc + 300
+
+for i in xrange(lbls.__len__()):
+    exec 'lbl%d = font2.render(lbls[%d], True, FGCOL)' % (i,i)
+    exec 'recl%d = lbl%d.get_rect()' % (i,i)
+    exec 'recl%d.center = (lb_x[%d], lb_y[%d])' % (i,i,i)
+
+# -----------------------------------
+# "buttons" of the live image section
+# -----------------------------------
+bt_l = [" ACQR ", "  GO  ", "  GO  ",  "  GO  ", " CALIB "]
+
+bt_x = np.zeros(5) + 120
+bt_y = np.arange(5) * vspc + 300
+
+cbk_live = ["updt_bias", "origin", 
+            "find_pix2spf", "test_thread", "calib_contrast"]
+
+for i in range(bt_x.size):
+    exec 'but%d = font2.render(bt_l[%d], True, FGCOL, BLUE)' % (i,i)
+    exec 'recb%d = but%d.get_rect()' % (i,i)
+    exec 'recb%d.center = (bt_x[%d], bt_y[%d])' % (i,i,i)
+
+# --------------------------------------
+# buttons of the speckle nulling section
+# --------------------------------------
+lbls_spn = ["LOCK TGTs", "SPKL NULLNG", 
+            "POINT CTRL", "CLR CHANNEL"]
+
+lbls_spn_x = np.zeros(4) + 400
+lbls_spn_y = np.arange(4) * vspc + 300
+
+for i in xrange(4):
+    exec 'lbl_spn_%d = font2.render(lbls_spn[%d], True, FGCOL)' % (i,i)
+    exec 'recl_spn_%d = lbl_spn_%d.get_rect()' % (i,i)
+    exec 'recl_spn_%d.center = (lbls_spn_x[%d], lbls_spn_y[%d])' % (i,i,i)
+
+bts_spn = ["TLOCK", "TFREE",          # LABELS of the BUTTONS
+           "SITER", "SLOOP", "ABORT",
+           "RECAL", "TRACK", "LETGO",
+           "CHNL5", "CHNL6", "CHNL7"]
+bts_spn_x = np.array([500, 560,       # x-coordinate of the BUTTONS
+                      500, 560, 620,
+                      500, 560, 620,
+                      500, 560, 620])
+
+bts_spn_y = np.array([300, 300,       # y-coordinate of the BUTTONS
+                      330, 330, 330,
+                      360, 360, 360,
+                      390, 390, 390])
+cbk_spn = ["tlock", "tfree",          # call-back associated to click
+           "siter", "sloop", "sabort",
+           "recal_sats", "track_sats",
+           "letgo_sats",
+           "clear_channel_5",
+           "clear_channel_6",
+           "clear_channel_7"]
+
+for i in xrange(bts_spn_x.size):
+    exec 'bt_spn_%d = font2.render(bts_spn[%d], True, FGCOL, BLUE)' % (i,i)
+    exec 'recb_spn_%d = bt_spn_%d.get_rect()' % (i,i)
+    exec 'recb_spn_%d.center = (bts_spn_x[%d], bts_spn_y[%d])' % (i,i,i)
+
+
+# ROI stats
+# ---------
+ptiles = (100, 99.9, 99, 95, 90, 75, 50, 25, 5, 1, 0)
+npct = ptiles.__len__()
+
+pct_x = np.zeros(npct) + 330 + 165
+pct_y = np.arange(npct) * 15 + 500
+
+for i, ptile in enumerate(ptiles):
+    line = "p-tile %5.1f: xxxxx.x" % (ptile,)
+    exec 'ptile%d = font3.render(line, False, FGCOL)' % (i,)
+    exec 'recpt%d = ptile%d.get_rect()' % (i,i)
+    exec 'recpt%d.center = (pct_x[%d], pct_y[%d])' % (i,i,i)
+
+lines = ["Loop configuration:", 
+         "------------------",
+         "nb. speckle tracked: %3d"  % (conf.nspk_2_track),
+         "default probe ampli: %.3f" % (conf.prbamp),
+         "speckle loop gain  :  %.2f" % (conf.lpgain),
+         "nb. speckle probes : %3d"  % (conf.nphi),
+         "",
+         "Loop status:",
+         "-----------",
+         "%s" % (loop_mesg,)]
+
+nlines = lines.__len__()
+lconf_x = np.zeros(nlines) + 800
+lconf_y = np.arange(nlines) * 15 + 600
+
+for i, cfmsg in enumerate(lines):
+    exec 'lconf%d = font3.render(lines[%d], False, FGCOL, BGCOL)' % (i,i,)
+    exec 'reccf%d = lconf%d.get_rect()' % (i,i,)
+    exec 'reccf%d.center = (lconf_x[%d], lconf_y[%d])' % (i,i,i,)
+
+surf_live = pygame.surface.Surface((xs, ys))
+surf_roi  = pygame.surface.Surface((xs, ys))
+surf_ave  = pygame.surface.Surface((xs, ys))
+surf_std  = pygame.surface.Surface((xs, ys))
+
+# ============================================================
+# ============================================================
+
+t = threading.Thread(target=update_im_stats, args=())
+t.start()
+
+# ============================================================
+# ============================================================
+cntr = 0
+stat_rate = 4
+
+liveim    = getimg(False, True)-bias_frm     # numpy array of the image
+
+#updt_spk_pos(liveim.astype('float')*ROI)
+
+while True: # the main game loop
+    clicked = False
+
+    cntr += 1
+    liveim    = getimg(False, True)-bias_frm   # numpy array of the image
+    liveroi   = liveim * ROI                   # numpy array of the ROI
+
+    dispim    = arr2im(np.transpose(liveim),   vmin=0, vmax=16000, zoom=1)
+    disproi   = arr2im(np.transpose(liveroi),  vmin=0, vmax=16000, zoom=1)
+    dispave   = arr2im(np.transpose(frms_ave), vmin=0, vmax=16000, zoom=1)
+    dispstd   = arr2im(np.transpose(frms_std), vmin=0, vmax=2000, zoom=1)
+    
+    pygame.surfarray.blit_array(surf_live, dispim)
+    pygame.surfarray.blit_array(surf_roi,  disproi)
+
+    screen.fill(BGCOL)
+    screen.blit(surf_live, (5,   20))
+    screen.blit(surf_roi,  (335, 20))
+    screen.blit(pic1, rect4)
+
+    if cntr > stat_rate:
+        pygame.surfarray.blit_array(surf_ave,  dispave)
+        pygame.surfarray.blit_array(surf_std,  dispstd)    
+        cntr = 0
+    screen.blit(surf_ave,  (665, 20))
+    screen.blit(surf_std,  (665, 286))
+
+    # center fov +
+    x0sc = np.int(5 + conf.orix)
+    y0sc = np.int(20 + conf.oriy)
+    pygame.draw.line(screen, FGCOL, (x0sc-5, y0sc), (x0sc+5, y0sc), 2)
+    pygame.draw.line(screen, FGCOL, (x0sc, y0sc-5), (x0sc, y0sc+5), 2)
+
+    # center ROI +
+    x0sc += 330
+    pygame.draw.line(screen, FGCOL, (x0sc-5, y0sc), (x0sc+5, y0sc), 2)
+    pygame.draw.line(screen, FGCOL, (x0sc, y0sc-5), (x0sc, y0sc+5), 2)
+
+    # center averaged +
+    x0sc += 330
+    pygame.draw.line(screen, FGCOL, (x0sc-5, y0sc), (x0sc+5, y0sc), 2)
+    pygame.draw.line(screen, FGCOL, (x0sc, y0sc-5), (x0sc, y0sc+5), 2)
+
+    # satellites +
+    for ii in range(4):
+        xsc =  5 + satx[ii]
+        ysc = 20 + saty[ii]
+        pygame.draw.line(screen, FGCOL, (xsc-5, ysc), (xsc+5, ysc), 2)
+        pygame.draw.line(screen, FGCOL, (xsc, ysc-5), (xsc, ysc+5), 2)
+
+    # lines to split the window
+    pygame.draw.line(screen, FGCOL, (330, 0), (330, YW), 3)
+    pygame.draw.line(screen, FGCOL, (660, 0), (660, YW), 3)
+    pygame.draw.line(screen, FGCOL, (0, 281), (XW, 281), 3)
+
+    screen.blit(titl1, rect1)
+    screen.blit(titl2, rect2)
+    screen.blit(titl3, rect3)
+
+    pygame.draw.rect(screen, GREEN, recb0)
+
+    for i in range(lbls.__len__()):
+        exec 'screen.blit(lbl%d, recl%d)' % (i, i)
+    for i in range(bt_x.size):
+        exec 'screen.blit(but%d, recb%d)' % (i, i)
+    for i in range(lbls_spn.__len__()):
+        exec 'screen.blit(lbl_spn_%d, recl_spn_%d)' % (i, i)
+    for i in range(bts_spn_x.size):
+        exec 'screen.blit(bt_spn_%d, recb_spn_%d)' % (i, i)
+
+    # image information display
+    # --------------------------
+    test = np.percentile(liveim[ROI > 0], ptiles)
+
+    for i, ptile in enumerate(ptiles):
+        line = "p-tile %5.1f: %7.1f" % (ptile,test[i])
+        exec 'ptile%d = font3.render(line, True, FGCOL)' % (i,)
+        exec 'screen.blit(ptile%d, recpt%d)' % (i, i)
+
+    lines = ["Loop configuration:", 
+             "------------------",
+             "nb. speckle tracked: %3d"  % (conf.nspk_2_track),
+             "default probe ampli: %.3f" % (conf.prbamp),
+             "speckle loop gain  :  %.2f" % (conf.lpgain),
+             "nb. speckle probes : %3d"  % (conf.nphi),
+             "",
+             "Loop status:",
+             "-----------",
+             "%s" % (loop_mesg,)]
+
+    for i, cfmsg in enumerate(lines):
+        exec 'lconf%d = font3.render(lines[%d], False, FGCOL, BGCOL)' % (i,i,)
+        exec 'screen.blit(lconf%d, reccf%d)' % (i,i,)
+
+    # target speckles
+    for ii in xrange(conf.nspk_2_track):
+        xsc = 335 + conf.spxs[ii]
+        ysc = 20  + conf.spys[ii]
+        pygame.draw.line(screen, BGCOL, (xsc-5, ysc), (xsc+5, ysc), 2)
+        pygame.draw.line(screen, BGCOL, (xsc, ysc-5), (xsc, ysc+5), 2)
+
+    # ==============================
+    #   EVENT MANAGEMENT SECTION
+    # ==============================
+    for event in pygame.event.get():
+
+        if event.type == QUIT:
+            pygame.quit()
+            updt_stats = False
+            conf.save_conf_file()
+
+            # close shared memory access
+            # --------------------------
+            for i in xrange(nch):
+                exec "disp%02d.close()" % (i,)
+            cam.close()
+
+            print("Speckle nulling ended normally.")
+            sys.exit()
+
+        elif event.type == KEYDOWN:
+
+            if event.key == K_ESCAPE:
+                pygame.quit()
+                updt_stats = False
+                conf.save_conf_file()
+    
+                # close shared memory access
+                # --------------------------
+                for i in xrange(nch):
+                    exec "disp%02d.close()" % (i,)
+                cam.close()
+
+                print("Speckle nulling ended normally.")
+                sys.exit()
+            # ------
+            if event.key == K_h:
+                print(hmsg)
+            # ------
+            if event.key == K_F1:
+                flscreen = True - flscreen
+                if flscreen:
+                    screen = pygame.display.set_mode((XW, YW), FULLSCREEN, 32)
+                else:
+                    screen = pygame.display.set_mode((XW, YW), 0, 32)
+            # ------
+            if event.key == K_LEFT:
+                conf.orient = "LFT"
+                ROI = mkROI((xs, ys), (conf.orix, conf.oriy), 
+                            ori=conf.orient, xr=ROI_xr).astype(float)
+                ROI *= (1 - sat_mask)
+            # ------
+            if event.key == K_RIGHT:
+                conf.orient = "RGT"
+                ROI = mkROI((xs, ys), (conf.orix, conf.oriy), 
+                            ori=conf.orient, xr=ROI_xr).astype(float)
+                ROI *= (1 - sat_mask)
+            # ------
+            if event.key == K_UP:      # increase ROI exclusion radius
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LSHIFT):
+                    if ROI_xr < 60:
+                        ROI_xr += 1
+                else:
+                    conf.orient = "UP"
+                ROI = mkROI((xs, ys), (conf.orix, conf.oriy), 
+                            ori=conf.orient, xr=ROI_xr).astype(float)
+                ROI *= (1 - sat_mask)
+            # ------
+            if event.key == K_DOWN:    # reduce ROI exclusion radius
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LSHIFT):
+                    if ROI_xr > 1:
+                        ROI_xr -= 1
+                else:
+                    conf.orient = "DWN"
+                ROI = mkROI((xs, ys), (conf.orix, conf.oriy), 
+                            ori=conf.orient, xr=ROI_xr).astype(float)
+                ROI *= (1 - sat_mask)
+            # ------
+            if event.key == K_w:
+                conf.nspk_2_track += 1
+            # ------
+            if event.key == K_s:
+                if conf.nspk_2_track > 1:
+                    conf.nspk_2_track -= 1
+            # ------
+            if event.key == K_a:       # reduce speckle probe ampli
+                if conf.prbamp> 0.0:
+                    mmods = pygame.key.get_mods()
+                    if (mmods & KMOD_LSHIFT):
+                        conf.prbamp -= 0.01
+                    else:
+                        conf.prbamp -= 0.001
+            # ------
+            if event.key == K_q:       # pump up speckle probe ampli
+                if conf.prbamp < 0.3:
+                    mmods = pygame.key.get_mods()
+                    if (mmods & KMOD_LSHIFT):
+                        conf.prbamp += 0.01
+                    else:
+                        conf.prbamp += 0.001
+            # ------
+            if event.key == K_e:
+                if conf.lpgain < 0.5:
+                    conf.lpgain += 0.05
+                    os.system("scexaostatus set sn_gain %6.3f" % (conf.lpgain,))
+            # ------
+            if event.key == K_d:
+                if conf.lpgain > 0.05:
+                    conf.lpgain -= 0.05
+                else:
+                    conf.lpgain = 0.0
+                os.system("scexaostatus set sn_gain %6.3f" % (conf.lpgain,))
+            # ------
+            if event.key == K_r:
+                if conf.nphi < 50:
+                    conf.nphi += 5
+            # ------
+            if event.key == K_f:
+                if conf.nphi >= 5:
+                    conf.nphi -= 5
+
+        elif event.type == MOUSEMOTION:
+            mx, my = event.pos
+
+        elif event.type == MOUSEBUTTONUP:
+            mx, my = event.pos
+
+            # ------------
+            if rect1.collidepoint(mx, my):
+                t1 = threading.Thread(target=test_thread)
+                t1.start()
+
+            # ------------
+            for ii in range(bt_x.size):
+                exec 'test = recb%d.collidepoint(mx, my)' % (ii,)
+                if test:
+                    exec "t1 = threading.Thread(target=%s)" % (cbk_live[ii],)
+                    t1.start()
+            # -------------
+            for ii in xrange(bts_spn_x.size):
+                exec 'test = recb_spn_%d.collidepoint(mx,my)' % (ii,)
+                if test:
+                    exec "t1 = threading.Thread(target=%s)" % (cbk_spn[ii])
+                    t1.start()
+            clicked = True
+
+    pygame.display.flip()#update()
+    fpsClock.tick(FPS)
+
+pygame.quit()
+sys.exit()

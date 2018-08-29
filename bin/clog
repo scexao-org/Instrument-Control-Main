@@ -1,0 +1,10 @@
+#!/bin/bash
+
+while [ TRUE ]
+do
+echo -n "COMMENT LOG INPUT : "
+read -e line
+
+log "$line"
+done
+

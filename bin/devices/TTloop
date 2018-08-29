@@ -1,0 +1,155 @@
+#!/usr/bin/env python
+
+# ======================================================== #
+#  _   _       _      ___             _                    #
+# | | | | ___ | |_   / __\ ____  ___ | |_                  #
+# | --- |/ _ \| __|  \_\_ |  _ \/ _ \| __|                 #
+# | --- | (_) | |_   __\ \| (_) |(_) | |_                  #
+# |_| |_|\___/\___|  \___/|  __/\___/\___|                 #
+#                         |_|                              #
+#    _   _ _                                               #
+#   /_\ | (_) __ _ _ __                                    #
+#  //_\\| | |/ _` | '_ \                                   #
+# /  _  \ | | (_| | | | |                                  #
+# \_/ \_/_|_|\__, |_| |_|                                  #
+#            |___/                                         #
+#                                                          #
+# ======================================================== #
+
+import os
+import time
+import sys
+import pdb
+import numpy as np
+import pyfits as pf
+import numpy.linalg as la
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from camera_tools import cam_cmd
+from scexao_shm import shm
+
+shm_im = shm("/tmp/ircam0.im.shm")
+shm_im_dark = shm("/tmp/ircam0_dark.im.shm")
+shm_im_badpixmap = shm("/tmp/ircam0_badpixmap.im.shm")
+dm = shm("/tmp/dm00disp05.im.shm", verbose=False)
+
+dark_chuck = shm_im_dark.get_data()
+badpixmap_chuck = shm_im_badpixmap.get_data()
+# Reading in shared memory
+#------------------------
+
+# Find center of image
+#------------------------
+
+def find_center(im_chuck, shiftx, shifty):
+    imax = np.max(im_chuck)
+    imin = imax*0.1
+    im_chuck -= imin
+    mask = im_chuck > 0
+    im_chuck *= mask
+    #print imax
+    if imax < 100:
+        print "Not enough flux, aborting"
+        #os.system("/home/scexao/bin/log Hotspotalign: Not enough flux, aborting")
+        sys.exit()
+    #pf.writeto("./temp_chuck.fits",im_chuck,clobber='True')
+    total = np.sum(im_chuck)
+    X, Y = np.indices(np.shape(im_chuck)) 
+    cx = np.sum(Y*im_chuck)/total
+    cy = np.sum(X*im_chuck)/total
+    #print cx, cy
+    cx = cx-shiftx
+    cy = cy-shifty
+    return [cx, cy]
+
+# Main
+#------------------------
+
+# ------------------------------------------------------------------
+#                        Parameters
+# ------------------------------------------------------------------
+
+modes = pf.getdata('/home/scexao/bin/devices/DM_modes2.fits')
+
+scale = -0.05#12.1e-3/3600./180*m.pi*18/
+
+gain = 0.01 #Gain of the loop
+
+modes *= -scale*gain
+
+dmc = np.zeros((50,50))
+
+# parameters of the target point
+with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
+    pos = np.array([[float(digit) for digit in line.split()] for line in file])
+
+if not os.path.isfile("/tmp/nuller_pickoff.im.shm"):
+    os.system("creashmim nuller_pickoff 1 1")
+nuller_pickoff = shm("/tmp/nuller_pickoff.im.shm", verbose=False)
+npin = int(nuller_pickoff.get_data())
+pscale = 15.3 #mas per pixel in Chuckcam
+
+filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
+cors = [line.rstrip('\n') for line in open(filename)]
+ncor = len(cors)
+cort = np.zeros((2,ncor))
+for i in range(ncor):
+    corparam = cors[i].split(';')
+    cort[0,i] = float(corparam[2])
+    cort[1,i] = float(corparam[3])
+cort /= pscale
+cor = np.array([0,0])
+if npin:
+    cor = cort[:,0]
+
+im_chuck = shm_im.get_data()
+(ysize,xsize) = im_chuck.shape
+print xsize, ysize
+crop = shm_im.get_crop().astype(int)
+#crop = np.array([128,128,160,160])
+shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5
+shifty = pos[0,1]-crop[2]+256+cor[1]-0.5
+print  shiftx, shifty
+# Try to find the center a first time, to check the flux
+im_chuck = shm_im.get_data()
+(xsizeim, ysizeim) = (xsize, ysize)
+c0 = find_center(im_chuck, shiftx, shifty)
+print c0
+cnt = 0
+cnt1 = 0
+i = 0
+nim = 10
+# loop
+while True:
+    try:
+        while (cnt1 <= cnt):
+            cnt1 = shm_im.get_counter()
+        cnt = cnt1
+        if i < nim:
+            if i == 0:
+                #print read_shm().shape
+                im_chuck = shm_im.get_data()/float(nim)
+            else:
+                im_chuck += shm_im.get_data()/float(nim)
+            i += 1
+        else:
+            i = 0
+            im_chuck -= dark_chuck
+            im_chuck *= badpixmap_chuck
+            
+            c0 = find_center(im_chuck, shiftx, shifty)
+            print c0
+            
+            # Calculating and sending command to DM
+            dmc += np.squeeze(c0[0]*modes[0,:,:]/0.1+c0[1]*modes[1,:,:]/0.1)
+            dm.set_data(dmc.astype(np.float32))
+            time.sleep(0.001)
+            
+    except KeyboardInterrupt:
+        print 'KeyboardInterrupt caught'
+        shm_im.close()
+        dm.close()
+        nuller_pickoff.close()
+        
+        sys.exit()

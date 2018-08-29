@@ -1,0 +1,88 @@
+#!/bin/bash
+
+
+EXPECTED_ARGS=3
+
+if [ $# -ne $EXPECTED_ARGS ]
+then
+  echo
+  echo "-------- Make and apply AC astrometric grid ---------"
+ echo " "
+ echo "Usage: $0 <CPA> <sleeptime> <contrast>"
+ echo "  "
+ echo "Creates a 2D sine wave for use for astrometric calibration "
+ echo " "
+ echo "  INPUT <CPA>   : Cycle per Aperture"
+ echo "  Note that CPA = distance from optical axis in l/D"
+ echo "  Should keep CPA<10 to avoid aliasing"
+ echo " "
+ echo "  INPUT <sleeptime> : time between pos and neg patterns [sec]"
+ echo " "
+ echo "  INPUT <contrast>  : amplitude on DM"
+ echo " "
+ echo "EXAMPLE : $0 10.0 0.2 0.016"
+ echo " "
+ echo "  Amplitude | Contrast in H-band"
+ echo "    0.159            10         "
+ echo "    0.113            20         "
+ echo "    0.095            28.1       "
+ echo "    0.051            100        "
+ echo "    0.030            286        "
+ echo "    0.016            1000       " 
+ echo "    0.0114           2000       "
+ echo " "
+ exit
+fi
+
+ 
+
+# beam diameter in pixel
+dpix=45 
+CPA=$1
+sleeptime=$2
+coeff=$3
+
+log "Astrogrid: incoherent speckles are on CPA=$1, switchtime=$2, and amplitude=$3"
+
+Cfits << EOF
+sl=2.0*_PI*${CPA}/${dpix}
+mkslopexy imsx 50 50 sl 0.0
+mkslopexy imsy 50 50 0.0 sl
+#imsinx=sin(imsx+imsy+_PI/2)
+imsinx=cos(imsx)
+#imsiny=sin(imsx-imsy+_PI/2)
+imsiny=cos(imsy)
+im=imsinx+imsiny
+savefits im "!/home/scexao/conf/dm_patterns/astromgrid.fits"
+exit
+EOF
+
+
+
+
+
+while :
+do
+
+sleep $sleeptime
+echo "==========================pos"
+Cfits << EOF
+readshmim dm00disp09
+loadfits "~/conf/dm_patterns/astromgrid.fits" grid
+grid1=grid*${coeff}
+cp grid1 dm00disp09
+exit
+EOF
+
+sleep $sleeptime
+echo "===========================neg"
+Cfits << EOF
+readshmim dm00disp09
+loadfits "~/conf/dm_patterns/astromgrid.fits" grid
+grid1=0-grid*${coeff}
+grid2=0*grid1
+cp grid1 dm00disp09
+exit
+EOF
+
+done

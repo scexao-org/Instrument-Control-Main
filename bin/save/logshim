@@ -1,0 +1,29 @@
+#! /bin/bash
+
+EXPECTED_ARGS=3
+
+if [ $# -ne $EXPECTED_ARGS ]
+then
+  echo
+  echo "-------- LOG SHARED MEMORY DATA STREAM ---------"
+ echo " "
+ echo "Usage: $0 <data stream name> <block size> <directory>"
+ echo " "
+ echo "  INPUT <data stream name>   : shared memory stream name. Actual file is /tmp/<stream name>.im.shm"
+ echo "  INPUT <block size>         : number of slices in each data cube saved"
+ echo "  INPUT <directory>          : Destination directory"
+ echo " "
+ echo "EXAMPLE :  $0 ircam2 10000 /media/data/20150222/ircamlog/"
+ echo " "
+ exit
+fi
+
+pname="logshim-$1"
+echo "$pname"
+
+mkdir -p $3
+
+Cfits -n $pname << EOF
+shmimstreamlog $1 $2 "$3"
+exit
+EOF

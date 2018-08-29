@@ -1,0 +1,6 @@
+1;OPEN (default)  ;1
+2;700 nm 50 nm BW ;2
+3;BLOCK           ;0
+4;750 nm 50 nm BW ;2
+5;850 nm 25 nm BW ;2
+6;850 nm 40 nm BW ;2

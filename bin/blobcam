@@ -1,0 +1,380 @@
+#! /usr/bin/env python
+
+##############################################
+#  _   _____   __  ______  _______  ________ #
+# | | / / _ | /  |/  / _ \/  _/ _ \/ __/ __/ #
+# | |/ / __ |/ /|_/ / ___// // , _/ _/_\ \   #
+# |___/_/ |_/_/  /_/_/  /___/_/|_/___/___/   #
+#                                            #
+##############################################
+
+###########################################################
+#Created by Guillaume Schworer guillaume.schworer@obspm.fr#
+###########################################################
+
+import matplotlib as mat
+import sys, os
+mat.use('TkAgg')
+import wx
+import time
+import PIL
+from threading import Thread
+import wx
+import numpy as np
+import gobject
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg, NavigationToolbar2Wx
+import flycapture2 as fc
+#from logit import logit
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from   scexao_shm   import shm
+
+if not os.path.isfile("/tmp/blobcam.im.shm"):
+    os.system("creashmim blobcam 300 300")
+blobshm = shm("/tmp/blobcam.im.shm")
+
+syskeyword='bramcam'
+
+gobject.threads_init()
+
+def create(parent):
+    return bramcam(parent)
+
+[wxID_BRAMCAM, wxID_BRAMCAMBRAM, wxID_BRAMCAMFPSVALUE, wxID_BRAMCAMGAINVALUE, 
+ wxID_BRAMCAMIMAGE, wxID_BRAMCAMIMAGEINFO, wxID_BRAMCAMINTVALUE, 
+ wxID_BRAMCAMLALRANDM, wxID_BRAMCAMMAXVALUE, wxID_BRAMCAMMINVALUE, 
+ wxID_BRAMCAMPANEL1, wxID_BRAMCAMPOWVALUE, wxID_BRAMCAMRANLDL, 
+ wxID_BRAMCAMSTATICTEXT1, wxID_BRAMCAMSTATICTEXT2, wxID_BRAMCAMSTATICTEXT3, 
+ wxID_BRAMCAMSTATICTEXT4, wxID_BRAMCAMSTATICTEXT5, wxID_BRAMCAMSTATICTEXT6, 
+ wxID_BRAMCAMVIEW, 
+] = [wx.NewId() for _init_ctrls in range(20)]
+
+class bramcam(wx.Frame):
+    gainlim=[1.,30.]
+    integrationlim=[1.,500.]
+    powerlim=[0.1,10]
+    maxfreq_update=20.
+    growth = 1.414
+    gain=1.
+    clipmin=0.
+    clipmax=50.
+    integration=0.16
+    powervisu=1.
+    keep_updating = True
+    freq_update = 20.
+    clipstep = 1.#5.
+    cmaps=['hot','jet','spectral','binary','bone','Reds','Oranges','Set1']
+    cmapindex=0
+    firstplotting=True
+    text_color=(30,30,30)
+
+    def _init_ctrls(self, prnt):
+        # generated method, don't edit
+        wx.Frame.__init__(self, id=wxID_BRAMCAM, name=u'bramcam', parent=prnt,
+              pos=wx.Point(607, 63), size=wx.Size(717, 732),
+              style=wx.SYSTEM_MENU | wx.CAPTION | wx.CLOSE_BOX,
+              title=u'Bram-Cam')
+        self.SetClientSize(wx.Size(717, 732))
+        self.SetBackgroundColour(wx.Colour(0, 0, 0))
+        self.Bind(wx.EVT_CLOSE, self.OnBramcamClose)
+        self.Bind(wx.EVT_CHAR_HOOK, self.key_shortcut)
+
+        self.panel1 = wx.Panel(id=wxID_BRAMCAMPANEL1, name='panel1',
+              parent=self, pos=wx.Point(0, 0), size=wx.Size(717, 732),
+              style=wx.TAB_TRAVERSAL)
+        #self.panel1.SetBackgroundColour(wx.Colour(138, 7, 7))
+	self.panel1.SetBackgroundColour(wx.Colour(7, 138, 7))
+
+        self.view = wx.Panel(id=wxID_BRAMCAMVIEW, name=u'view',
+              parent=self.panel1, pos=wx.Point(0, 0), size=wx.Size(717, 584),
+              style=wx.TAB_TRAVERSAL)
+
+        self.bram = wx.StaticBitmap(bitmap=wx.Bitmap("/home/scexao/bin/devices/gcam192d.png",
+              wx.BITMAP_TYPE_ANY), id=wxID_BRAMCAMBRAM, name=u'bram',
+              parent=self.panel1, pos=wx.Point(0, 584), size=wx.Size(192, 148),
+              style=0)
+        self.bram.SetMinSize(wx.Size(10, 10))
+
+        self.staticText1 = wx.StaticText(id=wxID_BRAMCAMSTATICTEXT1,
+              label=u'Gain:', name='staticText1', parent=self.panel1,
+              pos=wx.Point(480, 592), size=wx.Size(35, 17), style=0)
+        self.staticText1.SetForegroundColour(self.text_color)
+
+        self.gainvalue = wx.StaticText(id=wxID_BRAMCAMGAINVALUE, label=u'',
+              name=u'gainvalue', parent=self.panel1, pos=wx.Point(520, 592),
+              size=wx.Size(32, 17), style=0)
+        self.gainvalue.SetForegroundColour(self.text_color)
+
+        self.staticText2 = wx.StaticText(id=wxID_BRAMCAMSTATICTEXT2,
+              label=u'Int. (ms):', name='staticText2', parent=self.panel1,
+              pos=wx.Point(480, 616), size=wx.Size(60, 17), style=0)
+        self.staticText2.SetForegroundColour(self.text_color)
+
+        self.intvalue = wx.StaticText(id=wxID_BRAMCAMINTVALUE, label=u'',
+              name=u'intvalue', parent=self.panel1, pos=wx.Point(544, 616),
+              size=wx.Size(40, 17), style=0)
+        self.intvalue.SetForegroundColour(self.text_color)
+
+        self.staticText5 = wx.StaticText(id=wxID_BRAMCAMSTATICTEXT5,
+              label=u'FPS:', name=u'staticText5', parent=self.panel1,
+              pos=wx.Point(480, 640), size=wx.Size(30, 17), style=0)
+        self.staticText5.SetForegroundColour(self.text_color)
+
+        self.FPSvalue = wx.StaticText(id=wxID_BRAMCAMFPSVALUE, label=u'',
+              name=u'FPSvalue', parent=self.panel1, pos=wx.Point(512, 640),
+              size=wx.Size(32, 17), style=0)
+        self.FPSvalue.SetForegroundColour(self.text_color)
+
+        self.lalrandm = wx.StaticText(id=wxID_BRAMCAMLALRANDM,
+              label=u'Visu power:', name=u'lalrandm', parent=self.panel1,
+              pos=wx.Point(592, 592), size=wx.Size(80, 17), style=0)
+        self.lalrandm.SetForegroundColour(self.text_color)
+
+        self.powvalue = wx.StaticText(id=wxID_BRAMCAMPOWVALUE, label=u'',
+              name=u'powvalue', parent=self.panel1, pos=wx.Point(680, 592),
+              size=wx.Size(30, 17), style=0)
+        self.powvalue.SetForegroundColour(self.text_color)
+
+        self.ranldl = wx.StaticText(id=wxID_BRAMCAMRANLDL, label=u'Clipmin:',
+              name=u'ranldl', parent=self.panel1, pos=wx.Point(592, 640),
+              size=wx.Size(56, 17), style=0)
+        self.ranldl.SetMinSize(wx.Size(7, 17))
+        self.ranldl.SetForegroundColour(self.text_color)
+
+        self.minvalue = wx.StaticText(id=wxID_BRAMCAMMINVALUE, label=u'',
+              name=u'minvalue', parent=self.panel1, pos=wx.Point(656, 640),
+              size=wx.Size(32, 17), style=0)
+        self.minvalue.SetForegroundColour(self.text_color)
+
+        self.staticText3 = wx.StaticText(id=wxID_BRAMCAMSTATICTEXT3,
+              label=u'Clipmax:', name='staticText3', parent=self.panel1,
+              pos=wx.Point(592, 616), size=wx.Size(60, 17), style=0)
+        self.staticText3.SetForegroundColour(self.text_color)
+
+        self.maxvalue = wx.StaticText(id=wxID_BRAMCAMMAXVALUE, label=u'',
+              name=u'maxvalue', parent=self.panel1, pos=wx.Point(656, 616),
+              size=wx.Size(32, 17), style=0)
+        self.maxvalue.SetForegroundColour(self.text_color)
+
+        self.staticText4 = wx.StaticText(id=wxID_BRAMCAMSTATICTEXT4,
+              label=u'Blob Cam', name='staticText4', parent=self.panel1,
+              pos=wx.Point(216, 592), size=wx.Size(156, 39), style=0)
+        self.staticText4.SetFont(wx.Font(25, wx.SWISS, wx.NORMAL, wx.NORMAL,
+              False, u'Ubuntu'))
+        self.staticText4.SetForegroundColour(self.text_color)
+
+        self.imageinfo = wx.StaticText(id=wxID_BRAMCAMIMAGEINFO, label=u'',
+              name=u'imageinfo', parent=self.panel1, pos=wx.Point(368, 712),
+              size=wx.Size(344, 17), style=0)
+        self.imageinfo.SetForegroundColour(self.text_color)
+
+        self.image = wx.StaticBitmap(bitmap=wx.NullBitmap, id=wxID_BRAMCAMIMAGE,
+              name=u'image', parent=self.panel1, pos=wx.Point(72, 40),
+              size=wx.Size(717, 584), style=0)
+
+        self.staticText6 = wx.StaticText(id=wxID_BRAMCAMSTATICTEXT6,
+              label=u'Press F1 for help', name='staticText6',
+              parent=self.panel1, pos=wx.Point(528, 680), size=wx.Size(113, 17),
+              style=0)
+        self.staticText6.SetForegroundColour(self.text_color)
+
+    def __init__(self, parent):
+        self._init_ctrls(parent)
+        def update_gui(obj):
+            obj.figure = mat.figure.Figure(facecolor=(0.9490,0.9451,0.9411), figsize=(9.3,8)) #(0.9490,0.9451,0.9411)
+            obj.axes = obj.figure.add_axes([0.01,0.02,0.95,0.99])
+            obj.axes.tick_params(axis='x', which='both', bottom='off', top='off', labelbottom='off')
+            obj.axes.tick_params(axis='y', which='both', right='off', left='off', labelleft='off')
+            obj.canvas = FigureCanvasWxAgg(parent=wx.FindWindowById(wxID_BRAMCAMVIEW), id=wx.ID_ANY, figure=obj.figure)
+            obj.toolbar = NavigationToolbar2Wx(obj.canvas)
+            obj.toolbar.Realize()
+            tw, th = obj.toolbar.GetSizeTuple()
+            fw, fh = obj.canvas.GetSizeTuple()
+            obj.toolbar.SetSize(wx.Size(fw, th))
+            obj.toolbar.update()
+            obj.axes.clear()
+            get_image(obj)
+            obj.clipmax=obj.pic.max()
+            update_all(obj)
+            t=Thread(target=showimage, args=(obj,))
+            t.daemon=True
+            t.start()
+        self.fcc = fc.Context()
+        a,b,c,d=self.fcc.get_camera_from_index(0)
+        self.fcc.connect(a,b,c,d)
+        self.fcc.start_capture()
+        gobject.idle_add(update_gui, self)
+    
+    def key_shortcut(self, event):
+        key=event.GetKeyCode()
+        change=False
+        if key==13: #display help
+            change=True
+            self.gain=1.
+            self.clipmin=0.
+            self.clipmax=self.pic.max()
+            self.integration=1.
+            self.powervisu=1.
+            self.freq_update = 4.
+            self.axes.set_xlim(self.initialxlim)
+            self.axes.set_ylim(self.initialylim)
+        elif key==wx.WXK_F1 or key==104 or key==72:
+            print "\n"+"#"*48+"\n"+"Bramcam".center(48)+"\n\n"+pycolor.fail+"down"+pycolor.okgreen+" up"+ pycolor.endc +" arrows: change gain\n"+pycolor.fail+"left"+pycolor.okgreen+" right"+ pycolor.endc +" arrows: change integration time\n"+pycolor.fail+"k"+pycolor.okgreen+" l"+ pycolor.endc +": change frame per sec (for display over ssh)\n"+pycolor.fail+","+pycolor.okgreen+" ;."+ pycolor.endc +": change visualization power\n"+pycolor.fail+"("+pycolor.okgreen+" )"+ pycolor.endc +": change clipmin\n"+pycolor.fail+"-"+pycolor.okgreen+" +="+ pycolor.endc +": change clipmax\n"+pycolor.okblue+"C"+pycolor.endc+": change colormap\nEnter: reset\nSpace: pause/start viewing\nEnter: reset\nEscape: quit\n\n"+"#"*48
+        elif key==107 or key==75: #fps down
+            change=True
+            self.freq_update = np.round(self.freq_update/self.growth,2)
+        elif key==108 or key==76: #fps up
+            change=True
+            self.freq_update = np.round(min(self.freq_update * self.growth, min(self.maxfreq_update, np.round(1000./self.integration,2))),2)
+        elif key==315: #gain up
+            change=True
+            self.gain=min(np.round(self.gain*self.growth,1), self.gainlim[1])
+        elif key==314: #integration down
+            change=True
+            self.integration=max(np.round(self.integration*1./self.growth,1), self.integrationlim[0])
+            self.freq_update=min(self.maxfreq_update, np.round(1000./self.integration,2))
+        elif key==317: #gain down
+            change=True
+            self.gain=max(np.round(self.gain*1./self.growth,1),self.gainlim[0])
+        elif key==316: #integration up
+            change=True
+            self.integration=min(np.round(self.integration*self.growth,1),self.integrationlim[1])
+            self.freq_update=min(self.maxfreq_update,np.round(1000./self.integration,2))
+        elif key==wx.WXK_ESCAPE:
+            self.Close()
+        elif key==32: #start/stop display
+            change=True
+            self.keep_updating = not self.keep_updating
+            if self.keep_updating:
+                #logit(syskeyword, 'Stream unpaused')
+                t=Thread(target=showimage, args=(self,))
+                t.daemon=True
+                t.start()
+            else:
+                pass #logit(syskeyword, 'Stream paused')
+        elif key==59 or key==46:  #powervisu up
+            change=True
+            self.powervisu=min(np.round(self.powervisu*self.growth,2), self.powerlim[1])
+        elif key==44:  #powervisu down
+            change=True
+            self.powervisu=max(np.round(self.powervisu/self.growth,2), self.powerlim[0])
+        elif key==40: #clipmin down
+            change=True
+            self.clipmin=max(np.round(self.clipmin-self.clipstep,2), 0.)
+        elif key==41: #clipmin up
+            change=True
+            self.clipmin=np.round(self.clipmin+self.clipstep,2)
+        elif key==45: #clipmax down
+            change=True
+            self.clipmax=max(np.round(self.clipmax-self.clipstep,2), 0.)
+        elif key==61 or key==43: #clipmax up
+            change=True
+            self.clipmax=np.round(self.clipmax+self.clipstep,2)
+        elif key==67 or key==99: #change colormap
+            change=True
+            self.cmapindex=(self.cmapindex+1)%len(self.cmaps)
+        if change:
+            update_all(self)
+            if not self.keep_updating: plot(self)
+        event.Skip()
+    
+    def OnBramcamClose(self, event):
+        self.keep_updating=False
+        time.sleep(0.2)
+        self.Destroy()
+        event.Skip()
+
+
+def set_gain(obj):
+    obj.fcc.set_property(type=13, abs_control=True, abs_value=obj.gain, auto_manual_mode=False, on_off=True, one_push=False,present=True, value_a=3584L, value_b=0L)
+
+
+def set_int(obj):
+    obj.fcc.set_property(type=16, abs_control=True, abs_value=obj.freq_update, auto_manual_mode=False, on_off=True, one_push=False,present=True, value_a=981L, value_b=0L)
+    obj.fcc.set_property(type=12, abs_control=True, abs_value=obj.integration, auto_manual_mode=False, on_off=True, one_push=False,present=True, value_a=981L, value_b=0L)
+
+
+def update_all(obj):
+    set_gain(obj)
+    set_int(obj)
+    wx.FindWindowById(wxID_BRAMCAMINTVALUE).SetLabel(str(obj.integration))
+    if obj.keep_updating:
+        wx.FindWindowById(wxID_BRAMCAMFPSVALUE).SetLabel(str(obj.freq_update))
+    else:
+        wx.FindWindowById(wxID_BRAMCAMFPSVALUE).SetLabel('0.0')
+    wx.FindWindowById(wxID_BRAMCAMGAINVALUE).SetLabel(str(obj.gain))
+    wx.FindWindowById(wxID_BRAMCAMPOWVALUE).SetLabel(str(obj.powervisu))
+    wx.FindWindowById(wxID_BRAMCAMMINVALUE).SetLabel(str(obj.clipmin))
+    wx.FindWindowById(wxID_BRAMCAMMAXVALUE).SetLabel(str(obj.clipmax))
+
+
+def showimage(obj):
+    while obj.keep_updating:
+        start=time.time()
+        get_image(obj)
+        plot(obj)
+        while time.time()-start<1./obj.freq_update:
+            time.sleep(0.005)
+
+
+def get_image(obj):
+    try:
+        obj.pictmp=obj.fcc.retrieve_buffer().__array__()
+        obj.pic=np.array(obj.pictmp[:,:,0], dtype='uint16')+np.left_shift(np.array(obj.pictmp[:,:,1], dtype='uint16'),8)
+        #obj.pic=obj.fcc.retrieve_buffer().__array__()[:,:,0]
+        #print obj.pic.dtype
+        blobshm.set_data0(np.array(obj.pic, dtype='float'))
+    except:
+        obj.pic=np.zeros((100,100))
+
+
+def plot(obj):
+    def update_plot(obj):
+        obj.xlim=obj.axes.get_xlim()
+        obj.ylim=obj.axes.get_ylim()
+        obj.axes.clear()
+        cbmap=obj.axes.imshow(obj.visupic, interpolation='nearest', cmap=plt.get_cmap(obj.cmaps[obj.cmapindex]))
+        wx.FindWindowById(wxID_BRAMCAMIMAGEINFO).SetLabel("min: "+str(int(obj.pic.min()))+', max: '+str(int(obj.pic.max()))+', median: '+str(int(np.median(obj.pic)))+', mean: '+str(int(np.mean(obj.pic))))
+        if not obj.firstplotting:
+            obj.axes.set_xlim(obj.xlim)
+            obj.axes.set_ylim(obj.ylim)
+        obj.canvas.draw()
+        if obj.firstplotting:
+            obj.firstplotting=False
+            obj.initialxlim=obj.axes.get_xlim()
+            obj.initialylim=obj.axes.get_ylim()
+    temp=obj.pic-obj.clipmin
+    temp[temp<obj.clipmin]=obj.clipmin
+    temp[temp>obj.clipmax]=obj.clipmax
+    obj.visupic=temp**obj.powervisu
+    gobject.idle_add(update_plot, obj) 
+    #pygame.draw.line(screen, GREEN, (5, yws/2-9), (xws+5, yws/2-9), 1) #horizontal
+    #pygame.draw.line(screen, GREEN, (xws/2+5+48,5), (xws/2+5+48,yws+5), 1)  #originally 2*10
+       
+        
+
+
+class pycolor:
+    header = '\033[95m'
+    okblue = '\033[94m'
+    okgreen = '\033[92m'
+    warning = '\033[93m'
+    fail = '\033[91m'
+    endc = '\033[0m'
+
+
+class App(wx.App):
+    def OnInit(self):
+        frame = create(None)
+        frame.Show()
+        #logit(syskeyword, 'Started')
+        return True    
+    def OnExit(self):
+        #logit(syskeyword, 'Finished')
+        pass
+
+
+app = App(0)
+app.MainLoop()

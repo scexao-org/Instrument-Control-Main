@@ -1,0 +1,3 @@
+#!/bin/bash
+
+shmimcrop -d ircam2 ircam2_dark ircam2crop $1 $1 $2 $3

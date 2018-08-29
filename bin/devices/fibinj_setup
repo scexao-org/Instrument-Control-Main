@@ -1,0 +1,883 @@
+#!/bin/bash
+
+tempfile=`tempfile 2>/dev/null` || tempfile=/tmp/test_smi$$
+trap "rm -f $tempfile" 0 1 2 5 15
+
+# ===============================================================
+# READ POSITIONS
+
+echo "reading PIAA1 positions"
+filep1="/home/scexao/bin/devices/conf/conf_piaa1.txt"
+nlp1=$(cat $filep1 | wc -l)
+IFS=$'\n'
+declare -a np1
+declare -a dp1
+declare -a ap1
+declare -a xp1
+declare -a yp1
+declare -a cp1
+i=1
+for line in `cat $filep1`
+do
+    np1[$i]=`echo $line |cut -d\; -f1`
+    dp1[$i]=`echo $line |cut -d\; -f2`
+    ap1[$i]=`echo $line |cut -d\; -f3`
+    xp1[$i]=`echo $line |cut -d\; -f4`
+    yp1[$i]=`echo $line |cut -d\; -f5`
+    cp1[$i]=`echo $line |cut -d\; -f6`
+    i=$(($i+1))
+done
+
+echo "reading PIAA2 positions"
+filep2="/home/scexao/bin/devices/conf/conf_piaa2.txt"
+nlp2=$(cat $filep2 | wc -l)
+IFS=$'\n'
+declare -a np2
+declare -a dp2
+declare -a ap2
+declare -a xp2
+declare -a yp2
+declare -a fp2
+declare -a cp2
+i=1
+for line in `cat $filep2`
+do
+    np2[$i]=`echo $line |cut -d\; -f1`
+    dp2[$i]=`echo $line |cut -d\; -f2`
+    ap2[$i]=`echo $line |cut -d\; -f3`
+    xp2[$i]=`echo $line |cut -d\; -f4`
+    yp2[$i]=`echo $line |cut -d\; -f5`
+    fp2[$i]=`echo $line |cut -d\; -f6`
+    cp2[$i]=`echo $line |cut -d\; -f7`
+    i=$(($i+1))
+done
+
+echo "reading Fibers positions"
+files="/home/scexao/bin/devices/conf/conf_fibinj_fib.txt"
+nls=$(cat $files | wc -l)
+IFS=$'\n'
+declare -a ns
+declare -a ds
+declare -a xs
+declare -a ys
+declare -a fs
+declare -a cs
+i=1
+for line in `cat $files`
+do
+    ns[$i]=`echo $line |cut -d\; -f1`
+    ds[$i]=`echo $line |cut -d\; -f2`
+    xs[$i]=`echo $line |cut -d\; -f3`
+    ys[$i]=`echo $line |cut -d\; -f4`
+    fs[$i]=`echo $line |cut -d\; -f5`
+    cs[$i]=`echo $line |cut -d\; -f6`
+    i=$(($i+1))
+done
+
+echo "reading Carriage positions"
+filec="/home/scexao/bin/devices/conf/conf_fibinj_car.txt"
+nlc=$(cat $filec | wc -l)
+IFS=$'\n'
+declare -a nc
+declare -a dc
+declare -a fc
+i=1
+for line in `cat $files`
+do
+    nc[$i]=`echo $line |cut -d\; -f1`
+    dc[$i]=`echo $line |cut -d\; -f2`
+    fc[$i]=`echo $line |cut -d\; -f3`
+    i=$(($i+1))
+done
+
+#=======================================================================
+# =================== STATE MACHINE ====================================
+
+state="menuconfselect"
+
+
+fibnbmax=$nls
+fibnb=0
+fibselected=1
+
+menuconfmanage_default=0
+
+
+echo "START STATE MACHINE"
+
+while true; do
+
+    stateok=0
+
+    # ================================================================
+    # CHOOSE CONFIGURATION INDEX
+    if [ $state = "menuconfselect" ]; then
+	stateok=1
+	
+	fibselected=$(cat "/home/scexao/bin/devices/conf/current_SMINUMBER.txt")
+	
+	menuname="CONFIGURATION MENU\n [Active conf = ${fibselected}]"
+	menuitems=()
+	for i in `seq 1 ${fibnbmax}`;
+	do
+	    menuitems+=( "${ns[i]}" "${ds[i]}" )
+	done 
+	menuitems+=( "-" "")
+	menuitems+=( "C" "Configurations")
+	
+	dialog --title "Select Fiber" \
+	    --ok-label "Configure" \
+	    --cancel-label "Remove" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${fibselected} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	fibnb=$(cat $tempfile)
+	
+	case $retval in
+	    0) state="menuconfmanage";; # button 1: configure
+	    1) state="menuconfremove";;  # button 3: Top
+	    2) state="menuexit";; # button 4: Exit
+	    255) ;;#state="menuexit";;
+	esac
+	
+	if [ $state = "menuconfmanage" ]; then
+	    case $fibnb in
+		-) ;;
+		C) state="menuconfselect";;
+	    esac
+	fi
+    fi
+
+    # ============================================================
+    #  CONFIGURATION SETUP MENU
+    if [ $state = "menuconfmanage" ]; then
+	stateok=1
+	
+	fibselected=${fibnb}
+	
+	echo $fibselected > "/home/scexao/bin/devices/conf/current_SMINUMBER.txt"
+	
+	menuitems=( "0" "Move PIAA1 in")
+	menuitems+=( "1" "Manual PIAA1 alignment")
+	menuitems+=( "2" "Move PIAA2 in")
+	menuitems+=( "3" "Manual PIAA2 alignment")
+	menuitems+=( "-" "")
+	menuitems+=( "4" "Move fiber in")
+	menuitems+=( "5" "Manual Fiber alignment")
+	menuitems+=( "6" "Manual Carriage translation")
+	menuitems+=( "7" "Manual filter change")
+	menuitems+=( "-" "")
+	menuitems+=( "8" "Move pickoff out")
+	menuitems+=( "9" "Move PIAA out")
+	menuitems+=( "-" "")
+	menuitems+=( "C" "Configurations" )
+	
+	dialog --title "SMI alignment" \
+	    --ok-label "Select" \
+	    --extra-button --extra-label "Back" \
+	    --cancel-label "Main" \
+	    --help-button --help-label "Exit" \
+	    --default-item $menuconfmanage_default \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	case $retval in
+	    0)  # button 1:
+		menuconfmanage_default=$choiceval
+		case $choiceval in
+		    -);;
+   		    0) 
+			# moving PIAA1 wheel
+			echo "moving PIAA1 in"
+			log "SMI: moving PIAA1 in"
+			piaa1 3
+			
+			state="menuconfmanage";;
+		    1)
+			state="menuconf_p1align"
+			log "SMI: Manually aligning PIAA1"
+			manualpiaa1align=0;;
+		    2)
+			# moving PIAA2 wheel
+			echo "moving PIAA2 in"
+			log "SMI: moving PIAA2 in"
+			piaa2 3
+			
+			state="menuconfmanage";;
+		    3) 
+			state="menuconf_p2align"
+			log "SMI: Manually aligning PIAA2"
+			manualpiaa2align=0;;
+		    4)
+			echo "moving pickoff in"
+			log "SMI: moving pickoff in"
+			nuller_pickoff in
+			sleep 0.1
+			fibinj_pickoff in
+			sleep 0.1
+			fibinj_fib x $fibnb
+			sleep 0.1
+			fibinj_fib y $fibnb
+			sleep 0.1
+			fibinj_fib f $fibnb		    
+			state="menuconfmanage";;
+		    5)
+			state="menuconf_fiberalign"
+			log "SMI: Manually aligning the Fiber"
+			manualfiberalign=0;;
+		    6)
+			state="menuconf_carriage"
+			log "SMI: Manually translating the carriage"
+			manualfiberalign=0;;
+		    7)
+			state="menuconf_filter"
+			;;
+		    8)
+			echo "moving pickoff out"
+			fibinj_pickoff out
+			log "SMI: moving pickoff out"
+			state="menuconfmanage";;
+		    9)
+			echo "moving PIAA out"
+			piaa1 1
+			piaa2 1
+			log "SMI: moving the PIAA out"
+			state="menuconfmanage";;
+		    
+		    C) state="menuconfselect";;  
+		esac;;
+	    3) state="menuconfselect";; # "Back" button
+	    1) state="menuconfselect";; # "Main" button
+	    2) state="menuexit";; # "Exit" button
+	    255) ;;#state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT PIAA1 
+    if [ $state = "menuconf_p1align" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT PIAA1"
+	
+	file="/home/scexao/bin/devices/conf/current_piaa1amp.txt"
+	if [ -a $file ]
+	then
+	    piaa1amp=$(echo "$(cat $file)")
+	else
+	    piaa1amp="?"
+	fi
+	
+	
+	menuitems=(  "0" "Amplitude : $piaa1amp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+	
+	dialog --title "PIAA1 manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualpiaa1align \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	
+	case $retval in
+	    0) 	manualpiaa1align=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_p1amp";;
+		    1)
+			((yp1[3]+=$piaa1amp))
+			piaa1 y goto ${yp1[3]}
+			sleep 0.1
+			state="menuconf_p1align";;
+		    2)
+			((yp1[3]-=$piaa1amp))
+			piaa1 y goto ${yp1[3]}
+			sleep 0.1
+	  		state="menuconf_p1align";;
+		    3)
+			((xp1[3]+=$piaa1amp))
+			piaa1 x goto ${xp1[3]}
+			sleep 0.1
+			state="menuconf_p1align";;
+		    4)
+			((xp1[3]-=$piaa1amp))
+			piaa1 x goto ${xp1[3]}
+			sleep 0.1
+			state="menuconf_p1align";;
+		esac
+		;;
+	    1) 
+		log "SMI: PIAA1 aligned"
+		state="menuconf_savep1";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+	
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT PIAA1 
+    if [ $state = "menuconf_p1amp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT PIAA1"
+	
+	file="/home/scexao/bin/devices/conf/current_piaa1amp.txt"
+	if [ -a $file ]
+	then
+	    piaa1amp=$(echo "$(cat $file)")
+	else
+	    piaa1amp="?"
+	fi
+	
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+	
+	dialog --title "Amplitude alignment PIAA1" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${piaa1amp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0)piaa1amp=$(cat $tempfile)
+		echo "$piaa1amp" > /home/scexao/bin/devices/conf/current_piaa1amp.txt
+		state="menuconf_p1align";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT PIAA2 
+    if [ $state = "menuconf_p2align" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT PIAA2"
+	
+	file="/home/scexao/bin/devices/conf/current_piaa2amp.txt"
+	if [ -a $file ]
+	then
+	    piaa2amp=$(echo "$(cat $file)")
+	else
+	    piaa2amp="?"
+	fi
+	
+	
+	menuitems=(  "0" "Amplitude : $piaa2amp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+	menuitems+=( "5" "Move focus in")
+	menuitems+=( "6" "Move focus out")
+	
+	dialog --title "PIAA2 manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualpiaa2align \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	
+	case $retval in
+	    0) 	manualpiaa2align=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_p2amp";;
+		    1)
+			((yp2[3]-=$piaa2amp))
+			piaa2 y goto ${yp2[3]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		    2)
+			((yp2[3]+=$piaa2amp))
+			piaa2 y goto ${yp2[3]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		    3)
+			((xp2[3]-=$piaa2amp))
+			piaa2 x goto ${xp2[3]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		    4)
+			((xp2[3]+=$piaa2amp))
+			piaa2 x goto ${xp2[3]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		    5)
+			((fp2[3]-=$piaa2amp))
+			piaa2 f goto ${fp2[3]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		    6)
+			((fp2[3]+=$piaa2amp))
+			piaa2 f goto ${fp2[3]}
+			sleep 0.1
+			state="menuconf_p2align";;
+		esac
+		;;
+	    1)
+		log "SMI: PIAA2 aligned"
+		state="menuconf_savep2";; 
+	    2) state="menuexit";;
+	    255) ;; #state="menuexit";;
+	esac
+	
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT PIAA2
+    if [ $state = "menuconf_p2amp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT PIAA2"
+	
+	file="/home/scexao/bin/devices/conf/current_piaa2amp.txt"
+	if [ -a $file ]
+	then
+	    piaa2amp=$(echo "$(cat $file)")
+	else
+	    piaa2amp="?"
+	fi
+	
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+	
+	dialog --title "Amplitude alignment PIAA1" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${piaa2amp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0)piaa2amp=$(cat $tempfile)
+		echo "$piaa2amp" > /home/scexao/bin/devices/conf/current_piaa2amp.txt
+		state="menuconf_p2align";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;; #state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT FIBER
+    if [ $state = "menuconf_fiberalign" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT FIBER"
+	
+	file="/home/scexao/bin/devices/conf/current_fibamp.txt"
+	if [ -a $file ]
+	then
+	    fibamp=$(echo "$(cat $file)")
+	else
+	    fibamp="?"
+	fi
+	
+	
+	menuitems=(  "0" "Amplitude : $fibamp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+	menuitems+=( "5" "Focus in")
+	menuitems+=( "6" "Focus out")
+	
+	dialog --title "Fiber manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualfiberalign \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	
+	case $retval in
+	    0) 	manualfiberalign=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_fibamp";;
+		    1)
+			((ys[$fibnb]-=$fibamp))
+			fibinj_fib y goto ${ys[$fibnb]}
+			sleep 0.1
+			state="menuconf_fiberalign";;
+		    2)
+			((ys[$fibnb]+=$fibamp))
+			fibinj_fib y goto ${ys[$fibnb]}
+			sleep 0.1
+			state="menuconf_fiberalign";;
+		    3)
+			((xs[$fibnb]-=$fibamp))
+			fibinj_fib x goto ${xs[$fibnb]}
+			sleep 0.1
+			state="menuconf_fiberalign";;
+		    4) 
+			((xs[$fibnb]+=$fibamp))
+			fibinj_fib x goto ${xs[$fibnb]}
+			sleep 0.1
+			state="menuconf_fiberalign";;
+		    5)
+			((fs[$fibnb]-=$fibamp))
+			fibinj_fib f goto ${fs[$fibnb]}
+			sleep 0.1
+			state="menuconf_fiberalign";;
+		    6) 
+			((fs[$fibnb]+=$fibamp))
+			fibinj_fib f goto ${fs[$fibnb]}
+			sleep 0.1
+			state="menuconf_fiberalign";;
+		esac
+		;;
+	    1) 
+		log "SMI: Fiber aligned"
+		state="menuconf_saves";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+	
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT FIBER
+    if [ $state = "menuconf_fibamp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT FIBER"
+	
+	file="/home/scexao/bin/devices/conf/current_fibamp.txt"
+	if [ -a $file ]
+	then
+	    fibamp=$(echo "$(cat $file)")
+	else
+	    fibamp="?"
+	fi
+	
+	menuitems=( "10000" " 10000 steps")
+	menuitems+=( "5000" " 5000 steps")
+	menuitems+=( "2000" " 2000 steps")
+	menuitems+=( "1000" " 1000 steps")
+	menuitems+=( "500" " 500 steps")
+	menuitems+=( "200" " 200 steps")
+	menuitems+=( "100" " 100 steps")
+	menuitems+=( "50" " 50 steps")
+	menuitems+=( "20" " 20 steps")
+	menuitems+=( "10" " 10 steps")
+	menuitems+=( "5" " 5 steps")
+	menuitems+=( "2" " 2 steps")
+	menuitems+=( "1" " 1 steps")
+	
+	dialog --title "Amplitude alignment FPM" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${fibamp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0)fibamp=$(cat $tempfile)
+		echo "$fibamp" > /home/scexao/bin/devices/conf/current_fibamp.txt
+		state="menuconf_fiberalign";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT CARRIAGE 
+    if [ $state = "menuconf_caralign" ]; then
+	stateok=1
+	menuname="MANUAL ALIGNMENT CARRIAGE"
+	
+	file="/home/scexao/bin/devices/conf/current_caramp.txt"
+	if [ -a $file ]
+	then
+	    caramp=$(echo "$(cat $file)")
+	else
+	    caramp="?"
+	fi
+	
+	
+	menuitems=(  "0" "Amplitude : $caramp steps")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move in")
+	menuitems+=( "2" "Move out")
+	
+	dialog --title "CARRIAGE manual alignment" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item $manualcaralign \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	
+	case $retval in
+	    0) 	manualcaralign=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0)
+			state="menuconf_caramp";;
+		    1)
+			((fc[$fibnb]-=$caramp))
+			fibinj_car goto ${fc[$fibnb]}
+			sleep 0.1
+			state="menuconf_caralign";;
+		    2) 
+			((fc[$fibnb]+=$caramp))
+			fibinj_car goto ${fc[$fibnb]}
+			sleep 0.1
+			state="menuconf_caralign";;
+		esac
+		;;
+	    1) 
+		log "SMI: Carriage moved"
+		state="menuconf_savec";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+	
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT CARRIAGE
+    if [ $state = "menuconf_caramp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT CARRIAGE"
+	
+	file="/home/scexao/bin/devices/conf/current_caramp.txt"
+	if [ -a $file ]
+	then
+	    caramp=$(echo "$(cat $file)")
+	else
+	    caramp="?"
+	fi
+	
+	menuitems=( "10000000" " 10000000 steps")
+	menuitems+=( "5000000" " 5000000 steps")
+	menuitems+=( "2000000" " 2000000 steps")
+	menuitems+=( "1000000" " 1000000 steps")
+	menuitems+=( "500000" " 500000 steps")
+	menuitems+=( "200000" " 200000 steps")
+	menuitems+=( "100000" " 100000 steps")
+	
+	dialog --title "Amplitude alignment CARRIAGE" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${caramp} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0)caramp=$(cat $tempfile)
+		echo "$caramp" > /home/scexao/bin/devices/conf/current_caramp.txt
+		state="menuconf_caralign";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  MANUAL FILTER CHANGE
+    if [ $state = "menuconf_filter" ]; then
+	stateok=1
+	menuname="MANUAL FILTER CHANGE"
+	
+	file="/home/scexao/bin/devices/conf/current_filter.txt"
+	if [ -a $file ]
+	then
+	    filter=$(echo "$(cat $file)")
+	else
+	    filter="?"
+	fi
+	
+	menuitems=( "1" " 1250 nm, 25 nm BW")
+	menuitems+=( "2" " 1300 nm, 25 nm BW")
+	menuitems+=( "3" " 1350 nm, 25 nm BW")
+	menuitems+=( "4" " 1550 nm, 25 nm BW")
+	menuitems+=( "5" " 1610 nm, 12 nm BW")
+	menuitems+=( "6" " 1500 nm, 25 nm BW")
+	
+	dialog --title "Manual filter change" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${filter} \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	
+	case $retval in
+	    0)filter=$(cat $tempfile)
+		echo "$filter" > /home/scexao/bin/devices/conf/current_filter.txt
+		smiwheel $filter
+		log "SMI: changing filter to ${menuitems[$(($filter * 2 - 1))]}"
+		state="menuconfmanage";; 
+	    1) state="menuconfmanage";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION PIAA1
+    if [ $state = "menuconf_savep1" ]; then
+	stateok=1
+	
+	cp $filep1 /home/scexao/bin/devices/conf/archive/
+	rm $filep1
+	for i in $(seq 1 $nlp1)
+	do
+	    printf '%s;%s;%s;%-6s;%-6s;%s\n' ${np1[$i]} ${dp1[$i]} ${ap1[$i]} ${xp1[$i]} ${yp1[$i]} ${cp1[$i]} >> $filep1
+	done
+	
+	echo "saving PIAA1 position"
+	piaa1 status
+	
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION PIAA2
+    if [ $state = "menuconf_savep2" ]; then
+	stateok=1
+	
+	cp $filep2 /home/scexao/bin/devices/conf/archive/
+	rm $filep2
+	for i in $(seq 1 $nlp2)
+	do
+	    printf '%s;%s;%s;%-6s;%-6s;%-6s;%s\n' ${np2[$i]} ${dp2[$i]} ${ap2[$i]} ${xp2[$i]} ${yp2[$i]} ${fp2[$i]} ${cp2[$i]} >> $filep2
+	done
+	
+	echo "saving PIAA2 position"
+	piaa2 status
+	
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION FIBER
+    if [ $state = "menuconf_saves" ]; then
+	stateok=1
+	
+	cp $files /home/scexao/bin/devices/conf/archive/
+	rm $files
+	for i in $(seq 1 $nls)
+	do
+	    printf '%s;%s;%-6s;%-6s;%-6s;%s\n' ${ns[$i]} ${ds[$i]} ${xs[$i]} ${ys[$i]} ${fs[$i]} ${cs[$i]} >> $files
+	done
+
+	echo "saving fiber position"
+        fibinj_fib status
+	
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION CARIAGE
+    if [ $state = "menuconf_savec" ]; then
+	stateok=1
+	
+	cp $filec /home/scexao/bin/devices/conf/archive/
+	rm $filec
+	for i in $(seq 1 $nlc)
+	do
+	    printf '%s;%s;%-8s\n' ${nc[$i]} ${dc[$i]} ${fc[$i]} >> $filec
+	done
+
+	echo "saving cariage position"
+	fibinj_car status
+	
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    # REMOVE SMI
+    if [ $state = "menuconfremove" ]; then
+	stateok=1
+	echo "remove all"
+	piaa1 1
+	sleep 0.1
+	piaa2 1
+	sleep 0.1
+	fibinj_pickoff out
+	sleep 0.1
+
+	log "SMI: Removing the PIAA and pickoff"
+
+	state="menuconfselect"
+    fi
+
+    # ==========================================================
+    # EXIT MODE
+    if [ $state = "menuexit" ]; then
+	stateok=1
+	echo "exit"
+	exit
+    fi
+
+    # ==========================================================
+    #  ERROR MODE
+    if [ $stateok = 0 ]; then
+	echo "state \"$state\" not recognized ... exit"
+	exit
+    fi
+
+done

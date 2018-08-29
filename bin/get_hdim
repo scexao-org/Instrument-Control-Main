@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+
+import pyfits as pf
+import numpy as np
+import time
+
+import os
+import sys
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python')
+from scexao_shm import shm
+from   camera_tools import cam_cmd
+
+auxdir = home + "/conf/speckle_aux/hdim/betelgeuse/"
+
+# ---------------------------------------------------------
+camid = 1
+
+etimes = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500, 
+                   1000, 2000, 5000, 10000, 20000, 50000,
+                   100000, 200000, 500000])
+
+
+cam = shm('/tmp/ircam%d.im.shm' % (camid,), verbose=False)
+
+os.system("fwheel 6")
+time.sleep(5)
+
+side = "right"
+
+for i, etime in enumerate(etimes):
+    delay = 2.0 * np.max((etime*1e-6, 0.01))
+    print("time %d" % (i,))
+    cam_cmd("tint %d %d" % (camid, etime), False)
+    time.sleep(0.5)
+    time.sleep(delay)
+    name = "darks_%06d.fits" % (etime,)
+    im = cam.get_data(True, True).astype('float')
+    time.sleep(delay)
+    pf.writeto(auxdir+name, im, clobber=True)
+
+os.system("fwheel 4")
+time.sleep(5)
+
+for i, etime in enumerate(etimes):
+    delay = 2.0 * np.max((etime*1e-6, 0.01))
+    print("time %d" % (i,))
+    cam_cmd("tint %d %d" % (camid, etime), False)
+    time.sleep(0.5)
+    time.sleep(delay)
+    name = "null_%s_%06d.fits" % (side, etime,)
+    time.sleep(delay)
+    im = cam.get_data(True, True).astype('float')
+    time.sleep(delay)
+    pf.writeto(auxdir+name, im, clobber=True)
+
+# ------------------------------------------
+(ys, xs) = (256, 320)
+
+imc = np.zeros((18, ys, xs))
+drk = np.zeros((18, ys, xs))
+
+for i, etime in enumerate(etimes):
+    drk[i] = pf.getdata(auxdir+"darks_%06d.fits" % (etime,))
+    imname = "null_%s_%06d.fits" % (side, etime,)
+    try:
+        imc[i]  = pf.getdata(auxdir+imname) - drk[i]
+    except:
+        print 'missing frames?', imname
+
+v1 = 100
+v2 = 12000
+hdim = np.zeros((ys, xs))
+hdim = imc[0]
+hdim[imc[0] < v1] = 0.0
+
+for i in xrange(15):
+    test1 = (v1 < imc[i]) * (imc[i] < v2) 
+    test2 = (v1 < imc[i+1]) * (imc[i+1] < v2) 
+    test = test1 * test2
+
+    coeff = (imc[i+1]/imc[i])[test].mean()
+    hdim *= coeff
+    hdim += imc[i+1]
+    hdim /= 2.0
+    hdim[imc[i+1] < v1] = 0.0
+
+pf.writeto("hd_null_%s.fits" % (side,), hdim/hdim.max(), clobber=True)
+cam.close()

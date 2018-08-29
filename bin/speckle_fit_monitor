@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import time
+
+home = os.getenv('HOME')
+
+plt.ion()
+plt.show()
+
+kpon = True
+
+cur_file = home+"/conf/speckle_aux/current.npy"
+
+
+#plt.figure()
+
+f1  = plt.figure(1, figsize=(8,8)) # matplotlib figure
+
+while kpon:
+    f1.clf()
+    
+    for ii in xrange(16):
+        cur_file = home+"/conf/speckle_aux/current_%02d.npy" % (ii,)
+        try:
+            #Iarr= np.load(cur_file)
+            (Iarr, a0, phi, params) = np.load(cur_file)
+        except:
+            Iarr = np.zeros(31)
+            (Iarr, a0, phi, params) = (np.zeros(31), 0.0, np.arange(30), 
+                                       [0.0, 0.0, 0.0, 0.0])
+
+        ax1 = f1.add_subplot(4,4,ii+1)
+        ax1.grid()
+        ax1.plot(phi, Iarr[1:], 'bo')
+        
+    plt.draw()
+    time.sleep(2.0)

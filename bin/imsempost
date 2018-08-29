@@ -1,0 +1,26 @@
+#! /bin/bash
+
+EXPECTED_ARGS=1
+
+if [ $# -ne $EXPECTED_ARGS ]
+then
+  echo
+  echo "-------- POST IMAGE SEMAPHORES ---------"
+ echo " "
+ echo "Usage: $0 <image>"
+ echo " "
+ echo "  INPUT <image>    : shared memory stream name"
+ echo " "
+ echo "EXAMPLE :  $0 ircam2"
+ echo " "
+ exit
+fi
+
+pname="$0"
+#echo "$pname"
+
+Cfits -n $pname << EOF > /dev/null
+readshmim $1
+imsetsempost $1 -1
+exit
+EOF

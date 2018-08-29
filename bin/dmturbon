@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo "(Re)starting DM turbulence ..."
+
+# kill all previous dm processes
+tmux kill-session -t dmturb
+
+# Create tmux session to control DM turbulence
+tmux new-session -d -s dmturb
+tmux send-keys -t dmturb '/home/scexao/bin/dmturbstartscript' C-m
+

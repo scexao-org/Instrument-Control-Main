@@ -1,0 +1,129 @@
+#!/bin/bash
+
+
+
+# number of arguments to script
+NBARGS=7
+
+
+
+
+
+function printHELP {
+echo "------------------------------------------------------------------------"
+echo "$(tput bold) $pname : CROP SHARED MEMORY IMAGE $(tput sgr0)"
+echo "------------------------------------------------------------------------"
+echo "  Reads shared memory stream, writes cropped copy in another stream"
+echo "  Can optionally subtract dark"
+echo "   "
+echo " $(tput bold)USAGE:$(tput sgr0)"
+echo "     $0 [-hd] <instream> <darkstream> <outstream> <xsize> <ysize> <xstart> <ystart>"
+echo ""
+echo " $(tput bold)OPTIONS:$(tput sgr0)"
+echo "     $(tput bold)-h$(tput sgr0)                 help"
+echo "     $(tput bold)-d$(tput sgr0)                 remove dark"
+echo ""
+echo " $(tput bold)INPUT:$(tput sgr0)"
+echo "     <instream>     input stream"
+echo "     <darkstream>     dark stream (used if -d option)"
+echo "     <outstream>    output stream"
+echo "     <xsize>        cropped zone x size"
+echo "     <ysize>        cropped zone y size"
+echo "     <xstart>       cropped zone x start"
+echo "     <ystart>       cropped zone y start"
+echo ""
+echo ""
+echo "------------------------------------------------------------------------"
+}
+
+
+printHELP1 ()
+{
+    printf "%20s       Crop shared memory image\n" "$0" 
+}
+
+
+
+
+
+# ================= OPTIONS =============================
+
+
+
+
+# Transform long options to short ones
+singlelinehelp=0
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    "--help") set -- "$@" "-h" ;;
+    "--help1") 
+set -- "$@" "-h" 
+singlelinehelp=1;
+;;
+    *)        set -- "$@" "$arg"
+  esac
+done
+
+
+
+
+
+RMDARK="0"
+while getopts :hd FLAG; do
+  case $FLAG in
+    d) # set loop name
+	RMDARK="1"
+    ;;
+    h)  #show help
+      if [ "$singlelinehelp" -eq "0" ]; then
+      printHELP
+      else
+      printHELP1
+      fi
+      exit
+      ;;
+    \?) #unrecognized option - show help
+      echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed."
+      printHELP
+      ;;
+  esac
+done
+
+shift $((OPTIND-1)) 
+
+
+
+
+
+
+
+
+if [ "$1" = "help" ] || [ "$#" -ne $NBARGS ]; then
+if [ "$#" -ne $NBARGS ]; then
+    echo "$(tput setaf 1)$(tput bold) Illegal number of parameters ($NBARGS params required, $# entered) $(tput sgr0)"
+fi
+printHELP
+        exit
+fi
+
+
+
+
+
+
+
+if [ "$RMDARK" = "1" ]; then
+Cfits << EOF
+readshmim "$1"
+readshmim "$2"
+cropshim $1 $2 $3 $4 $5 $6 $7
+exit
+EOF
+else
+Cfits << EOF
+readshmim "$1"
+cropshim $1 null $3 $4 $5 $6 $7
+exit
+EOF
+fi

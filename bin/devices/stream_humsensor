@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+import serial
+import time
+import sys, os
+from datetime import datetime
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+"/src/lib/python/")
+from scexao_shm import shm
+
+# ------------------------------------------------------------------
+#                access to shared memory structures
+# ------------------------------------------------------------------
+if not os.path.isfile("/tmp/humsensor.im.shm"):
+    os.system("creashmim humsensor 3 1")
+humshm = shm("/tmp/humsensor.im.shm") #SHM of data
+if not os.path.isfile("/tmp/humsensor_stream.im.shm"):
+    os.system("creashmim humsensor_stream 1 1")
+strshm = shm("/tmp/humsensor_stream.im.shm") #SHM of flag
+
+# ------------------------------------------------------------------
+#                Configure RS232 communication
+# ------------------------------------------------------------------
+
+serpath = "/dev/serial/by-path/pci-0000:00:1a.0-usb-0:1.5:1.0-port0"
+
+brate = 19200 # baud rate for Weeder AI board
+tout  = 1.  # time out for serial connection (in sec)
+delay = 0.05  # safety delay between send - receive 
+
+try:
+    # Configure the analog inputs' negative channel, range, settling time and
+    # resolution.
+    # Note when streaming, negative channels and ranges can be configured for
+    # individual analog inputs, but the stream has only one settling time and
+    # resolution.
+    
+    ser = serial.Serial(serpath,brate,timeout=tout)
+    print ser
+
+    flag = strshm.get_data()
+    data = np.zeros((3,1))
+
+    while flag[0]:
+        line = ser.readline()
+        if len(line) > 5:
+            for i in range(3):
+                data[i] = float(line.split(',')[i].split('=')[1])
+        humshm.set_data(data.astype(np.float32))
+        flag = strshm.get_data()
+
+except Exception:
+    e = sys.exc_info()[1]
+    print(e)
+
+print("\nStop Stream")
+strshm.set_data(np.ones(1).astype(np.float32)) # put back the flag to one
+
+# close serial port
+ser.close()
