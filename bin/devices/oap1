@@ -29,7 +29,7 @@ zabernames = ["f"]
 
 description = "OAP1 orientation"
 
-defpos = ["int1", "int2", "ao"]
+defpos = ["int", "ao"]
 
 # GENERIC CODE
 

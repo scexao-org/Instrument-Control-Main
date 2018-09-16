@@ -1,20 +1,16 @@
 #!/usr/bin/python
 
-import socket
-import random
-import cPickle
-import time
-import sys
-import string
 import os
+import sys
+import time
 
-NPS_IP = "scexaoNPS2"
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from nps import nps
 
-hold = sys.argv # reading argument of command
-hold.pop(0)     # throw away the command itself!
+# SPECIFIC PARAMETERS FOR THIS DEVICE
 
-# simple test to avoid problem!
-if len(hold) == 0:
+def message():
     print "------------------------------------"
     print "          NPS2 contents             "
     print "------------------------------------"
@@ -29,35 +25,28 @@ if len(hold) == 0:
     print "------------------------------------"
     print "Example of use of the command nps_on"
     print "------------------------------------"
-    print "\n>>nps_off 3"
+    print "\n>>nps_on 3"
     print "turns on the outlet 3 on the NPS"
     print "outlet number is 1 <= # <= 8"
     print "\nSee also: nps_off"
     print "------------------------------------"
     exit()
+
+args = sys.argv[1:]
+
+npsid = 2
+if len(args) == 1:
+    portid = int(args[0])
+    if 1 <= portid <= 8:
+        args2 = ['off']
+    else:
+        message()
 else:
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((NPS_IP, 23))
-        sock.send("@@@@\r\n")
-        time.sleep(0.1)
-        print sock.recv(1024)
-        time.sleep(0.1)
+    message()
+npsname = "mps2 port%d" %(portid,)
 
-        cmd = "F0"+(str)(hold[0])+"\r\n"
-        print cmd
-        sock.send(cmd)
-        time.sleep(1)
-        print sock.recv(1024)
-        time.sleep(1)
-        sock.close()
-        time.sleep(0.1)
-    except:
-        print ""
-        print "-------------------------------------------------------"
-        print "nps_on could not connect to NPS."
-        print "check that environment variable NPS_IP is correctly set"
-        print "-------------------------------------------------------"
+description = "turn off port on power switch #2"
 
+# GENERIC CODE
 
-
+nps(npsname, npsid, portid, args=args2, description=description)

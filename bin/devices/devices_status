@@ -1,5 +1,11 @@
 #!/bin/bash
 
+echo "status of NPS1"
+nps 1 status
+echo "status of NPS2"
+nps 2 status
+echo "status of NPS3"
+nps 3 status
 echo "Calibration source fiber:"
 src_fib status
 sleep 0.1

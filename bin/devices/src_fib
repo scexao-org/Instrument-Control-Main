@@ -32,7 +32,7 @@ conexnames = ["x", "y"]
 
 description = "Calibration source fiber stage"
 
-defpos = ["in1", "in2", "out"]
+defpos = ["in", "out"]
 
 # GENERIC CODE
 

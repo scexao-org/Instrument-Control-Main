@@ -1,0 +1,3 @@
+readshmim /tmp/ircam0.im.shm
+imgmon /tmp/ircam0.im.shm 10
+exit

@@ -1,5 +1,0 @@
-Cfits << EOF
-readshmim ocam2k
-imsetstatus ocam2k 1
-exit
-EOF

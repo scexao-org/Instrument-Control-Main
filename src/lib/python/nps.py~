@@ -1,0 +1,128 @@
+#!/usr/bin/python
+
+# ========================================================= #
+#    ___                     _                      _       #
+#   / _ \___ _ __   ___ _ __(_) ___    ___ ___   __| | ___  #
+#  / /_\/ _ \ '_ \ / _ \ '__| |/ __|  / __/ _ \ / _` |/ _ \ #
+# / /_\\  __/ | | |  __/ |  | | (__  | (_| (_) | (_| |  __/ #
+# \____/\___|_| |_|\___|_|  |_|\___|  \___\___/ \__,_|\___| #
+#                                                           #
+#   __                  __  ___  __                         #
+#  / _| ___  _ __    /\ \ \/ _ \/ _\                        #
+# | |_ / _ \| '__|  /  \/ / /_)/\ \                         #
+# |  _| (_) | |    / /\  / ___/ _\ \                        #
+# |_|  \___/|_|    \_\ \/\/     \__/                        #
+#                                                           #
+# ========================================================= #
+                                     
+import socket
+import random
+import cPickle
+import time
+import sys
+import string
+import os
+
+# =====================================================================
+# =====================================================================
+NPS_IP = "scexaoNPS1"
+
+hold = sys.argv # reading argument of command
+hold.pop(0)     # throw away the command itself!
+
+class nps:
+
+    def __init__(self, npsname, npsip, npsid, args=[], description="no description"):
+        
+        self.npsname = npsname
+        self.description = description
+
+        if args != [] and "--help1" in args[0]:
+            self.quickhelp()
+            sys.exit()
+
+        self.npsip = npsip
+        self.npsid = npsid
+        
+        na = args.__len__()
+        
+        if args == []:
+            self.()
+            self.usage()
+            
+        elif "on" in args[0]:
+            self.npson()
+            
+        elif "off" in args[0]:
+            self.npsoff()
+
+        elif "status" in args[0]:
+            self.status()
+            
+        else:
+            self.usage()
+
+# =====================================================================
+
+    def usage(self):
+        print """---------------------------------------
+Usage: %s <command>
+---------------------------------------
+COMMAND:
+    on      turns on
+    off     turns off
+    status  displays status
+---------------------------------------""" % (self.npsname,)
+    
+    # -----------------------------------------------------------------
+    def quickhelp(self):
+        print "%20s       %s" % (self.npsname,self.description)
+
+    # -----------------------------------------------------------------
+    def npson(self):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((self.npsip, 23))
+            sock.send("@@@@\r\n")
+            time.sleep(0.1)
+            print sock.recv(1024)
+            time.sleep(0.1)
+            
+            cmd = "N0%i\r\n" % (self.npsid,)
+            sock.send(cmd)
+            time.sleep(1)
+            print sock.recv(1024)
+            time.sleep(1)
+            sock.close()
+            time.sleep(0.1)
+        except:
+            print ""
+            print "-------------------------------------------------------"
+            print "nps_on could not connect to NPS."
+            print "check that environment variable NPS_IP is correctly set"
+            print "-------------------------------------------------------"
+
+    # -----------------------------------------------------------------
+    def npsoff(self):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((self.npsip, 23))
+            sock.send("@@@@\r\n")
+            time.sleep(0.1)
+            print sock.recv(1024)
+            time.sleep(0.1)
+            
+            cmd = "F0%i\r\n" % (self.npsid,)
+            sock.send(cmd)
+            time.sleep(1)
+            print sock.recv(1024)
+            time.sleep(1)
+            sock.close()
+            time.sleep(0.1)
+        except:
+            print ""
+            print "-------------------------------------------------------"
+            print "nps_on could not connect to NPS."
+            print "check that environment variable NPS_IP is correctly set"
+            print "-------------------------------------------------------"
+

@@ -50,7 +50,7 @@ def open_shm(shm_name, dims=(1,1), check=False):
 # ------------------------------------------------------------------
 #             short hands for tmux commands
 # ------------------------------------------------------------------
-def tmux(cargs="", session="ircam1", command="send-keys"):
+def tmux(cargs="", session="ircam2", command="send-keys"):
     ''' ------------------------------------------------------------
     Synthesizes and sends a tmux command. The default option was
     chosen to match the most common one, hence making the code
@@ -349,7 +349,7 @@ if args != []:
 # ------------------------------------------------------------------
 #                access to shared memory structures
 # ------------------------------------------------------------------
-camid = 1#2 # camera identifier (1: science camera)
+camid = 2#2 # camera identifier (1: science camera)
 cam = shm("/tmp/ircam%d.im.shm" % (camid,), verbose=False)
 (xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
 print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
@@ -360,11 +360,8 @@ cam_dark = open_shm("ircam%d_dark" % (camid,), dims=(xsizeim, ysizeim), check=Tr
 cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid,), dims=(xsizeim, ysizeim), check=True)
 cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
 cam_paused = open_shm("ircam%d_paused" % (camid,))
-telescope_status = open_shm("telescope_status", dims=(6,1))
-pup = int(pupshm.get_data())
-npin = int(nuller_pickoff.get_data())
 
-pscale = 15.3 #mas per pixel in Rajnicam
+pscale = 1. #mas per pixel in Rajnicam
 
 filename = "/home/scexao/conf/rajnicam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
@@ -376,8 +373,6 @@ for i in range(ncor):
     cort[1,i] = float(corparam[3])
 cort /= pscale
 cor = np.array([0,0])
-if npin:
-    cor = cort[:,0]
 
 # ------------------------------------------------------------------
 #                       global variables
@@ -673,11 +668,7 @@ while True: # the main game loop
         fpsn = cam.get_fps()
         ndrn = int(cam.get_ndr())
         cropn = cam.get_crop().astype(int)
-        npin = int(nuller_pickoff.get_data())
-        if npin:
-            cor = cort[:,0]
-        else:
-            cor = np.array([0,0])
+        cor = np.array([0,0])
         if etimen != etime or fpsn != fps or ndrn != ndr or np.any(cropn != crop):
             print "reloading bias and badpixmap"
             (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
@@ -826,9 +817,9 @@ while True: # the main game loop
             screen.blit(savem1, rct_savem1)
             screen.blit(savem2, rct_savem2)
             screen.blit(savem3, rct_savem3)
-            rects = [rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm, rct_dinfo, rct_dinfo2, rct_savem1, rct_savem2, rct_savem3, rct_sc1, rct_sc2, rct_wh, rct_pup]
+            rects = [rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm, rct_dinfo, rct_dinfo2, rct_savem1, rct_savem2, rct_savem3, rct_wh]
         else:
-            rects = [rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm, rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_pup]
+            rects = [rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm, rct_dinfo, rct_dinfo2, rct_wh]
 
         if logexpt:
             time.sleep(0.1)
@@ -838,13 +829,6 @@ while True: # the main game loop
                 os.system("/home/scexao/bin/log Rajnicam: changing exposure time to %d" %etime)
                 timeexpt = []
                 logexpt = False
-        if cnti % 20 == 0:
-            slot = int(ircam_filter.get_data())
-            msgwhl = ircam_filters[slot-1]
-            if slot < 7:
-                wh = font1.render(msgwhl, True, CYAN)
-            else:
-                wh = font1.render(msgwhl, True, RED1)
                 
     
     # =====================================================================
@@ -860,11 +844,6 @@ while True: # the main game loop
             cam.close()
             cam_dark.close()
             cam_badpixmap.close()
-            cam_clean.close()
-            ircam_filter.close()
-            pupshm.close()
-            telescope_status.close()
-            nuller_pickoff.close()
             print("Rajnicam has ended normally.")
             sys.exit()
         elif event.type == KEYDOWN:
@@ -875,10 +854,6 @@ while True: # the main game loop
                 cam_dark.close()
                 cam_badpixmap.close()
                 cam_clean.close()
-                ircam_filter.close()
-                pupshm.close()
-                telescope_status.close()
-                nuller_pickoff.close()
                 print("Rajnicam has ended normally.")
                 sys.exit()
 
@@ -1081,7 +1056,7 @@ while True: # the main game loop
  
                     subt_ref = False
                     
-                    nref = min(100, (5000000/etimet))
+                    nref = int(500*fps/float(ndr)) # 5s of ref
                     ave_ref = ave_img_data(nref, bias=bias, badpixmap=badpixmap, disp=True, tint=etime)
                     rname = conf_dir + "ref.fits"
                     pf.writeto(rname, ave_ref, overwrite=True)

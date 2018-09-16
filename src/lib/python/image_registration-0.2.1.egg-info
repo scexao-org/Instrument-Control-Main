@@ -1,0 +1,42 @@
+Metadata-Version: 1.1
+Name: image_registration
+Version: 0.2.1
+Summary: Image Registration Tools for extended images in astronomy.
+Home-page: https://github.com/keflavich/image_registration
+Author: Adam Ginsburg
+Author-email: adam.g.ginsburg@gmail.com
+License: UNKNOWN
+Description: Image Registration Methods for Astronomy
+        ========================================
+        (intended for *extended emission*, not stellar images!)
+        
+        Documentation:
+        http://image-registration.rtfd.org
+        
+        Borrows heavily from
+        http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation/content/html/efficient_subpixel_registration.html
+        
+        and replicates much of the functionality of 
+        http://www.astro.ucla.edu/~mperrin/IDL/sources/subreg.pro
+        
+        and implements 
+        http://solarmuri.ssl.berkeley.edu/~welsch/public/software/cross_cor_taylor.pro
+        
+        
+        .. image:: https://d2weczhvl823v0.cloudfront.net/keflavich/image_registration/trend.png
+           :alt: Bitdeli badge
+           :target: https://bitdeli.com/free
+        
+        .. image:: https://zenodo.org/badge/3821/keflavich/image_registration.png
+           :target: http://dx.doi.org/10.5281/zenodo.12528
+        
+        CHANGES
+        -------
+        
+        0.2.1 - Use scipy.stats.nanmean if np.nanmean unavailable
+        0.2 - new, faster, iterative chi^2 method.  Works for non-uniform error
+        0.1 - original version, worked for uniform error
+        
+Platform: UNKNOWN
+Requires: pytest
+Requires: FITS_tools

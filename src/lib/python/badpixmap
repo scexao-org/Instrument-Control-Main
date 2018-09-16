@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+
+import sys
+import pyfits as pf
+import numpy as np
+import glob
+
+
+def usage():
+    print """---------------------------------------
+Usage: badpixmap <camid> <path>
+--------------------------------------- """
+    sys.exit()
+
+# =====================================================================
+# =====================================================================
+def main():
+    args = sys.argv[1:]  # list of read arguments
+    na = args.__len__()  # number of arguments
+
+    if na != 2:
+        usage()
+        sys.exit()
+    else:
+        if int(args[0].lower()) == 1 :
+            pathcube = "/media/data/"+str(args[1].lower())
+            pathmap = "/home/scexao/conf/chuckcam_aux/badpixmap.fits"
+        elif int(args[0].lower()) == 2 :
+            pathmap = "/home/scexao/conf/rajnicam_aux/badpixmap.fits"
+            pathcube = "/media/data/LLOWFS/"+str(args[1].lower())
+        
+        
+    ilist = glob.glob(pathcube+'darkcube_*.fits')
+    
+    ilist.sort()
+    
+    n_im = len(ilist)
+    if n_im == 0:
+        usage()
+        sys.exit()
+    else:    
+        for i in range(n_im):
+            darkcubei = pf.getdata(ilist[i])
+            if i == 0:
+                badpixi = np.zeros((n_im,darkcubei.shape[1],darkcubei.shape[2]))
+            std_cubei = np.std(darkcubei, axis=0)
+            stdmed = np.median(std_cubei[3:-3,3:-3])
+            stdstd = np.std(std_cubei)
+            badpixi[i,:,:] = np.abs(std_cubei-stdmed) > stdstd*5
+            
+        badpixmap = np.sum(badpixi, axis=0) > 0.5
+        badpixmap = badpixmap.astype(float)
+        pf.writeto(pathcube+"badpixcube.fits",badpixi,clobber='True')
+        pf.writeto(pathcube+"badpixmap.fits",badpixmap,clobber='True')
+        pf.writeto(pathmap,badpixmap,clobber='True')
+        
+if __name__ == "__main__":
+    main()

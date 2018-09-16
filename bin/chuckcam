@@ -310,7 +310,7 @@ CTRL+s      : start/stop logging images
 CTRL+d      : save a HDR image
 CTRL+1-6    : change filter wheel slot:
               1. OPEN 
-              2. 1550 nm, 10 nm BW
+              2. y-band
               3. 1550 nm, 25 nm BW
               4. 1550 nm, 50 nm BW
               5. J-band
@@ -616,7 +616,7 @@ rct_zm  = zm.get_rect()
 rct_zm.topleft = (5*z1, 5*z1)
 
 #ircam_filter
-ircam_filters = ["          OPEN", "1550nm 10nm BW", "1550nm 25nm BW", "1550nm 50nm BW", "        J-band", "        H-band", "         BLOCK"]
+ircam_filters = ["          OPEN", "        y-band", "1550nm 25nm BW", "1550nm 50nm BW", "        J-band", "        H-band", "         BLOCK"]
 msgwhl = ircam_filters[slot-1]
 if slot < 7:
     wh = font1.render(msgwhl, True, CYAN)
@@ -1287,7 +1287,7 @@ while True: # the main game loop
  
                     subt_ref = False
                     
-                    nref = min(100, (5000000/etimet))
+                    nref = int(5*fps/float(ndr)) # 5s of ref
                     ave_ref = ave_img_data(nref, bias=bias, badpixmap=badpixmap, disp=True, tint=etime)
                     rname = conf_dir + "ref.fits"
                     pf.writeto(rname, ave_ref, overwrite=True)

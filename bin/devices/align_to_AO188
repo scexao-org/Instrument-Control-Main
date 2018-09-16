@@ -3,34 +3,10 @@
 log Aligning to AO188 internal source
 
 src_fib out
-sleep 7.0
 
-nps_off1 5
+src_power off
 
 dmflatAO188
 
 oap1 ao
 sleep 0.1
-
-dm_stage x push +1000
-sleep 0.5
-
-dm_stage x push +1000
-sleep 0.5
-
-dm_stage x push +1000
-sleep 0.5
-
-dm_stage x push +1000
-sleep 0.5
-
-dm_stage x push +1000
-sleep 0.5
-
-dm_stage x push +1000
-sleep 0.5
-
-dm_stage x push +1000
-sleep 0.5
-
-hotspotalign

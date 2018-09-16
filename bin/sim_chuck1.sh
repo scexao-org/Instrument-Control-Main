@@ -1,11 +1,11 @@
 #!/bin/sh
 
-for i in $(seq 1 50)
+for i in $(seq 1 20)
 do
-/home/scexao/bin/sim_chuck 1000 /home/scexao/Documents/ananya/fitsfile/fits_$i.fits
+/home/scexao/bin/sim_chuck 9000 /home/scexao/Documents/ananya/fitsfile/fits_$i.fits
 mdate=$(date +"%Y-%m-%d-%H:%M:%S:%N")
 #(sleep 10s; echo " $i File appeared at $mdate" > "/home/scexao/Documents/ananya/fits/astromtest_$mdate.txt") &
-( sleep 10s ; cp /home/scexao/Documents/ananya/fitsfile/fits_$i.fits /home/scexao/Documents/ananya/fits/f_$i.fits) &
+( sleep 7s ; cp /home/scexao/Documents/ananya/fitsfile/fits_$i.fits /home/scexao/Documents/ananya/fits/f_$i.fits) &
 done
 
 

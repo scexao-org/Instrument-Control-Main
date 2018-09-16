@@ -12,6 +12,7 @@ PG1_pickoff --help1
 fpm --help1
 lyot --help1
 invpiaa --help1
+oap4 --help1
 intsphere --help1
 charis_pickoff --help1
 charis_fieldstop --help1
@@ -42,3 +43,25 @@ rhea_pickoff --help1
 first_photometry --help1
 src_select --help1
 src_flux --help1
+src_power --help1
+dm_power --help1
+vacpump_power --help1
+cred2_power --help1
+ocam_power --help1
+vcam_power --help1
+vcomp_power --help1
+scexaoCTRL_power 1 --help1
+scexaoPCAM_power 1 --help1
+scexaoDATA_power --help1
+hv_power --help1
+mod_power --help1
+devices_power --help1
+zaber_power --help1
+ezstep_power --help1
+dove_power --help1
+first_power --help1
+neon_power --help1
+saphira_power --help1
+saphira_temp_power --help1
+saphira_stir_power --help1
+nps --help1
