@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 echo "status of NPS1"
 nps 1 status
 echo "status of NPS2"
@@ -20,6 +21,12 @@ src_flux optnd status
 sleep 0.1
 echo "Calibration source FILTER:"
 src_flux filter status
+sleep 0.1
+echo "Integrating sphere pickoff:"
+intsphere status
+sleep 0.1
+echo "Compensating plate:"
+compplate status
 sleep 0.1
 echo "OAP1:"
 oap1 status
@@ -51,14 +58,20 @@ sleep 0.1
 echo "Pt Grey 1 pickoff:"
 PG1_pickoff status
 sleep 0.1
-echo "Integrating sphere pickoff:"
-intsphere status
+echo "Field stop:"
+field_stop status
 sleep 0.1
+#echo "Steering mirror:"
+#steering status
+#sleep 0.1
 echo "CHARIS pickoff:"
 charis_pickoff status
 sleep 0.1
 echo "MKIDS pickoff:"
 mkids_pickoff status
+sleep 0.1
+echo "IR cams pupil masks:"
+ircam_pupil status
 sleep 0.1
 echo "IR cams filter:"
 ircam_filter status
@@ -87,6 +100,23 @@ sleep 0.1
 echo "LLOWFS focus:"
 lowfs_fcs status
 sleep 0.1
+echo "Polarizer:"
+polarizer status
+sleep 0.1
+#polarizer_theta status
+#sleep 0.1
+echo "CHARIS Wollaston:"
+charis_wollaston status
+sleep 0.1
+#echo "IR cams FLC:"
+#ircam_flc status
+#sleep 0.1
+echo "IR cams QWPs:"
+ircam_qwp status
+sleep 0.1
+echo "IR cams Wollaston:"
+ircam_wollaston status
+sleep 0.1
 echo "GLINT pickoff:"
 nuller_pickoff status
 sleep 0.1
@@ -109,10 +139,7 @@ echo "Post-coro fiber injection lens:"
 pcfi_len status
 sleep 0.1
 echo "Post-coro fiber injection fiber:"
-#pcfi_fib status
-#sleep 0.1
-echo "Polarizer:"
-polarizer status
+pcfi_fib status
 sleep 0.1
 echo "PyWFS pickoff:"
 pywfs_pickoff status

@@ -16,7 +16,10 @@ home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from devices import devices
 
-# SCALE: 5.3 mm/arcsec
+# SCALE: 5.3 arcsec/mm
+# +X motion with source fiber -> move to the left on chuck -> -X motion with pcfi fiber
+# +Y motion with source fiber -> move to the top on chuck -> -Y motion with pcfi fiber
+
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 

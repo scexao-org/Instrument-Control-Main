@@ -60,6 +60,12 @@ sleep 1
 echo "FIRST pickoff:"
 first_pickoff home &
 sleep 1
+echo "Field stop x:"
+field_stop x home &
+sleep 1
+echo "Field stop y:"
+field_stop y home &
+sleep 1
 echo "Post-coro fiber injection pickoff:"
 pcfi_pickoff home &
 sleep 1

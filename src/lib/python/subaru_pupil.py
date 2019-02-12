@@ -36,7 +36,6 @@ Garima Singh  :  Version 0.1 of 11 January 2013
 #--------------------------------------------------------------
 
 import numpy as np
-from numpy.fft import fftshift as shift
 import pyfits as pf
 import matplotlib.pyplot as plt
 
@@ -45,12 +44,12 @@ import matplotlib.pyplot as plt
 # dist() functions is the Hacked up adaptation of the IDL dist() command
 #------------------------------------------------------------------------
 
-def dist((n,m)):
+def dist((n,m),(offsetn,offsetm)=(0,0)):
 
     '''Hacked up adaptation of the IDL dist command
     '''
-    x2=np.roll((np.arange(n, dtype=float)-n/2)**2, n/2)
-    y2=np.roll((np.arange(m, dtype=float)-m/2)**2, m/2)
+    x2=(np.arange(n, dtype=float)-n/2+offsetn)**2
+    y2=(np.arange(m, dtype=float)-m/2+offsetm)**2
     a=np.empty((n,m))
     for i in np.arange(m):
         a[:,i]=x2
@@ -63,20 +62,22 @@ def dist((n,m)):
 # Subaru_pupil function returns the Subaru Telescope Pupil 
 #--------------------------------------------------------------
 
-def Subaru_pupil((nn,mm), prad):
+def Subaru_pupil((nn,mm), prad, badactuator=False, spider2=False):
     '''Returns an array describing the pupil of the Subaru Telescope
 
     parameters:
     ----------
     - (nn, mm): dimensions of the array in pixels
-    - prad: radius of the pupil in pixels    '''
+    - prad: radius of the pupil in pixels    
+    - badactuator: (boolean) add the 2 bad actuators in the pupil
+    - spider2: (boolean) add the secondary spider arm masking the bad actuator'''
 
 #-------------------
 # pupil description
 #-------------------
 
-    pdiam, odiam = 7.92, 2.5 #2.3         # tel. and obst. diameters (meters)
-    thick  = 0.23                         # adopted spider thickness (meters)
+    pdiam, odiam = 7.92, 2.4              # tel. and obst. diameters (meters)
+    thick  = 0.35                         # adopted spider thickness (meters)
     offset = 1.278                        # spider intersection offset (meters)
     beta   = 51.75*np.pi/180              # spider angle beta
 
@@ -115,98 +116,33 @@ def Subaru_pupil((nn,mm), prad):
 # pupil outer and inner edge
 #----------------------------
 
-    e   = ((shift(mydist) < prad) * (shift(mydist) > ro*prad))
+    e   = (mydist < prad) * (mydist > ro*prad)
     pup = (a+b+c+d)*e
 
-#    pf.writeto("/Users/Keha/Documents/Python_programming/phase_coronagraphy/fits_images/pupil.fits", pup* np.ones([1024,1024]), clobber=True)
+    if badactuator:
+        rb = 0.08
+        db1 = 0.46
+        xb1 = offset+db1*prad*np.cos(beta)
+        yb1 = db1*prad*np.sin(beta)
+        bdist1 = dist((nn, mm),(-yb1,-xb1))
+        f = bdist1 > rb*prad
+        db2 = 0.75
+        offset2 = 0.34
+        xb2 = (offset2-db2*np.cos(beta))*prad
+        yb2 = -db2*np.sin(beta)*prad
+        bdist2 = dist((nn, mm),(-yb2,-xb2))
+        g = bdist2 > rb*prad
+        pup *= f*g
+    
+        if spider2:
+            thick2 = 0.18
+            thick2 *= prad/pdiam
+            offset2 *= prad
+            epsi2 = thick2/(2*np.sin(beta))
+            h = (np.arctan(yy/(xx-offset2+epsi2))<beta)*(yy<=-ro*prad/2)*(xx<=offset2)+(yy>-ro*prad/2)+(xx>offset2)+(np.arctan(yy/(xx-offset2-epsi2))>beta)
+            pup *= h
 
     return pup
 
 #-------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------
-
-
-#----------------------------------------------------------------------
-# Square_Lyot function returns the lyot mask for Subaru Telescope Pupil 
-#----------------------------------------------------------------------
-
-
-def Square_Lyot((nn,mm), prad):
-
-    '''Returns an array describing the square lyot for the Subaru Telescope pupil 
-
-    parameters:
-    ----------
-    - (nn, mm): dimensions of the array in pixels
-    - prad: radius of the pupil in pixels    '''
-    
-    #-------------------
-    # pupil description
-    #-------------------
-
-    pdiam, odiam = 7.92, 2.3     # tel. and obst. diameters (meters)
-    thick  = 0.23                # spider thickness (meters), oversize by 2%
-    offset = 1.278               # spider intersection offset (meters)
-    beta   = 51.75*np.pi/180     # spider angle beta
-
-    ro  = odiam/pdiam            # fraction of aperture obsctructed
-  
-    xx     =   np.outer(np.ones(nn), np.arange(mm)) - mm/2
-    yy     =   np.outer(np.arange(nn), np.ones(mm)) - nn/2
-
-    mydist = dist((nn, mm))
-
-    #--------------------------------------------------
-    # scaled values of the pupil's parameters in pixels
-    #---------------------------------------------------
-
-    thick   = thick* 1.5 * (prad/pdiam) 
-    offset *= prad/pdiam
-    epsi    = thick/(2*np.sin(beta))
-    
-
-    #---------------------------------------------------
-    # oversized spider arms for lyot mask: quadrants 1-4
-    #----------------------------------------------------
-    
-    a = ((xx > offset + epsi) * (abs(np.arctan(yy/(xx-offset-epsi))) < beta))
-    b = ((xx < -offset - epsi) * (abs(np.arctan(yy/(xx+offset+epsi))) < beta))
-
-    #--------------
-    # quadrants 2-3
-    # --------------
-
-    c = (((yy > 0.0) * ((abs(np.arctan(yy/(xx-offset+epsi))) > beta) +
-                       (abs(np.arctan(yy/(xx+offset-epsi))) > beta))))
-    d = (((yy < 0.0) * ((abs(np.arctan(yy/(xx-offset+epsi))) > beta) +
-                       (abs(np.arctan(yy/(xx+offset-epsi))) > beta))))
-    
-    #-------------------------------------------------------------------
-    # sides of the square obscuration for lyot oversized by 12 %
-    #-------------------------------------------------------------------
-
-    sq = ro*prad*1.12           
-
-    #---------------------
-    # Lyot mask outer edge
-    #---------------------
-
-    e  = ((shift(mydist) < prad * 0.95))  
-         
-    lyot = (a+b+c+d)* e
-
-    #---------------------
-    # Lyot mask inner edge
-    #---------------------
-
-    no,mo=np.shape(lyot)
-    Xo=no/2
-    Yo=mo/2
-    sq=int(np.ceil(sq))
-
-    for io in range ((Xo-sq),(Xo+sq)):
-        for jo in range ((Yo-sq),(Yo+sq)):
-            lyot[io,jo]=0
-         
-
-    return lyot

@@ -303,6 +303,7 @@ CRTL+o      : increase frame rate
 CTRL+l      : decrease frame rate
 CTRL+h      : hotspotalign
 CTRL+p      : camera to pupil plane/focus plane
+CTRL+i      : PCFI mode in/out
 CTRL+b      : take new darks
 CTRL+SHIFT+b: take new dark for current exp
 CTRL+r      : save a reference image
@@ -372,11 +373,14 @@ cam_dark = open_shm("ircam%d_dark" % (camid,), dims=(xsizeim, ysizeim), check=Tr
 cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid,), dims=(xsizeim, ysizeim), check=True)
 cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
 cam_paused = open_shm("ircam%d_paused" % (camid,))
+new_dark = open_shm("ircam%d_newdark" % (camid,))
 ircam_filter = open_shm("ircam_filter")
 pupshm = open_shm("chuck_pup")
+irdshm = open_shm("chuck_pup_fcs")
 nuller_pickoff = open_shm("nuller_pickoff")
 telescope_status = open_shm("telescope_status", dims=(6,1))
 pup = int(pupshm.get_data())
+ird = int(irdshm.get_data())
 npin = int(nuller_pickoff.get_data())
 
 pscale = 15.3 #mas per pixel in Chuckcam
@@ -590,6 +594,13 @@ sc2 = font4.render(msgsc1, True, CYAN)
 rct_sc2  = sc2.get_rect()
 rct_sc2.bottomleft = (5*z1-4, ysc-ktot)
 
+#IRD parameters
+dird = 64.*z1
+xird = -4.*z1
+yird = -11.5*z1
+pird = dird/7.
+irdc = pird/2.
+
 #parallactic angles
 xcpa = xws-25*z1
 ycpa = yws-25*z1
@@ -626,11 +637,11 @@ rct_wh  = wh.get_rect()
 rct_wh.topright = (xws-6*z1, 5*z1)
 
 #pupil lens
-msgpups = ["     ", "PUPIL"]
-msgpup = msgpups[pup]
+msgpups = ["     ", "PUPIL", "IRD"]
+msgpup = msgpups[pup*(pup+ird)]
 pupm = font1.render(msgpup, True, CYAN)
 rct_pup  = pupm.get_rect()
-rct_pup.topleft = (6*z1, 5*z1)
+rct_pup.midtop = (xws/2, 5*z1)
 
 imin, imax = 0, 0
 surf_live = pygame.surface.Surface((xws, yws))
@@ -650,7 +661,6 @@ plot_hotspot = False # flag for display of the hotspot
 plot_history = False # flag for display of position history
 subt_bias    = True  # flag for bias subtraction
 subt_ref     = False # flag for ref subtraction
-cont_acq     = False 
 lin_scale    = True  # flag for linear range
 average      = False # flag for averaging
 saveim       = False # flag to save images
@@ -710,6 +720,47 @@ while True: # the main game loop
         campaused = int(cam_paused.get_data())
         shmreload = True
 
+    # Save new darks for the current exposure time
+    # -------------------------------------
+    newdark = int(new_dark.get_data())
+    if newdark:
+        msg = "  !! Acquiring a dark !!  "
+        dinfo2 = font3.render(msg, True, BGCOL, SACOL)
+        screen.blit(dinfo2, rct_dinfo2)
+        os.system("scexaostatus set darkchuck 'NEW INT DARK    ' 0")
+        os.system("log Chuckcam: Saving current internal dark")
+        
+        print("In the time it takes Chuck Norris to sidekick a")
+        print("red-headed stepchild, we'll acquire this dark.")
+        
+        os.system("ircam_block")          # blocking the light
+        msgwhl = ircam_filters[6]
+        wh = font1.render(msgwhl, True, RED1)
+        screen.blit(wh, rct_wh)
+        pygame.display.update([rct_dinfo2, rct_wh])
+        time.sleep(2.0)        # safety
+        
+        ndark = int(10*fps/float(ndr)) # 10s of dark
+        ave_dark = ave_img_data(ndark,clean=False, disp=True, tint=etime)
+        bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
+        pf.writeto(bname, ave_dark, overwrite=True)
+        
+        bpname = conf_dir + "badpixmap%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
+                 % (fps, etime, ndr, crop[0], crop[2], xsizeim, ysizeim)
+        badpixmap = make_badpix(ave_dark)
+        pf.writeto(bpname, badpixmap, overwrite=True)
+        
+        bias = ave_dark*badpixmap
+        time.sleep(0.2)
+        
+        os.system("ircam_block")          # blocking the light
+        os.system("scexaostatus set darkchuck 'OFF             ' 1")
+        os.system("log Chuckcam: Done saving current internal dark")
+        cam_dark.set_data(bias.astype(np.float32))
+        cam_badpixmap.set_data(badpixmap.astype(np.float32))
+        new_dark.set_data(np.zeros(1, dtype = np.float32))
+        
     # ------------------------------------------------------------------
     # Relaod shared memory with different size due to change in window size
     if shmreload:
@@ -937,18 +988,23 @@ while True: # the main game loop
         # ------------------------------------------------------------------
         # display the cross
         if plot_cross:
-            if pup:
-                #Pupil cross
-                pos2 = pos[1,:]
-                color = GREEN
+            if ird:
+                #IRD spot positions
+                for i in range(8):
+                    pygame.draw.circle(screen, GREEN, (int(xws/2+xird*z2*z3+(i-3.5)*pird*z2*z3),int(yws/2+yird*z2*z3)), int(irdc*z2*z3), 1)
             else:
-                #Focus cross
-                pos2 = pos[0,:]
-                color = RED
-            ycross = (256-crop[2]+pos2[1]+cor[1]-ymin+yshift)*z1*z2*z3
-            xcross = (320-crop[0]+pos2[0]+cor[0]-xmin+xshift)*z1*z2*z3
-            pygame.draw.line(screen, color, (0, ycross), (xws, ycross), 1)
-            pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
+                if pup:
+                    #Pupil cross
+                    pos2 = pos[1,:]
+                    color = GREEN
+                else:
+                    #Focus cross
+                    pos2 = pos[0,:]
+                    color = RED
+                ycross = (256-crop[2]+pos2[1]+cor[1]-ymin+yshift)*z1*z2*z3
+                xcross = (320-crop[0]+pos2[0]+cor[0]-xmin+xshift)*z1*z2*z3
+                pygame.draw.line(screen, color, (0, ycross), (xws, ycross), 1)
+                pygame.draw.line(screen, color, (xcross, 0), (xcross, yws), 1)
 
         if plot_pa:
             temp = telescope_status.get_data()
@@ -1021,7 +1077,8 @@ while True: # the main game loop
                 wh = font1.render(msgwhl, True, RED1)
                 
             pup = int(pupshm.get_data())
-            msgpup = msgpups[pup]
+            ird = int(irdshm.get_data())
+            msgpup = msgpups[pup*(pup+ird)]
             pupm = font1.render(msgpup, True, CYAN)
         
     
@@ -1039,8 +1096,10 @@ while True: # the main game loop
             cam_dark.close()
             cam_badpixmap.close()
             cam_clean.close()
+            new_dark.close()
             ircam_filter.close()
             pupshm.close()
+            irdshm.close()
             telescope_status.close()
             nuller_pickoff.close()
             print("Chuckcam has ended normally.")
@@ -1053,8 +1112,10 @@ while True: # the main game loop
                 cam_dark.close()
                 cam_badpixmap.close()
                 cam_clean.close()
+                new_dark.close()
                 ircam_filter.close()
                 pupshm.close()
+                irdshm.close()
                 telescope_status.close()
                 nuller_pickoff.close()
                 print("Chuckcam has ended normally.")
@@ -1175,16 +1236,16 @@ while True: # the main game loop
                 if (mmods & KMOD_LCTRL):
                     if pup:
                         tmux("chuck_pup")
+                        if ird:
+                            tmux("chuck_pup_fcs pupil &")
+                            tmux("pcfi_pickoff out &")
+                            tmux("saphira_pickoff out &")
                         tmux("ircam_fcs chuck")
                     else:
-                        iz = 0
-                        z2 = zs2[iz]
-                        msgzm = "  "
-                        zm = font1.render(msgzm, True, CYAN)
                         lin_scale = True
                         tmux("chuck_pup")
+                        tmux("chuck_pup_fcs pupil &")
                         tmux("ircam_fcs chuck_pup")
-                        tmux("chuck_pup_fcs pupil")
                 else:
                     plot_pa = not plot_pa
 
@@ -1410,6 +1471,10 @@ while True: # the main game loop
             #------------------------
             if event.key == K_c:
                 plot_cross = not plot_cross
+                if plot_cross:
+                    with open(conf_dir+'hotspots.txt') as file:
+                        pos = np.array([[float(digit) for digit in line.split()] for line in file])
+                    pos2 = pos[0,:]
 
             # Color/grayscale map
             #--------------------
@@ -1417,10 +1482,24 @@ while True: # the main game loop
                 clr_scale += 1
                 clr_scale %= 3
                 
-            # Display history of position
-            #----------------------------
+            # Display history of position/IRD mode
+            #-------------------------------------
             if event.key == K_i:
-                plot_history = not plot_history
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    if ird:
+                        tmux("chuck_pup")
+                        tmux("chuck_pup_fcs pupil &")
+                        tmux("saphira_pickoff out &")
+                        tmux("pcfi_pickoff out &")
+                    else:
+                        if not pup:
+                            tmux("chuck_pup")
+                        tmux("chuck_pup_fcs ird &")
+                        tmux("saphira_pickoff ird &")
+                        tmux("pcfi_pickoff in &")
+                else:
+                    plot_history = not plot_history
 
             # Start/stop accumulating frames
             #-------------------------------

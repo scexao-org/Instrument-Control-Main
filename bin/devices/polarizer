@@ -9,25 +9,20 @@
 #                                             #
 # =========================================== #
 
-import os
-import sys
+import os,sys
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-from devices import devices
+from flipmount import flipmount
 
-# SPECIFIC PARAMETERS FOR THIS DEVICE
 
-devname = "polarizer"
+# SPECIFIC PARAMETERS FOR THIS STAGE
 
-conexids = ["usb-Newport_CONEX-AGP_A606QD57-if00-port0"]
-conexnames = ["x"]
-
-description = "Polarizer stage"
-
-defpos = ["in", "out"]
+stagename = "polarizer"
+flipid = "E"
+description = "Flip mount for polarizer"
 
 # GENERIC CODE
 
 args = sys.argv[1:]
-devices(devname, conexids, conexnames, args=args, description=description, defpos=defpos, color_st=True)
+flipmount(stagename, flipid, args, description)

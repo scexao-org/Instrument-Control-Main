@@ -6,8 +6,56 @@ import copy
 import scipy.optimize as opt
 from scipy.fftpack import fftfreq
 from astropy.modeling import models, fitting
+import math as m
 
 fitter = fitting.LevMarLSQFitter()
+
+# ======= MAKE RAMP =====================================================
+# =======================================================================
+
+def make_ramp(*args):
+    # make_ramp - Creates a n points ramp between a and b.
+    # PURPOSE:
+    # This function computes and returns a n point ramp between a and b, b can
+    # be excluded or included, with a linear or logarithmic step.
+    # INPUTS:
+    #    a: left limit, included
+    #    b: right limit, excluded or included
+    #    n: numer of points in the ramp
+    #  leq: OPTIONAL boolean to include b, default is b is excluded
+    # loga: OPTIONAL boolean to use a log frequency axis, default is linear.
+    # OUPUTS:
+    # ramp: ramp
+    
+    ni = len(args)
+    
+    a = args[0]
+    b = args[1]
+    n = args[2]
+    if ni == 3:
+        leq = 0
+        loga = 0
+    elif ni == 4:
+        leq = args[3]
+        loga = 0
+    else:
+        leq = args[3]
+        loga = args[4]
+        if leq == []:
+            leq = 0
+    
+    if leq == 1:
+        n2 = n-1
+    else:
+        n2 = n
+    
+    if loga == 1:
+        ramptemp = np.array(map(float, range(n)))*(m.log10(b)-m.log10(a))/n2+m.log10(a)
+        ramp = np.power(10,ramptemp)
+    else:
+        ramp = np.array(map(float, range(n)))*(b-a)/n2+a
+    
+    return ramp
 
 # ========= HOT PIXELS ==================================
 #========================================================
@@ -163,7 +211,7 @@ def radial_data(data,annulus_width=1,working_mask=None,x=None,y=None,rmax=None):
 # 2005/12/12 IJC: Removed decifact, changed name, wrote comments.
 # 2005/11/04 by Ian Crossfield at the Jet Propulsion Laboratory
  
-    import numpy as ny
+    import numpy as np
 
     class radialDat:
         """Empty object container.
@@ -180,16 +228,16 @@ def radial_data(data,annulus_width=1,working_mask=None,x=None,y=None,rmax=None):
     #---------------------
     # Set up input parameters
     #---------------------
-    data = ny.array(data)
+    data = np.array(data)
     
     if working_mask==None:
-        working_mask = ny.ones(data.shape,bool)
+        working_mask = np.ones(data.shape,bool)
     
     npix, npiy = data.shape
     if x==None or y==None:
-        x1 = ny.arange(-npix/2.,npix/2.)
-        y1 = ny.arange(-npiy/2.,npiy/2.)
-        x,y = ny.meshgrid(y1,x1)
+        x1 = np.arange(-npix/2.,npix/2.)
+        y1 = np.arange(-npiy/2.,npiy/2.)
+        x,y = np.meshgrid(y1,x1)
 
     r = abs(x+1j*y)
 
@@ -199,16 +247,16 @@ def radial_data(data,annulus_width=1,working_mask=None,x=None,y=None,rmax=None):
     #---------------------
     # Prepare the data container
     #---------------------
-    dr = ny.abs([x[0,0] - x[0,1]]) * annulus_width
-    radial = ny.arange(rmax/dr)*dr + dr/2.
+    dr = np.abs([x[0,0] - x[0,1]]) * annulus_width
+    radial = np.arange(rmax/dr)*dr + dr/2.
     nrad = len(radial)
     radialdata = radialDat()
-    radialdata.mean = ny.zeros(nrad)
-    radialdata.std = ny.zeros(nrad)
-    radialdata.median = ny.zeros(nrad)
-    radialdata.numel = ny.zeros(nrad)
-    radialdata.max = ny.zeros(nrad)
-    radialdata.min = ny.zeros(nrad)
+    radialdata.mean = np.zeros(nrad)
+    radialdata.std = np.zeros(nrad)
+    radialdata.median = np.zeros(nrad)
+    radialdata.numel = np.zeros(nrad)
+    radialdata.max = np.zeros(nrad)
+    radialdata.min = np.zeros(nrad)
     radialdata.r = radial
     
     #---------------------
@@ -219,16 +267,16 @@ def radial_data(data,annulus_width=1,working_mask=None,x=None,y=None,rmax=None):
       maxrad = minrad + dr
       thisindex = (r>=minrad) * (r<maxrad) * working_mask
       if not thisindex.ravel().any():
-        radialdata.mean[irad] = ny.nan
-        radialdata.std[irad]  = ny.nan
-        radialdata.median[irad] = ny.nan
-        radialdata.numel[irad] = ny.nan
-        radialdata.max[irad] = ny.nan
-        radialdata.min[irad] = ny.nan
+        radialdata.mean[irad] = np.nan
+        radialdata.std[irad]  = np.nan
+        radialdata.median[irad] = np.nan
+        radialdata.numel[irad] = np.nan
+        radialdata.max[irad] = np.nan
+        radialdata.min[irad] = np.nan
       else:
-        radialdata.mean[irad] = data[thisindex].mean()
+        radialdata.mean[irad] = np.nanmean(data[thisindex])
         radialdata.std[irad]  = data[thisindex].std()
-        radialdata.median[irad] = ny.median(data[thisindex])
+        radialdata.median[irad] = np.median(data[thisindex])
         radialdata.numel[irad] = data[thisindex].size
         radialdata.max[irad] = data[thisindex].max()
         radialdata.min[irad] = data[thisindex].min()

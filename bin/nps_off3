@@ -19,7 +19,7 @@ def message():
     print "Port 3: 24V power supplies (Ez step)"
     print "Port 4: 15V power supplies (Zaber)"
     print "Port 5: 5 and 12V supplies (Wheels)"
-    print "Port 6: Axiom cameras"
+    print "Port 6: C-RED2 cameras"
     print "Port 7: SAPHIRA Temp. Controller"
     print "Port 8: SAPHIRA stirling cooler"
     print "------------------------------------"

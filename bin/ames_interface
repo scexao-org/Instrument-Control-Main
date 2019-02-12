@@ -36,15 +36,28 @@ import image_processing as impro
 #             short hands for opening and checking flags
 # ------------------------------------------------------------------
 
-def check_flag(flagname, write=False, value=0):
-    if write:
-        f = open(flagname, 'w')
-        f.write('%d' %(value,))
-    else:
+def check_dm_flag(flagname, run, it):
+    try:
         f = open(flagname)
-        value = int([line.rstrip('\n') for line in f][0])
+        filename = [line.rstrip('\n') for line in f][0]
+        f.close()
+        runi = int(filename[3:9])
+        iti = int(filename[11:17])
+        status = (runi == run) and (iti == it)
+    except:
+        status = False
+        it = it0
+    return(status,it)
+
+# ------------------------------------------------------------------
+#             short hands for opening and checking flags
+# ------------------------------------------------------------------
+
+def write_im_flag(flagname, filename):
+    f = open(flagname, 'w')
+    f.write('%s done' %(filename,))
     f.close()
-    return(value)
+    return()
 
 # ------------------------------------------------------------------
 #                access to shared memory structures
@@ -71,11 +84,11 @@ nim = int(args[2]) # number of images to average
 #                Define paths
 # ------------------------------------------------------------------
 
-path_run = "/media/data/AMES/Run%04d/" % (run,)
+path_run = "/media/data/AMES/Run%06d/" % (run,)
 path_DM = path_run+"DM/"
 path_IM = path_run+"IMAGES/"
-dm_flag = path_run+"DMstatus.txt"
-im_flag = path_run+"IMAGEstatus.txt"
+dm_flag = path_DM+"log.txt"
+im_flag = path_IM+"log.txt"
 
 # ------------------------------------------------------------------
 #                Initialize parameters
@@ -90,23 +103,30 @@ cnt0 = -1
 ####################################################################
 
 while True:
-    flagdm = check_flag(dm_flag)
+    flagdm,it = check_dm_flag(dm_flag, run, it)
     if not flagdm:
         time.sleep(0.1)
         sys.stdout.write('\r WAITING FOR DM COMMAND                  \r')
     else:
+        time.sleep(1)
         sys.stdout.flush()
-        check_flag(dm_flag,write=True,value=0)
 
         # ----------------------------------------------------------
         #                Read and send the new DM command
         # ----------------------------------------------------------
         
-        dmit = pf.getdata(path_DM+"Run%04d_It%04d_DM.fits" % (run,it))
-        ndmc = dmit.shape[0]
+        dmit = pf.getdata(path_DM+"run%06dit%06ddm.fits" % (run,it))
+        ndim = dmit.ndim
+        if ndim == 3:
+            ndmc = dmit.shape[0]
+        else:
+            ndmc = 1
         for i in range(ndmc):
             if i == 0:
-                dmc_ctrl.set_data(dmit[i,:,:].astype('float32'))
+                if ndim == 3:
+                    dmc_ctrl.set_data(dmit[i,:,:].astype('float32'))
+                else:
+                    dmc_ctrl.set_data(dmit.astype('float32'))
             else:
                 dmc_probe.set_data(dmit[i,:,:].astype('float32'))
             time.sleep(0.01)
@@ -142,17 +162,21 @@ while True:
             #                Concatenate cube
             # ------------------------------------------------------
             
-            if i == 0:
-                im_cube = np.zeros((ndmc,ave_im2.shape[0],ave_im2.shape[1]))
-            im_cube[i,:,:] = ave_im2
+            if ndim == 3:
+                if i == 0:
+                    im_cube = np.zeros((ndmc,ave_im2.shape[0],ave_im2.shape[1]))
+                im_cube[i,:,:] = ave_im2
+            else:
+                im_cube = ave_im2
 
         # ----------------------------------------------------------
         #                Save image
         # ----------------------------------------------------------
         
         dmc_probe.set_data(np.zeros((50,50)).astype('float32'))
-        pf.writeto(path_IM+"Run%04d_It%04d_IMAGE.fits" % (run,it), im_cube.astype('float32'), overwrite=True)
-        check_flag(im_flag,write=True,value=1)
+        imagename = "run%06dit%06d.fits" % (run,it)
+        pf.writeto(path_IM+imagename, im_cube.astype('float32'), overwrite=True)
+        write_im_flag(im_flag, imagename)
         it += 1
 
 # ------------------------------------------------------------------

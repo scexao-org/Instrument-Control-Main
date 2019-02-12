@@ -6,6 +6,9 @@ sleep 0.1
 echo "Integrating sphere pickoff:"
 intsphere reset
 sleep 0.1
+echo "IR cams Wollaston:"
+ircam_wollaston reset
+sleep 0.1
 echo "IR cams block:"
 ircam_block reset
 sleep 0.1
@@ -21,3 +24,16 @@ sleep 0.1
 echo "Pt Grey 2 pickoff:"
 PG2_pickoff reset
 sleep 0.1
+echo "CHARIS Wollaston:"
+charis_wollaston reset
+sleep 0.1
+echo "IR cams QWPs:"
+ircam_qwp reset
+sleep 0.1
+echo "Polarizer:"
+polarizer reset
+sleep 0.1
+echo "Compensating plate:"
+compplate reset
+sleep 0.1
+

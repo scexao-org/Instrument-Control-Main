@@ -12,10 +12,13 @@
 
 import os
 import sys
+import time
+import numpy as np
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from devices import devices
+from xaosim.scexao_shmlib import shm
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
@@ -29,6 +32,20 @@ description = "Chuck Pupil lens focus"
 defpos = ["pupil", "ird"]
 
 # GENERIC CODE
+mydata = np.zeros((1,1)).astype(np.float32)
+
+if not os.path.isfile("/tmp/"+devname+".im.shm"):
+    os.system("creashmim %s 1 1" % (devname,))
+    time.sleep(0.5)
+
+exec "defshm = shm('/tmp/%s.im.shm', verbose=False)" % (devname,)
 
 args = sys.argv[1:]
 devices(devname, conexids, conexnames, args=args, description=description, defpos=defpos, color_st=True)
+
+if args[0] == "ird":
+    mydata[0,0] = 1.
+else:
+    mydata[0,0] = 0.
+defshm.set_data(mydata)
+defshm.close()

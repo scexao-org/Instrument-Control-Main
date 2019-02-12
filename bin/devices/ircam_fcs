@@ -29,7 +29,7 @@ zabernames = ["f1"]
 
 description = "Focusing stage for Chuck and Saphira"
 
-defpos = ["chuck", "saphira", "chuck_pup", "saphira_pup", "piaacmc", "dm", "kcam"]
+defpos = ["chuck", "saphira", "chuck_pup", "saphira_pup", "piaacmc", "dm", "kcam", "pup_wheel"]
 
 # GENERIC CODE
 

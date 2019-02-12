@@ -21,12 +21,14 @@ from devices import devices
 
 devname = "charis_pickoff"
 
-conexids = ["usb-Newport_CONEX-AGP_A6WVRW4W-if00-port0"]
-conexnames = ["wheel"]
+conexids = ["usb-Newport_CONEX-AGP_A6WVRW4W-if00-port0","usb-Newport_CONEX-AGP_A62X7MON-if00-port0"]
+conexnames = ["wheel","theta"]
 
 description = "CHARIS pickoff mirror"
+
+defpos = ["1", "2", "3", "4","5", "6", "7", "8"]
 
 # GENERIC CODE
 
 args = sys.argv[1:]
-devices(devname, conexids, conexnames, args=args, description=description, color_st=True)
+devices(devname, conexids, conexnames, args=args, defpos=defpos, description=description, color_st=True)

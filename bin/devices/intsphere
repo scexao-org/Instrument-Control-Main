@@ -27,7 +27,7 @@ from flipmount import flipmount
 
 stagename = "intsphere"
 flipid = "E"
-description = "Integrating sphere pickoff for CHARIS"
+description = "Integrating sphere pickoff"
 
 # GENERIC CODE
 

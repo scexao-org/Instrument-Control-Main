@@ -8,7 +8,7 @@
 #include <fcntl.h> // for open
 #include <unistd.h> // for close
 #include <termios.h>
-#include <curses.h>
+#include <ncurses.h>
 
 #include "SCExAO_status.h"
 
@@ -271,6 +271,14 @@ int status_display()
       printw("Source Filter   : ");
       print_status(SCExAO_status[0].src_flux_filter, -1);
       printw("\n");
+      // Integrating Sphere
+      printw("Integ. Sphere   : ");
+      print_status(SCExAO_status[0].intsphere, SCExAO_status[0].intsphere_co);
+      printw("\n");
+      // Compensating plate
+      printw("Comp. plate     : ");
+      print_status(SCExAO_status[0].compplate, SCExAO_status[0].compplate_co);
+      printw("\n");
 
       print_header(" FRONT IR BENCH AND CORONAGRAPHS ", '-');
       // OAP1
@@ -315,27 +323,35 @@ int status_display()
       printw("PG1 Pickoff     : ");
       print_status(SCExAO_status[0].PG1_pickoff, SCExAO_status[0].PG1_pickoff_co);
       printw("\n");
-      // Integrating Sphere
-      printw("Integ. Sphere   : ");
-      print_status(SCExAO_status[0].intsphere, SCExAO_status[0].intsphere_co);
-      printw("\n");
+      // Field stop
+      printw("Field Stop      : ");
+      print_status(SCExAO_status[0].field_stop_st, SCExAO_status[0].field_stop_co);
+      printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].field_stop_x, SCExAO_status[0].field_stop_y);
+      // Steering Mirror
+      printw("Steering mirror : ");
+      print_status(SCExAO_status[0].steering_st, SCExAO_status[0].steering_co);
+      printw(" (t: %6.2f deg, p: %6.2f deg)\n", SCExAO_status[0].steering_theta, SCExAO_status[0].steering_phi);
       // CHARIS Pickoff
       printw("CHARIS Pickoff  : ");
       print_status(SCExAO_status[0].charis_pickoff_st, SCExAO_status[0].charis_pickoff_co);
-      printw(" (w: %6.2f deg)\n", SCExAO_status[0].charis_pickoff);
+      printw(" (w: %6.2f deg, t: %6.2f deg)\n", SCExAO_status[0].charis_pickoff_wheel, SCExAO_status[0].charis_pickoff_theta);
       // MKIDS Pickoff
       printw("MKIDS Pickoff   : ");
       print_status(SCExAO_status[0].mkids_pickoff_st, SCExAO_status[0].mkids_pickoff_co);
-      printw(" (w: %6.2f deg)\n", SCExAO_status[0].mkids_pickoff);
+      printw(" (w: %6.2f deg, t: %6.2f deg)\n", SCExAO_status[0].mkids_pickoff_wheel, SCExAO_status[0].mkids_pickoff_theta);
+      // IR Cams Pupil Masks
+      printw("IR Cam Pup Mask : ");
+      print_status(SCExAO_status[0].ircam_pupil_st, SCExAO_status[0].ircam_pupil_co);
+      printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].ircam_pupil_x, SCExAO_status[0].ircam_pupil_y);
       // IR Cams Filter
-      printw("IR Cams Filter  : ");
+      printw("IR Cam Filter   : ");
       print_status(SCExAO_status[0].ircam_filter, SCExAO_status[0].ircam_filter_co);
       printw("\n");
       // IR Cams Block
       printw("IR Cams Block   : ");
       print_status(SCExAO_status[0].ircam_block, SCExAO_status[0].ircam_block_co);
       printw("\n");
-      // IR Cames Focus
+      // IR Cams Focus
       printw("IR Cams Focus   : ");
       print_status(SCExAO_status[0].ircam_fcs_st, SCExAO_status[0].ircam_fcs_co);
       printw(" (f1:%6d stp, f2:%6.2f mm )\n", SCExAO_status[0].ircam_fcs_f1, SCExAO_status[0].ircam_fcs_f2);
@@ -363,6 +379,29 @@ int status_display()
       printw("LLOWFS Focus    : ");
       print_status(" ", -1);
       printw(" (f: %6d stp)\n", SCExAO_status[0].lowfs_fcs);
+
+      print_header(" IR BENCH POLARIZATION ", '-');
+
+      // Polarizer
+      printw("Polarizer       : ");
+      print_status(SCExAO_status[0].polarizer, SCExAO_status[0].polarizer_co);
+      printw(" (t: %6.2f deg )\n", SCExAO_status[0].polarizer_theta);
+      // CHARIS Wollaston
+      printw("CHARIS Wollaston: ");
+      print_status(SCExAO_status[0].ircam_wollaston, SCExAO_status[0].ircam_wollaston_co);
+      printw("\n");
+      // FLC
+      printw("IR Cam FLC      : ");
+      print_status(SCExAO_status[0].ircam_flc_st, SCExAO_status[0].ircam_flc_co);
+      printw(" (t: %6.2f deg)\n", SCExAO_status[0].ircam_flc);
+      // IR Cams QWPs
+      printw("IR Cam QWPs     : ");
+      print_status(SCExAO_status[0].ircam_qwp, SCExAO_status[0].ircam_qwp_co);
+      printw("\n");
+      // IR Cams Wollaston
+      printw("IR Cam Wollaston: ");
+      print_status(SCExAO_status[0].ircam_wollaston, SCExAO_status[0].ircam_wollaston_co);
+      printw("\n");
 
       print_header(" IR BENCH FIBER INJECTIONS ", '-');
 
@@ -401,10 +440,6 @@ int status_display()
 
       print_header(" VISIBLE BENCH ", '-');
       
-      // Polarizer
-      printw("Polarizer       : ");
-      print_status(SCExAO_status[0].polarizer_st, SCExAO_status[0].polarizer_co);
-      printw(" (x: %6.2f mm )\n", SCExAO_status[0].polarizer);
       // PyWFS Pickoff
       printw("PyWFS Pickoff   : ");
       print_status(SCExAO_status[0].pywfs_pickoff_st, SCExAO_status[0].pywfs_pickoff_co);
@@ -762,7 +797,23 @@ int main(int argc, char **argv)
 	{
 	  SCExAO_status[0].oap1_f = atoi(argv[3]);
 	}
-
+      // integrating sphere
+      if( strcmp(argv[2], "intsphere") == 0)
+	{
+	  strncpy(SCExAO_status[0].intsphere, argv[3], 15);
+	  SCExAO_status[0].intsphere_co = atoi(argv[4]);
+	}
+      // polarizer
+      if( strcmp(argv[2], "polarizer") == 0)
+	{
+	  strncpy(SCExAO_status[0].polarizer, argv[3], 15);
+	  SCExAO_status[0].polarizer_co = atoi(argv[4]);
+	}
+      if( strcmp(argv[2], "polarizer_theta") == 0)
+	{
+	  SCExAO_status[0].polarizer_theta = atof(argv[3]);
+	}
+      // dichroic
       if( strcmp(argv[2], "dichroic_st") == 0)
 	{
 	  strncpy(SCExAO_status[0].dichroic_st, argv[3], 15);
@@ -789,6 +840,12 @@ int main(int argc, char **argv)
       if( strcmp(argv[2], "pupil_y") == 0)
 	{
 	  SCExAO_status[0].pupil_y = atoi(argv[3]);
+	}
+      // Compensating plate
+      if( strcmp(argv[2], "compplate") == 0)
+	{
+	  strncpy(SCExAO_status[0].compplate, argv[3], 15);
+	  SCExAO_status[0].compplate_co = atoi(argv[4]);
 	}
       // piaa1
       if( strcmp(argv[2], "piaa1_st") == 0)
@@ -922,11 +979,19 @@ int main(int argc, char **argv)
 	{
 	  SCExAO_status[0].oap4_phi = atof(argv[3]);
 	}
-      // integrating sphere
-      if( strcmp(argv[2], "intsphere") == 0)
+      // steering mirror
+      if( strcmp(argv[2], "steering_st") == 0)
 	{
-	  strncpy(SCExAO_status[0].intsphere, argv[3], 15);
-	  SCExAO_status[0].intsphere_co = atoi(argv[4]);
+	  strncpy(SCExAO_status[0].steering_st, argv[3], 15);
+	  SCExAO_status[0].steering_co = atoi(argv[4]);
+	}
+      if( strcmp(argv[2], "steering_theta") == 0)
+	{
+	  SCExAO_status[0].steering_theta = atof(argv[3]);
+	}
+      if( strcmp(argv[2], "steering_phi") == 0)
+	{
+	  SCExAO_status[0].steering_phi = atof(argv[3]);
 	}
       // charis
       if( strcmp(argv[2], "charis_pickoff_st") == 0)
@@ -934,9 +999,13 @@ int main(int argc, char **argv)
 	  strncpy(SCExAO_status[0].charis_pickoff_st, argv[3], 15);
 	  SCExAO_status[0].charis_pickoff_co = atoi(argv[4]);
 	}
-      if( strcmp(argv[2], "charis_pickoff") == 0)
+      if( strcmp(argv[2], "charis_pickoff_wheel") == 0)
 	{
-	  SCExAO_status[0].charis_pickoff = atof(argv[3]);
+	  SCExAO_status[0].charis_pickoff_wheel = atof(argv[3]);
+	}
+      if( strcmp(argv[2], "charis_pickoff_theta") == 0)
+	{
+	  SCExAO_status[0].charis_pickoff_theta = atof(argv[3]);
 	}
       // mkids
       if( strcmp(argv[2], "mkids_pickoff_st") == 0)
@@ -944,9 +1013,13 @@ int main(int argc, char **argv)
 	  strncpy(SCExAO_status[0].mkids_pickoff_st, argv[3], 15);
 	  SCExAO_status[0].mkids_pickoff_co = atoi(argv[4]);
 	}
-      if( strcmp(argv[2], "mkids_pickoff") == 0)
+      if( strcmp(argv[2], "mkids_pickoff_wheel") == 0)
 	{
-	  SCExAO_status[0].mkids_pickoff = atof(argv[3]);
+	  SCExAO_status[0].mkids_pickoff_wheel = atof(argv[3]);
+	}
+      if( strcmp(argv[2], "mkids_pickoff_theta") == 0)
+	{
+	  SCExAO_status[0].mkids_pickoff_theta = atof(argv[3]);
 	}
       // ircams common
       if( strcmp(argv[2], "ircam_filter") == 0)
@@ -971,6 +1044,57 @@ int main(int argc, char **argv)
       if( strcmp(argv[2], "ircam_fcs_f2") == 0)
 	{
 	  SCExAO_status[0].ircam_fcs_f2 = atof(argv[3]);
+	}
+      // Polarization
+      if( strcmp(argv[2], "field_stop_st") == 0)
+	{
+	  strncpy(SCExAO_status[0].field_stop_st, argv[3], 15);
+	  SCExAO_status[0].field_stop_co = atoi(argv[4]);
+	}
+      if( strcmp(argv[2], "field_stop_x") == 0)
+	{
+	  SCExAO_status[0].field_stop_x = atof(argv[3]);
+	}
+      if( strcmp(argv[2], "field_stop_y") == 0)
+	{
+	  SCExAO_status[0].field_stop_y = atof(argv[3]);
+	}
+      if( strcmp(argv[2], "charis_wollaston") == 0)
+	{
+	  strncpy(SCExAO_status[0].charis_wollaston, argv[3], 15);
+	  SCExAO_status[0].charis_wollaston_co = atoi(argv[4]);
+	}
+      if( strcmp(argv[2], "ircam_wollaston") == 0)
+	{
+	  strncpy(SCExAO_status[0].ircam_wollaston, argv[3], 15);
+	  SCExAO_status[0].ircam_wollaston_co = atoi(argv[4]);
+	}
+      if( strcmp(argv[2], "ircam_flc_st") == 0)
+	{
+	  strncpy(SCExAO_status[0].ircam_flc_st, argv[3], 15);
+	  SCExAO_status[0].ircam_flc_co = atoi(argv[4]);
+	}
+      if( strcmp(argv[2], "ircam_flc") == 0)
+	{
+	  SCExAO_status[0].ircam_flc = atof(argv[3]);
+	}
+      if( strcmp(argv[2], "ircam_pupil_st") == 0)
+	{
+	  strncpy(SCExAO_status[0].ircam_pupil_st, argv[3], 15);
+	  SCExAO_status[0].ircam_pupil_co = atoi(argv[4]);
+	}
+      if( strcmp(argv[2], "ircam_pupil_x") == 0)
+	{
+	  SCExAO_status[0].ircam_pupil_x = atof(argv[3]);
+	}
+      if( strcmp(argv[2], "ircam_pupil_y") == 0)
+	{
+	  SCExAO_status[0].ircam_pupil_y = atof(argv[3]);
+	}
+      if( strcmp(argv[2], "ircam_qwp") == 0)
+	{
+	  strncpy(SCExAO_status[0].ircam_qwp, argv[3], 15);
+	  SCExAO_status[0].ircam_qwp_co = atoi(argv[4]);
 	}
       // PCFI
       if( strcmp(argv[2], "pcfi_pickoff_st") == 0)
@@ -1083,16 +1207,6 @@ int main(int argc, char **argv)
 	{
 	  strncpy(SCExAO_status[0].PG2_pickoff, argv[3], 15);
 	  SCExAO_status[0].PG2_pickoff_co = atoi(argv[4]);
-	}
-      // polarizer
-      if( strcmp(argv[2], "polarizer_st") == 0)
-	{
-	  strncpy(SCExAO_status[0].polarizer_st, argv[3], 15);
-	  SCExAO_status[0].polarizer_co = atoi(argv[4]);
-	}
-      if( strcmp(argv[2], "polarizer") == 0)
-	{
-	  SCExAO_status[0].polarizer = atof(argv[3]);
 	}
       // pywfs
       if( strcmp(argv[2], "pywfs_pickoff_st") == 0)

@@ -1,13 +1,7 @@
 #!/bin/bash
 
-echo "status of NPS1"
-nps 1 status
-echo "status of NPS2"
-nps 2 status
-echo "status of NPS3"
-nps 3 status
 echo "Calibration source fiber:"
-src_fib in2 &
+src_fib in &
 sleep 1
 echo "Calibration source selection:"
 src_select 3
@@ -20,7 +14,7 @@ sleep 0.1
 src_flux filter 1
 sleep 0.1
 echo "OAP1:"
-oap1 int2
+oap1 int
 sleep 0.1
 echo "Dichroic:"
 dichroic in &
@@ -82,6 +76,9 @@ PG1_pickoff
 sleep 0.1
 PG1_pickoff
 sleep 0.1
+echo "Field stop:"
+field_stop out &
+sleep 1
 echo "Integrating sphere pickoff:"
 intsphere
 sleep 0.1
@@ -102,6 +99,11 @@ sleep 0.1
 echo "Chuck pupil lens focus:"
 chuck_pup_fcs pupil &
 sleep 1
+echo "IR cams Wollaston:"
+ircam_wollaston
+sleep 0.1
+ircam_wollaston
+sleep 0.1
 echo "IR cams block:"
 ircam_block
 sleep 0.1

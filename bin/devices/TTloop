@@ -27,7 +27,7 @@ import numpy.linalg as la
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from camera_tools import cam_cmd
-from scexao_shm import shm
+from xaosim.scexao_shmlib import shm
 
 shm_im = shm("/tmp/ircam0.im.shm")
 shm_im_dark = shm("/tmp/ircam0_dark.im.shm")
@@ -42,7 +42,7 @@ badpixmap_chuck = shm_im_badpixmap.get_data()
 # Find center of image
 #------------------------
 
-def find_center(im_chuck, shiftx, shifty):
+def find_center(im_chuck, shiftx, shifty, timeout, c0):
     imax = np.max(im_chuck)
     imin = imax*0.1
     im_chuck -= imin
@@ -50,18 +50,23 @@ def find_center(im_chuck, shiftx, shifty):
     im_chuck *= mask
     #print imax
     if imax < 100:
-        print "Not enough flux, aborting"
-        #os.system("/home/scexao/bin/log Hotspotalign: Not enough flux, aborting")
-        sys.exit()
-    #pf.writeto("./temp_chuck.fits",im_chuck,clobber='True')
-    total = np.sum(im_chuck)
-    X, Y = np.indices(np.shape(im_chuck)) 
-    cx = np.sum(Y*im_chuck)/total
-    cy = np.sum(X*im_chuck)/total
-    #print cx, cy
-    cx = cx-shiftx
-    cy = cy-shifty
-    return [cx, cy]
+        timeout += 1
+        cx = c0[0]
+        cy = c0[1]
+        if timeout < 30:
+            time.sleep(1)
+        else:
+            print "Not enough flux, aborting"
+            sys.exit()
+    else:
+        timeout = 0
+        total = np.sum(im_chuck)
+        X, Y = np.indices(np.shape(im_chuck)) 
+        cx = np.sum(Y*im_chuck)/total
+        cy = np.sum(X*im_chuck)/total
+        cx = cx-shiftx
+        cy = cy-shifty
+    return([cx, cy],timeout)
 
 # Main
 #------------------------
@@ -80,6 +85,7 @@ modes *= -scale*gain
 
 dmc = np.zeros((50,50))
 
+timeout0 = 0
 # parameters of the target point
 with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
     pos = np.array([[float(digit) for digit in line.split()] for line in file])
@@ -105,17 +111,17 @@ if npin:
 
 im_chuck = shm_im.get_data()
 (ysize,xsize) = im_chuck.shape
-print xsize, ysize
+mask = np.zeros_like(im_chuck)
+a = 16
+mask[ysize/2-a:ysize/2+a,xsize/2-a:xsize/2+a] = 1.
 crop = shm_im.get_crop().astype(int)
 #crop = np.array([128,128,160,160])
 shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5
 shifty = pos[0,1]-crop[2]+256+cor[1]-0.5
-print  shiftx, shifty
 # Try to find the center a first time, to check the flux
 im_chuck = shm_im.get_data()
-(xsizeim, ysizeim) = (xsize, ysize)
-c0 = find_center(im_chuck, shiftx, shifty)
-print c0
+im_chuck *= mask
+c0,timeout = find_center(im_chuck, shiftx, shifty, timeout0, [0,0])
 cnt = 0
 cnt1 = 0
 i = 0
@@ -137,18 +143,31 @@ while True:
             i = 0
             im_chuck -= dark_chuck
             im_chuck *= badpixmap_chuck
+            im_chuck *= mask
             
-            c0 = find_center(im_chuck, shiftx, shifty)
-            print c0
+            c0, timeout = find_center(im_chuck, shiftx, shifty, timeout0, c0)
+            sys.stdout.write('\r tip: %.4f, tilt: %.4f' % (c0[0], c0[1]))
+            sys.stdout.flush()
             
             # Calculating and sending command to DM
-            dmc += np.squeeze(c0[0]*modes[0,:,:]/0.1+c0[1]*modes[1,:,:]/0.1)
-            dm.set_data(dmc.astype(np.float32))
-            time.sleep(0.001)
+            if timeout == 0:
+                dmc += np.squeeze(c0[0]*modes[0,:,:]/0.1+c0[1]*modes[1,:,:]/0.1)
+                dm.set_data(dmc.astype(np.float32))
+                time.sleep(0.001)
+            else:
+                sys.stdout.write('\r WAITING FOR FLUX %i s' % (timeout,))
+                sys.stdout.flush()
+                
+            timeout0 = timeout
+
+            #else:
+            #    timeout0 = timeout
             
     except KeyboardInterrupt:
         print 'KeyboardInterrupt caught'
         shm_im.close()
+        shm_im_dark.close()
+        shm_im_badpixmap.close()
         dm.close()
         nuller_pickoff.close()
         

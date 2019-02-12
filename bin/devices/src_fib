@@ -38,3 +38,6 @@ defpos = ["in", "out"]
 
 args = sys.argv[1:]
 devices(devname, conexids, conexnames, args=args, description=description, defpos=defpos, color_st=True)
+
+if args != [] and args[0].lower() == "out":
+    os.system("src_power off")

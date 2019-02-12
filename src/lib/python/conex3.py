@@ -34,11 +34,15 @@ class conex(object):
         self.s.write("1TP\r\n")
         time.sleep(delay)
         pos = self.s.readlines()
-        pos = pos[0]
-        pos = pos[3:]
-        pos = pos[:-2]
-        pos = round(float(pos), 2)
-        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname, str(pos)])
+        try:
+            pos = pos[0]
+            pos = pos[3:]
+            pos = pos[:-2]
+            pos = round(float(pos), 3)
+            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname, str(pos)])
+        except:
+            print pos
+            print "NO STATUS SENT"
         return pos
         
     def close(self):
