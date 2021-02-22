@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Demonstrates setting up stream-in with stream-out that continuously updates.

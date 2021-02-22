@@ -12,10 +12,10 @@ import pdb
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-import ezstep_chain
+import ezstep_chain3 as ezstep_chain
 
 devname  = "/dev/serial/by-path/"
-devname += "pci-0000:00:1d.0-usb-0:1.4.2:1.0-port0"
+devname += "pci-0000:00:1d.0-usb-0:1.8.2:1.0-port0"
 #"pci-0000:00:1d.0-usb-0:1.8.3.1.4:1.0-port0"
 #"pci-0000:00:1d.0-usb-0:1.8.3.1.3:1.0-port0"
 
@@ -23,7 +23,7 @@ a = ezstep_chain.ezstep_chain(devname)
 print("\n====== tip-tilt stages =========\n")
 a.init_tts()
 time.sleep(0.5)
-print("\n====== linear stages =========\n")
-a.init_linear()
-time.sleep(0.5)
+#print("\n====== linear stages =========\n")
+#a.init_linear()
+#time.sleep(0.5)
 a.close()

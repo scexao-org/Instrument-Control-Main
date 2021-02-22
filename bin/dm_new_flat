@@ -3,13 +3,13 @@
 import os
 import sys
 import numpy as np
-import pyfits as pf
+import astropy.io.fits as pf
+from datetime import date
 
 home = os.getenv('HOME')
-sys.path.append(home+'/src/lib/python/')
 
-from   scexao_shm   import shm
-import zernike
+from   pyMilk.interfacing.isio_shmlib import SHM 
+
 
 auxdir = home + "/conf/dm_patterns/"
 
@@ -21,11 +21,18 @@ args = sys.argv[1:]
 
 chn = 8
 # -----------------------
-dmc  = shm('/tmp/dm00disp.im.shm', verbose=False) # DM channel
+disp = np.zeros([50,50],dtype=np.float32)
 
-disp = dmc.get_data()
+for i in range(12):
+    disp+=SHM(f'/tmp/dm00disp{i:02d}.im.shm', verbose=False).get_data() 
 
-fname = home+"/conf/dm_patterns/internal_flat.fits"
 
-pf.writeto(fname, disp, clobber=True)
+today=date.today()
 
+fname = home+"/conf/dm_patterns/internal_flat%s.fits"
+
+
+
+pf.writeto(fname %'', disp, overwrite=True)
+
+pf.writeto(fname % today.strftime('_%Y%m%d'), disp, overwrite=True)

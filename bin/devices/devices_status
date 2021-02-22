@@ -49,30 +49,27 @@ sleep 0.1
 echo "Lyot mask:"
 lyot status
 sleep 0.1
-echo "Inverse PIAA:"
-invpiaa status
+#echo "Inverse PIAA:"
+#invpiaa status
+#sleep 0.1
+echo "Pt Grey 1 pickoff:"
+PG1_pickoff status
 sleep 0.1
 echo "OAP4:"
 oap4 status
 sleep 0.1
-echo "Pt Grey 1 pickoff:"
-PG1_pickoff status
+echo "Steering mirror:"
+steering status
 sleep 0.1
-echo "Field stop:"
-field_stop status
-sleep 0.1
-#echo "Steering mirror:"
-#steering status
-#sleep 0.1
 echo "CHARIS pickoff:"
 charis_pickoff status
 sleep 0.1
 echo "MKIDS pickoff:"
 mkids_pickoff status
 sleep 0.1
-echo "IR cams pupil masks:"
-ircam_pupil status
-sleep 0.1
+#echo "IR cams pupil masks:"
+#ircam_pupil status
+#sleep 0.1
 echo "IR cams filter:"
 ircam_filter status
 sleep 0.1
@@ -82,8 +79,8 @@ sleep 0.1
 echo "IR cams focus:"
 ircam_fcs status
 sleep 0.1
-echo "SAPHIRA pickoff:"
-saphira_pickoff status
+echo "Buffycam pickoff:"
+buffycam_pickoff status
 sleep 0.1
 echo "Chuck pupil lens focus:"
 chuck_pup_fcs status
@@ -91,8 +88,8 @@ sleep 0.1
 echo "Chuckcam Pupil lens:"
 chuck_pup status
 sleep 0.1
-echo "SAPHIRA pupil lens:"
-saphira_pup status
+echo "BuffyCam pupil lens:"
+buffy_pup status
 sleep 0.1
 echo "LLOWFS block:"
 lowfs_block status
@@ -105,15 +102,23 @@ polarizer status
 sleep 0.1
 #polarizer_theta status
 #sleep 0.1
+echo "Field stop:"
+field_stop status
+sleep 0.1
 echo "CHARIS Wollaston:"
 charis_wollaston status
 sleep 0.1
-#echo "IR cams FLC:"
-#ircam_flc status
+echo "IR cams FLC:"
+ircam_flc status
+sleep 0.1
+#echo "IR cams QWPs:"
+#ircam_qwp status
 #sleep 0.1
 echo "IR cams QWPs:"
-ircam_qwp status
+ircam_hwp status
 sleep 0.1
+#ircam_hwp_theta status
+#sleep 0.1
 echo "IR cams Wollaston:"
 ircam_wollaston status
 sleep 0.1
@@ -129,20 +134,20 @@ sleep 0.1
 echo "Fiber injection  carriage:"
 fibinj_car status
 sleep 0.1
-echo "Pt Grey 2 pickoff:"
-PG2_pickoff status
+echo "REACH pickoff:"
+reach_pickoff status
 sleep 0.1
-echo "Post-coro fiber injection pickoff:"
-pcfi_pickoff status
+echo "REACH OAP:"
+reach_oap status
 sleep 0.1
-echo "Post-coro fiber injection lens:"
-pcfi_len status
-sleep 0.1
-echo "Post-coro fiber injection fiber:"
-pcfi_fib status
+echo "REACH fiber:"
+reach_fib status
 sleep 0.1
 echo "PyWFS pickoff:"
 pywfs_pickoff status
+sleep 0.1
+echo "PyWFS field stop:"
+pywfs_fieldstop status
 sleep 0.1
 echo "PyWFS filter:"
 pywfs_filter status
@@ -153,14 +158,26 @@ sleep 0.1
 echo "PyWFS focusing lens:"
 pywfs_fcs status
 sleep 0.1
+echo "PyWFS focus pickoff:"
+pywfs_fcs_pickoff status
+sleep 0.1
 echo "PyWFS pupil lens:"
 pywfs_pup status
+sleep 0.1
+echo "VAMPIRES field stop:"
+vampires_fieldstop status
 sleep 0.1
 echo "FIRST pickoff:"
 first_pickoff status
 sleep 0.1
-echo "FIRST photometry 2 pickoff:"
-first_photometry x2 status
+echo "FIRST injection:"
+first_inj status
+sleep 0.1
+#echo "FIRST cal source:"
+#first_src status
+#sleep 0.1
+echo "FIRST photometry:"
+first_photometry status
 sleep 0.1
 echo "RHEA pickoff:"
 rhea_pickoff status

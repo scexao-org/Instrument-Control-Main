@@ -26,7 +26,7 @@ from flipmount import flipmount
 # SPECIFIC PARAMETERS FOR THIS STAGE
 
 stagename = "intsphere"
-flipid = "E"
+flipid = "J"
 description = "Integrating sphere pickoff"
 
 # GENERIC CODE

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-import commands
+import subprocess
 import numpy as np
 import time
 
@@ -25,7 +25,7 @@ def cam_cmd(cmd, reply=False):
     res = None
     if reply:
         time.sleep(0.1)
-        res = commands.getoutput('cat %s' % (fifocam_ut,))
+        res = subprocess.getoutput('cat %s' % (fifocam_ut,))
     return(res)
 
 def getfitsdata(imname):

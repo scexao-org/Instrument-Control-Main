@@ -27,10 +27,10 @@ from devices import devices
 
 devname = "first_photometry"
 
-conexids = ["usb-Newport_CONEX-AGP_A6YJRQ8U-if00-port0", "usb-Newport_CONEX-AGP_A6YJRQJX-if00-port0"]
-conexnames = ["x1", "x2"]
+conexids = ["usb-Newport_CONEX-AGP_A6YJRQJX-if00-port0"]
+conexnames = ["x"]
 
-description = "FIRST pickoff mirrors for photometry"
+description = "FIRST pickoff mirror for photometry"
 
 defpos = ["in", "out"]
 

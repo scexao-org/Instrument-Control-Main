@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ================================================= #
 #                   _       _       _               #
@@ -35,38 +35,38 @@ class mod(object):
         self.s=serial.Serial(modname, 19200, timeout=0.5)
         
     def frequency(self,channel,freq):
-        self.s.write('F'+str(channel)+" "+str(freq)+'\r\n') 
+        self.s.write(str.encode('F'+str(channel)+" "+str(freq)+'\r\n')) 
 
     def amplitude(self,channel,amp):
         if (float(amp)>=0) and (float(amp)<=1.0):
             amp=int(amp*1023)
-            #print amp
-            self.s.write('V'+str(channel)+" "+str(amp)+'\r\n')
+            #print(amp)
+            self.s.write(str.encode('V'+str(channel)+" "+str(amp)+'\r\n'))
         else:
-            print "Enter a value between 0 and 1 V"
+            print("Enter a value between 0 and 1 V")
 
     def phase(self,channel,phas):
         phas=int(phas*16383/360)
-        self.s.write('P'+str(channel)+" "+str(phas)+'\r\n')
+        self.s.write(str.encode('P'+str(channel)+" "+str(phas)+'\r\n'))
 
     def status(self):
         self.s.readlines()
-        self.s.write('QUE \r\n')
-        output=self.s.readlines()
+        self.s.write('QUE \r\n'.encode())
+        output=self.s.readlines().decode()
         return(output)
 
     def save(self):
-        self.s.write('s\r\n')
+        self.s.write('s\r\n'.encode())
 
     def reset(self):
-        self.s.write('r\r\n')
+        self.s.write('r\r\n'.encode())
 
     def close(self):
         self.s.close()
 
 
 def usage():
-    print """---------------------------------------
+    print("""---------------------------------------
 Usage: modulator <command> <arg>
 ---------------------------------------
 command:\n-------
@@ -88,7 +88,7 @@ arg:\n---
 examples:\n--------
     modulator status
     modulator frquency 0.1 \n
---------------------------------------- """
+--------------------------------------- """)
     sys.exit()
 
 
@@ -101,19 +101,19 @@ def main():
     if "status" in args[0].lower(): 
         modulate = mod(modname)
         stat=modulate.status()
-        #print stat
-        freq1 = int(stat[3][0:8],16)/10
-        print "Channel 1 frequency: "+str(freq1)+" Hz"
-        freq2 = int(stat[4][0:8],16)/10
-        print "Channel 2 frequency: "+str(freq2)+" Hz"
+        #print(stat)
+        freq1 = int(stat[3][0:8],16)//10
+        print("Channel 1 frequency: "+str(freq1)+" Hz")
+        freq2 = int(stat[4][0:8],16)//10
+        print("Channel 2 frequency: "+str(freq2)+" Hz")
         Amp1  = round(int(stat[3][14:18],16)/1023.,1)
-        print "Channel 1 Amplitude: +/-"+str(Amp1)+" V pk-pk"
+        print("Channel 1 Amplitude: +/-"+str(Amp1)+" V pk-pk")
         Amp2  = round(int(stat[4][14:18],16)/1023.,1)
-        print "Channel 2 Amplitude: +/-"+str(Amp2)+" V pk-pk"
+        print("Channel 2 Amplitude: +/-"+str(Amp2)+" V pk-pk")
         Phase1= round(int(stat[3][9:13],16)*360/16384.,1)
-        print "Channel 1 Phase: "+str(Phase1)+" degrees"
+        print("Channel 1 Phase: "+str(Phase1)+" degrees")
         Phase2= round(int(stat[4][9:13],16)*360/16384.,1)
-        print "Channel 2 Phase: "+str(Phase2)+" degrees"
+        print("Channel 2 Phase: "+str(Phase2)+" degrees")
         modulate.close()
         
     elif "frequency" in args[0].lower():
@@ -124,7 +124,7 @@ def main():
                 if (float(args[1])>99) and (float(args[1])<3501):
                     modulate = mod(modname)
                     stat=modulate.status()
-                    #print stat
+                    #print(stat)
                     Amp1 = round(int(stat[3][14:18],16)/1023.,1)
                     if int(args[1])==500:
                         ao = analog_output.aoutput(aoname)
@@ -169,24 +169,24 @@ def main():
                     time.sleep(delay)
                     modulate.reset()
                     stat=modulate.status()
-                    freq1 = int(stat[3][0:8],16)/10
-                    print "Channel 1 frequency: "+str(freq1)+" Hz"
-                    freq2 = int(stat[4][0:8],16)/10
-                    print "Channel 2 frequency: "+str(freq2)+" Hz"
+                    freq1 = int(stat[3][0:8],16)//10
+                    print("Channel 1 frequency: "+str(freq1)+" Hz")
+                    freq2 = int(stat[4][0:8],16)//10
+                    print("Channel 2 frequency: "+str(freq2)+" Hz")
                     Amp1  = round(int(stat[3][14:18],16)/1023.,1)
-                    print "Channel 1 Amplitude: +/-"+str(Amp1)+" V pk-pk"
+                    print("Channel 1 Amplitude: +/-"+str(Amp1)+" V pk-pk")
                     Amp2  = round(int(stat[4][14:18],16)/1023.,1)
-                    print "Channel 2 Amplitude: +/-"+str(Amp2)+" V pk-pk"
+                    print("Channel 2 Amplitude: +/-"+str(Amp2)+" V pk-pk")
                     Phase1= round(int(stat[3][9:13],16)*360/16384.,1)
-                    print "Channel 1 Phase: "+str(Phase1)+" degrees"
+                    print("Channel 1 Phase: "+str(Phase1)+" degrees")
                     Phase2= round(int(stat[4][9:13],16)*360/16384.,1)
-                    print "Channel 2 Phase: "+str(Phase2)+" degrees"
+                    print("Channel 2 Phase: "+str(Phase2)+" degrees")
                     modulate.close()
                     logit.logit('Modulator','Frequency_changed_to_'+str(args[1])+'(MHz)')
                 else:
-                    print "Enter a frequency between 100 and 3500 Hz"
+                    print("Enter a frequency between 100 and 3500 Hz")
             else:
-                print "Please enter a number between 100 and 3500 Hz"
+                print("Please enter a number between 100 and 3500 Hz")
 
     elif "amplitude" in args[0].lower():
         if na < 2:
@@ -231,7 +231,7 @@ def main():
             modulate.save()
             time.sleep(delay)
             #stat=mod.status()
-            #print stat
+            #print(stat)
             modulate.close()
             logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')
     elif "phase" in args[0].lower():

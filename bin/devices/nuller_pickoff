@@ -39,7 +39,9 @@ if not os.path.isfile("/tmp/"+devname+".im.shm"):
     os.system("creashmim %s 1 1" % (devname,))
     time.sleep(0.5)
 
-exec "whshm = shm('/tmp/%s.im.shm', verbose=False)" % (devname,)
+d = locals()
+exec("whshm = shm('/tmp/%s.im.shm', verbose=False)" % (devname,), globals(), d)
+whshm = d['whshm']
 
 args = sys.argv[1:]
 devices(devname, conexids, conexnames, args=args, description=description, defpos=defpos, color_st=True)

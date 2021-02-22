@@ -21,7 +21,7 @@ import time
 import sys
 import pdb
 import numpy as np
-import pyfits as pf
+from astropy.io import fits as pf
 import numpy.linalg as la
 
 home = os.getenv('HOME')
@@ -29,26 +29,63 @@ sys.path.append(home+'/src/lib/python/')
 from camera_tools import cam_cmd
 from xaosim.scexao_shmlib import shm
 
+
+# Reading in shared memory
+#------------------------
 shm_im = shm("/tmp/ircam0.im.shm")
 shm_im_dark = shm("/tmp/ircam0_dark.im.shm")
 shm_im_badpixmap = shm("/tmp/ircam0_badpixmap.im.shm")
-dm = shm("/tmp/dm00disp05.im.shm", verbose=False)
+dm = shm("/tmp/dm00disp08.im.shm", verbose=False)
 
 dark_chuck = shm_im_dark.get_data()
 badpixmap_chuck = shm_im_badpixmap.get_data()
-# Reading in shared memory
-#------------------------
+
+
+args = sys.argv[1:]
+if args != []:
+    if len(args) == 5:
+        x0 = float(args[0])
+        y0 = float(args[1])
+        dtime = int(args[2])
+        gain = float(args[3])
+        a = int(args[4])
+    if len(args) == 4:
+        x0 = float(args[0])
+        y0 = float(args[1])
+        dtime = int(args[2])
+        gain = float(args[3])
+        a = 16
+    elif len(args) == 3:
+        x0 = float(args[0])
+        y0 = float(args[1])
+        dtime = int(args[2])
+        gain = 0.01
+        a = 16
+    elif len(args) == 2:
+        x0 = float(args[0])
+        y0 = float(args[1])
+        dtime = 0
+        gain = 0.01
+        a = 16
+        
+else:
+    x0 = y0 = 0
+    dtime = 0
+    gain = 0.01 #Gain of the loop 
+    a = 16
+        
+
 
 # Find center of image
 #------------------------
 
 def find_center(im_chuck, shiftx, shifty, timeout, c0):
     imax = np.max(im_chuck)
-    imin = imax*0.1
+    imin = imax*0.05
     im_chuck -= imin
     mask = im_chuck > 0
     im_chuck *= mask
-    #print imax
+    #print(imax)
     if imax < 100:
         timeout += 1
         cx = c0[0]
@@ -56,7 +93,7 @@ def find_center(im_chuck, shiftx, shifty, timeout, c0):
         if timeout < 30:
             time.sleep(1)
         else:
-            print "Not enough flux, aborting"
+            print("Not enough flux, aborting")
             sys.exit()
     else:
         timeout = 0
@@ -79,7 +116,6 @@ modes = pf.getdata('/home/scexao/bin/devices/DM_modes2.fits')
 
 scale = -0.05#12.1e-3/3600./180*m.pi*18/
 
-gain = 0.01 #Gain of the loop
 
 modes *= -scale*gain
 
@@ -94,7 +130,7 @@ if not os.path.isfile("/tmp/nuller_pickoff.im.shm"):
     os.system("creashmim nuller_pickoff 1 1")
 nuller_pickoff = shm("/tmp/nuller_pickoff.im.shm", verbose=False)
 npin = int(nuller_pickoff.get_data())
-pscale = 15.3 #mas per pixel in Chuckcam
+pscale = 16.9 #mas per pixel in Chuckcam
 
 filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
@@ -112,20 +148,20 @@ if npin:
 im_chuck = shm_im.get_data()
 (ysize,xsize) = im_chuck.shape
 mask = np.zeros_like(im_chuck)
-a = 16
-mask[ysize/2-a:ysize/2+a,xsize/2-a:xsize/2+a] = 1.
+mask[ysize//2-a:ysize//2+a,xsize//2-a:xsize//2+a] = 1.
 crop = shm_im.get_crop().astype(int)
 #crop = np.array([128,128,160,160])
-shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5
-shifty = pos[0,1]-crop[2]+256+cor[1]-0.5
+shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5-x0/pscale
+shifty = pos[0,1]-crop[2]+256+cor[1]-0.5-y0/pscale
 # Try to find the center a first time, to check the flux
-im_chuck = shm_im.get_data()
+im_chuck = shm_im.get_data().astype('float64')
 im_chuck *= mask
 c0,timeout = find_center(im_chuck, shiftx, shifty, timeout0, [0,0])
 cnt = 0
 cnt1 = 0
 i = 0
 nim = 10
+time0 = time.time()+dtime
 # loop
 while True:
     try:
@@ -134,7 +170,7 @@ while True:
         cnt = cnt1
         if i < nim:
             if i == 0:
-                #print read_shm().shape
+                #print(read_shm().shape)
                 im_chuck = shm_im.get_data()/float(nim)
             else:
                 im_chuck += shm_im.get_data()/float(nim)
@@ -152,6 +188,7 @@ while True:
             # Calculating and sending command to DM
             if timeout == 0:
                 dmc += np.squeeze(c0[0]*modes[0,:,:]/0.1+c0[1]*modes[1,:,:]/0.1)
+                #if np.max(dmc) < 1.:
                 dm.set_data(dmc.astype(np.float32))
                 time.sleep(0.001)
             else:
@@ -159,12 +196,16 @@ while True:
                 sys.stdout.flush()
                 
             timeout0 = timeout
-
-            #else:
-            #    timeout0 = timeout
+            if dtime > 0 and time.time() > time0:
+                shm_im.close()
+                shm_im_dark.close()
+                shm_im_badpixmap.close()
+                dm.close()
+                nuller_pickoff.close()
+                sys.exit()
             
     except KeyboardInterrupt:
-        print 'KeyboardInterrupt caught'
+        print('KeyboardInterrupt caught')
         shm_im.close()
         shm_im_dark.close()
         shm_im_badpixmap.close()

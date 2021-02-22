@@ -5,10 +5,10 @@ import time
 import sys, os
 from datetime import datetime
 import numpy as np
+from xaosim.scexao_shmlib import shm
 
 home = os.getenv('HOME')
 sys.path.append(home+"/src/lib/python/")
-from scexao_shm import shm
 
 # ------------------------------------------------------------------
 #                access to shared memory structures
@@ -38,7 +38,7 @@ try:
     # resolution.
     
     ser = serial.Serial(serpath,brate,timeout=tout)
-    print ser
+    print(ser)
 
     flag = strshm.get_data()
     data = np.zeros((3,1))

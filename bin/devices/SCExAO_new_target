@@ -5,8 +5,12 @@ piaa2  7 &
 sleep 0.1
 lyot 1 &
 sleep 1
-charis_pickoff 2 &
+charis_pickoff 5 &
 sleep 0.1
-mkids_pickoff 2 &
+mkids_pickoff 3 &
 sleep 0.1
-fpm 19
+oap4 onaxis &
+sleep 0.1
+steering onaxis &
+sleep 0.1
+fpm 10

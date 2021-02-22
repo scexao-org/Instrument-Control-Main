@@ -46,10 +46,10 @@ def make_ramp(*args):
         n2 = n
     
     if loga == 1:
-        ramptemp = np.array(map(float, range(n)))*(m.log10(b)-m.log10(a))/n2+m.log10(a)
+        ramptemp = np.arange(n)*(m.log10(b)-m.log10(a))/n2+m.log10(a)
         ramp = np.power(10,ramptemp)
     else:
-        ramp = np.array(map(float, range(n)))*(b-a)/n2+a
+        ramp = np.arange(n)*(b-a)/n2+a
     
     return ramp
 
@@ -112,8 +112,8 @@ def psd2d(signal, npoints, nshift, fsamp):
     window = np.hanning(npoints)
     window /= np.mean(window)
 
-    psd_2d = np.zeros((npsd, npoints/2))
-    cumint_2d = np.zeros((npsd, npoints/2))
+    psd_2d = np.zeros((npsd, int(npoints/2)))
+    cumint_2d = np.zeros((npsd, int(npoints/2)))
     for i in range(npsd):
         sig2 = signal[i*nshift:i*nshift+npoints]*window
         res_psd = calc_psd(sig2, fsamp)
@@ -140,12 +140,12 @@ def psdrad(signal, npoints, nshift, nangle, fsamp):
     
     s = np.shape(signal)
     if len(s) != 2:
-        print "wrong dimensions"
+        print("wrong dimensions")
         sys.exit()
     else:
         ndim = s[1]
         if ndim != 2:
-            print "wrong dimensions"
+            print("wrong dimensions")
             sys.exit()
         ntot = s[0]
     

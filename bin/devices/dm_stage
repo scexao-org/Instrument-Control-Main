@@ -12,18 +12,18 @@ import pdb
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-import ezstep_chain
+import ezstep_chain3 as ezstep_chain
 import logit #Custom logging library
 
 
 ttmdev  = "/dev/serial/by-path/"
-ttmdev += "pci-0000:00:1d.0-usb-0:1.4.2:1.0-port0"
+ttmdev += "pci-0000:00:1d.0-usb-0:1.8.2:1.0-port0"
 # all steppers now connected together
 
 stagename = "dm_stage"
 
 def usage():
-    print """---------------------------------------
+    print("""---------------------------------------
 Usage: %s <dev> <command> <arg>
 ---------------------------------------
 dev:\n---
@@ -39,10 +39,10 @@ examples:\n--------
     %s reset
     %s x push +340 (relative move
     %s y push -413  only!        )
---------------------------------------- """% (stagename,stagename,stagename,stagename)
+--------------------------------------- """% (stagename,stagename,stagename,stagename))
 
 def quickhelp():
-    print "%20s       DM stage" % (stagename,)
+    print("%20s       DM stage" % (stagename,))
 
 # =====================================================================
 # =====================================================================

@@ -1,11 +1,9 @@
 #!/bin/bash
 
-log Aligning to internal SCExAO source
-
 src_fib in
 
-mkids_pickoff 2
-charis_pickoff 2
+mkids_pickoff 5
+charis_pickoff 3
 
 dmflat
 
@@ -17,7 +15,6 @@ src_flux irnd 6
 
 src_flux optnd 5
 
-src_flux filter 1
-
+src_flux filter 6
 
 oap1 int

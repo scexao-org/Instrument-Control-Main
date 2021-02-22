@@ -1,5 +1,5 @@
 import numpy as np
-import pyfits as pf
+from astropy.io import fits as pf
 from scipy.signal import medfilt2d as medfilt
 from scipy import ndimage
 import pdb
@@ -17,22 +17,27 @@ should be included by all programs requiring them.
 Frantz.
 --------------------------------------------------------------------- '''
 
-def mkdisk((xs, ys), (x0, y0), r0):
+def mkdisk(cs, c0, r0):
     ''' ------------------------------------------------------
     Create a circular mask centered on (x0,y0) in an array of
     size (xs, ys) with radius r0.
     Useful for centroid algorithms.
     ------------------------------------------------------ '''
+    (xs, ys) = cs
+    (x0, y0) = c0
     x,y = np.meshgrid(np.arange(xs)-x0, np.arange(ys)-y0)
     dist = np.hypot(y,x)
     mask = dist <= r0
     return mask
 
-def mkbox((xs, ys), (x0, y0), (dx, dy)):
+def mkbox(cs, c0, cd):
     ''' ------------------------------------------------------
     Create a box mask of lower corner (x0,y0) in an array of
     size (xs, ys), of dimensions (dx, dy).
     ------------------------------------------------------ '''
+    (xs, ys) = cs
+    (x0, y0) = c0
+    (dx, dy) = cd
     x,y = np.meshgrid(np.arange(xs), np.arange(ys))
     mask = (x >= x0) * (x < x0+dx) * (y >= y0) * (y < y0+dy)
     return mask

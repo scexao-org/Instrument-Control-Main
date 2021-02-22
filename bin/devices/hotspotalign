@@ -15,17 +15,18 @@ import time
 import sys
 import pdb
 import numpy as np
-import pyfits as pf
+from astropy.io import fits as pf
 import numpy.linalg as la
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from camera_tools import cam_cmd
-from scexao_shm import shm
-import ezstep_chain
+from xaosim.scexao_shmlib import shm
+#from scexao_shm import shm
+import ezstep_chain3 as ezstep_chain
 
 ttmdev  = "/dev/serial/by-path/"
-ttmdev += "pci-0000:00:1d.0-usb-0:1.4.2:1.0-port0" # all steppers now connected together
+ttmdev += "pci-0000:00:1d.0-usb-0:1.8.2:1.0-port0" # all steppers now connected together
 
 shm_im = shm("/tmp/ircam0.im.shm")
 shm_im_dark = shm("/tmp/ircam0_dark.im.shm")
@@ -35,7 +36,7 @@ shm_im_badpixmap = shm("/tmp/ircam0_badpixmap.im.shm")
 #------------------------
 
 def read_shm():
-    im_chuck = shm_im.get_data()
+    im_chuck = shm_im.get_data().astype('float32')
     dark_chuck = shm_im_dark.get_data()
     badpixmap_chuck = shm_im_badpixmap.get_data()
     im_chuck -= dark_chuck
@@ -54,13 +55,13 @@ def find_center(shiftx, shifty):
     #imin = np.percentile(im_chuck, 99.97)
     iflux = np.percentile(im_chuck, 99.999)
     imin = iflux*0.01
-    print imin, iflux, np.max(im_chuck)
+    print(imin, iflux, np.max(im_chuck))
     im_chuck = im_chuck-imin
     mask = im_chuck > 0
     im_chuck = im_chuck*mask
     if iflux < 200:
-        print iflux
-        print "Not enough flux, aborting"
+        print(iflux)
+        print("Not enough flux, aborting")
         os.system("/home/scexao/bin/log Hotspotalign: Not enough flux, aborting")
         os.system("scexaostatus set hotspot 'LOW FLUX' 0")
         sys.exit()
@@ -75,6 +76,12 @@ def find_center(shiftx, shifty):
 
 # Main
 #------------------------
+
+#reset the steering mirror
+os.system("steering home")
+time.sleep(1)
+os.system("steering onaxis")
+time.sleep(1)
 
 # parameters of the target point
 with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
@@ -101,12 +108,12 @@ if npin:
 
 im_chuck = read_shm()
 (ysize,xsize) = im_chuck.shape
-print xsize, ysize
+print(xsize, ysize)
 crop = shm_im.get_crop().astype(int)
 #crop = np.array([128,128,160,160])
 shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5
 shifty = pos[0,1]-crop[2]+256+cor[1]-0.5
-print  shiftx, shifty
+print( shiftx, shifty)
 # parameters of the loop
 gain = 0.2
 precision = 0.2
@@ -126,7 +133,7 @@ time.sleep(0.1)
 #initialize the position
 cnt = 0
 c0 = find_center(shiftx, shifty)
-print c0
+print(c0)
 
 os.system("/home/scexao/bin/log Hotspotalign: starting alignment")
 os.system("scexaostatus set hotspot 'IN PROGRESS' 3")
@@ -135,7 +142,7 @@ os.system("scexaostatus set hotspot 'IN PROGRESS' 3")
 while (((c0[0]**2+c0[1]**2)**0.5) > precision) and (cnt < 500):
     cnt = cnt+1
     c0 = find_center(shiftx, shifty)
-    print c0
+    print(c0)
     
     # if the psf is still north-west of the hotspot, move south-east
     if (c0[0] > precision) and (c0[1] > precision):
@@ -160,7 +167,7 @@ while (((c0[0]**2+c0[1]**2)**0.5) > precision) and (cnt < 500):
     # else, if the psf is south-east of the hotspot, move closer to the hotspot
     else:
         com = np.dot(invA, c0)
-        print com
+        print(com)
         com0x = int(round(com[0,0]*gain))
         com0y = int(round(com[0,1]*gain))
         com0x = min([com0x, 100])

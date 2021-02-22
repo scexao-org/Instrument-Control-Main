@@ -37,6 +37,7 @@ class dio:
                 self.dev = dev
                 self.id  = os.path.split(dev)[1]
             try:
+                #print(self.dev)
                 self.ser = serial.Serial(self.dev, brate, timeout=tout)
             except:
                 self.ser = None
@@ -44,9 +45,9 @@ class dio:
                           (self.dev,))
                 return(None)
 
-            self.ser.write('A00\r')
+            self.ser.write('A00\r'.encode())
             time.sleep(delay)
-            msg = self.ser.readline()
+            msg = self.ser.readline().decode()
             
             if "A?" in msg:
                 #print("DIO card found.")
@@ -64,32 +65,32 @@ class dio:
             self.dev = dev
 
     def flip(self, chn):
-        self.ser.write("AL%s\r\n" % (chn))
+        self.ser.write(str.encode("AL%s\r\n" % (chn)))
         time.sleep(delay)
-        dummy = self.ser.readline()
+        dummy = self.ser.readline().decode()
         #print dummy
         
-        self.ser.write("AH%s\r\n" % (chn))
+        self.ser.write(str.encode("AH%s\r\n" % (chn)))
         time.sleep(delay)
-        dummy = self.ser.readline()
+        dummy = self.ser.readline().decode()
         #print dummy
 
-        self.ser.write("AL%s\r\n" % (chn))
+        self.ser.write(str.encode("AL%s\r\n" % (chn)))
         time.sleep(delay)
-        dummy = self.ser.readline()
+        dummy = self.ser.readline().decode()
         #print dummy
 
     def turn_on(self, chn):
-        self.ser.write("AH%s\r\n" % (chn))
+        self.ser.write(str.encode("AH%s\r\n" % (chn)))
         time.sleep(delay)
-        dummy = self.ser.readline()
-        print dummy
+        dummy = self.ser.readline().decode()
+        print(dummy)
 
     def turn_off(self, chn):
-        self.ser.write("AL%s\r\n" % (chn))
+        self.ser.write(str.encode("AL%s\r\n" % (chn)))
         time.sleep(delay)
-        dummy = self.ser.readline()
-        print dummy
+        dummy = self.ser.readline().decode()
+        print(dummy)
 
     def init(self):
         ''' ------------------------------------------------------

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os, sys, socket, time, numpy, commands, binascii, datetime, math
 import pyfits as pf

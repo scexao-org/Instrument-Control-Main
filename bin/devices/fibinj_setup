@@ -195,7 +195,7 @@ while true; do
 			# moving PIAA1 wheel
 			echo "moving PIAA1 in"
 			log "SMI: moving PIAA1 in"
-			piaa1 3
+			piaa1 4
 			
 			state="menuconfmanage";;
 		    1)
@@ -206,7 +206,7 @@ while true; do
 			# moving PIAA2 wheel
 			echo "moving PIAA2 in"
 			log "SMI: moving PIAA2 in"
-			piaa2 3
+			piaa2 4
 			
 			state="menuconfmanage";;
 		    3) 
@@ -244,8 +244,8 @@ while true; do
 			state="menuconfmanage";;
 		    9)
 			echo "moving PIAA out"
-			piaa1 1
-			piaa2 1
+			piaa1 7
+			piaa2 7
 			log "SMI: moving the PIAA out"
 			state="menuconfmanage";;
 		    
@@ -297,23 +297,23 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_p1amp";;
 		    1)
-			((yp1[3]+=$piaa1amp))
-			piaa1 y goto ${yp1[3]}
+			((yp1[4]+=$piaa1amp))
+			piaa1 y goto ${yp1[4]}
 			sleep 0.1
 			state="menuconf_p1align";;
 		    2)
-			((yp1[3]-=$piaa1amp))
-			piaa1 y goto ${yp1[3]}
+			((yp1[4]-=$piaa1amp))
+			piaa1 y goto ${yp1[4]}
 			sleep 0.1
 	  		state="menuconf_p1align";;
 		    3)
-			((xp1[3]+=$piaa1amp))
-			piaa1 x goto ${xp1[3]}
+			((xp1[4]+=$piaa1amp))
+			piaa1 x goto ${xp1[4]}
 			sleep 0.1
 			state="menuconf_p1align";;
 		    4)
-			((xp1[3]-=$piaa1amp))
-			piaa1 x goto ${xp1[3]}
+			((xp1[4]-=$piaa1amp))
+			piaa1 x goto ${xp1[4]}
 			sleep 0.1
 			state="menuconf_p1align";;
 		esac
@@ -416,33 +416,33 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_p2amp";;
 		    1)
-			((yp2[3]-=$piaa2amp))
-			piaa2 y goto ${yp2[3]}
+			((yp2[4]-=$piaa2amp))
+			piaa2 y goto ${yp2[4]}
 			sleep 0.1
 			state="menuconf_p2align";;
 		    2)
-			((yp2[3]+=$piaa2amp))
-			piaa2 y goto ${yp2[3]}
+			((yp2[4]+=$piaa2amp))
+			piaa2 y goto ${yp2[4]}
 			sleep 0.1
 			state="menuconf_p2align";;
 		    3)
-			((xp2[3]-=$piaa2amp))
-			piaa2 x goto ${xp2[3]}
+			((xp2[4]-=$piaa2amp))
+			piaa2 x goto ${xp2[4]}
 			sleep 0.1
 			state="menuconf_p2align";;
 		    4)
-			((xp2[3]+=$piaa2amp))
-			piaa2 x goto ${xp2[3]}
+			((xp2[4]+=$piaa2amp))
+			piaa2 x goto ${xp2[4]}
 			sleep 0.1
 			state="menuconf_p2align";;
 		    5)
-			((fp2[3]-=$piaa2amp))
-			piaa2 f goto ${fp2[3]}
+			((fp2[4]-=$piaa2amp))
+			piaa2 f goto ${fp2[4]}
 			sleep 0.1
 			state="menuconf_p2align";;
 		    6)
-			((fp2[3]+=$piaa2amp))
-			piaa2 f goto ${fp2[3]}
+			((fp2[4]+=$piaa2amp))
+			piaa2 f goto ${fp2[4]}
 			sleep 0.1
 			state="menuconf_p2align";;
 		esac

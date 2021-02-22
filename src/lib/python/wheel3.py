@@ -14,19 +14,19 @@ class wheel(object):
         
     def open(self, devid):
         self.s = serial.Serial(devid, 115200, timeout=0.5)
-        self.s.write('\r')
+        self.s.write('\r'.encode())
         dummy = self.s.readline() # flush the port
 
     def move(self, slot, devname):
-        self.s.write("pos=%c\r" % (slot,))
+        self.s.write(str.encode("pos=%c\r" % (slot,)))
         dummy = self.s.readline()
         logit.logit(devname,'moved_to_slot_'+str(slot))
 
     def status(self):
         dummy = self.s.readlines() # flush
-        self.s.write("pos?\r")
+        self.s.write("pos?\r".encode())
         time.sleep(0.1)
-        dummy = self.s.readline()
+        dummy = self.s.readline().decode()
         slot = dummy[5]
         return int(slot)
 

@@ -24,7 +24,7 @@ if not os.path.exists(sdir):
 # ---------------------------------------------------
 
 def touch(fname, times=None):
-    with file(fname, 'a'):
+    with open(fname, 'a'):
         os.utime(fname, times)
 
 # ---------------------------------------------------
@@ -130,7 +130,7 @@ class zaber_chain:
                     return(None)
 
                 if not quiet:
-                    print dummy
+                    print(dummy)
                 if ((sz >= 6) and (dummy[1] == 60)):
                     self.nz = sz / 6
                     print("Device %s connected to %d Zabers" % \
@@ -215,7 +215,7 @@ class zaber_chain:
         args = ' '.join(map(str, step2zaberByte(int(arg))))
         full_cmd = '%s %d %s' % (idn, cmd, args)
         if not quiet:
-            print full_cmd
+            print(full_cmd)
         self.ser.write(zab_cmd(full_cmd))
         dummy = []
         while dummy == []:

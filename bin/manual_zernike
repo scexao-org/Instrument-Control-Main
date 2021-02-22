@@ -3,15 +3,15 @@
 import pygame, sys
 from pygame.locals import *
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import pyfits as pf
+from astropy.io import fits as pf
 import pdb
 import threading
 import mmap
 import struct 
 import os
-import Image
+from PIL import Image
 import time
 import datetime
 from scipy.interpolate import griddata
@@ -65,8 +65,8 @@ Frantz.
 -------------------------------------------------------
 """
 
-plt.ion()
-plt.show()
+#plt.ion()
+#plt.show()
 
 # ------------------------------------------------------------------
 #                       global variables
@@ -94,9 +94,10 @@ dmc  = shm('/tmp/dm00disp%02d.im.shm' % (chn,)) # DM channel (perturbation)
 # -----------------------
 #   set up the window
 # -----------------------
-adelay = 100 # action delay (keys and joystick actions)
-pygame.init()
-pygame.key.set_repeat(adelay, 1)
+adelay = 300 # action delay (keys and joystick actions)
+pygame.display.init()
+pygame.font.init()
+pygame.key.set_repeat(adelay, 100)
 last_joy_updt = pygame.time.get_ticks()
 joy_pressed = 0
 
@@ -114,13 +115,15 @@ def combine_modes():
     a = np.zeros((dmpz, dmpz), dtype='float')
     b = np.zeros((dms, dms), dtype='float')
     if sync:
-        for i in xrange(z0, z1+1):
+        for i in range(z0, z1+1):
             a += z_vals[i-z0] * mkzer1(i, dmpz, dmpz/2, True)
         b[0:dmpz, 1:dmpz+1] = a
         dmc.set_data(b.astype('float32'))
 
 # ===============================================================
-def draw_cursor(surf, (xc, yc, hh, ww), (vmin, vmax, vcur), active):
+def draw_cursor(surf, co, v, active):
+    (xc, yc, hh, ww) = co
+    (vmin, vmax, vcur) = v
     x0, y0 = xc - ww/2, yc - hh/2
     x1 = x0 + ww * (vcur-vmin) / (vmax-vmin) - ww/20
     y1 = yc-hh
@@ -225,11 +228,11 @@ bxs = [2*BW+FW/6, 2*BW+FW/2, 2*BW+5*FW/6, 2*BW+FW/6, 2*BW+FW/2, 2*BW+5*FW/6]
 by0 = YW - 4*ZH
 bys = [by0, by0, by0, by0 + 2*ZH, by0 + 2*ZH, by0 + 2*ZH]
 
-for i in xrange(6):
-    exec 'b_lbl%d = font1.render(blabels[i], True, FGCOL)' % (i,)
-    exec 'b_rec%d = b_lbl%d.get_rect()' % (i,i,)
-    exec 'b_rec%d.center = (bxs[i], bys[i]+0.75*ZH)' % (i,)
-    exec 'screen.blit(b_lbl%d, b_rec%d), ' % (i,i,)
+for i in range(6):
+    exec('b_lbl%d = font1.render(blabels[i], True, FGCOL)' % (i,), globals(), locals())
+    exec('b_rec%d = b_lbl%d.get_rect()' % (i,i,), globals(), locals())
+    exec('b_rec%d.center = (bxs[i], bys[i]+0.75*ZH)' % (i,), globals(), locals())
+    exec('screen.blit(b_lbl%d, b_rec%d), ' % (i,i,), globals(), locals())
 
 xws, yws = 100, 100
 imin, imax = 0, 0
@@ -261,8 +264,23 @@ while True: # the main game loop
             # --------------------------
             print("The program has ended normally.")
             sys.exit()
+
+        elif event.type == KEYUP:
+            # ============= ARROWS ==================
+            # UP - DOWN: no repeat
+            if event.key == K_UP:
+                if (umode == 0):
+                    mode_actv = (mode_actv - 1) % dz
+                    #time.sleep(0.2)
+
+            if event.key == K_DOWN:
+                if (umode == 0):
+                    mode_actv = (mode_actv + 1) % dz
+                    #time.sleep(0.2)
+
         elif event.type == KEYDOWN:
             mmods = pygame.key.get_mods()
+            # Warning - event repetition due to pygame.key.set_repeat(adelay, 100)
 
             if event.key == K_s:
                 print("want to save?")
@@ -287,13 +305,7 @@ while True: # the main game loop
                     plot_cross = True - plot_cross
 
             # ============= ARROWS ==================
-            if event.key == K_UP:
-                if (umode == 0):
-                    mode_actv = (mode_actv - 1) % dz
 
-            if event.key == K_DOWN:
-                if (umode == 0):
-                    mode_actv = (mode_actv + 1) % dz
 
             if event.key == K_RIGHT:
                 if (umode == 0):
@@ -304,6 +316,7 @@ while True: # the main game loop
                     if (temp < amax):
                         z_vals[mode_actv] = temp
                     combine_modes()
+                    #time.sleep(0.5)
 
             if event.key == K_LEFT:
                 if (umode == 0):
@@ -314,6 +327,8 @@ while True: # the main game loop
                     if (temp > amin):
                         z_vals[mode_actv] = temp
                     combine_modes()
+                    #time.sleep(0.5)
+
             # ========================================
 
             if event.key == K_SPACE:
@@ -353,8 +368,7 @@ while True: # the main game loop
         # ---------------------------------------------
         elif event.type == pygame.JOYAXISMOTION:
             joy.compute()
-            print joy.x1, joy.y1
-            print("coucou 1")
+            print(joy.x1, joy.y1)
 
         # ---------------------------------------------
         #             joystick hats
@@ -396,16 +410,20 @@ while True: # the main game loop
             clicked = True
             
             # --------- CLICK used to switch modes ------
-            for i in xrange(3):
-                exec 'mytest = zone%d.collidepoint(mx, my)' % (i+1,)
+            for i in range(3):
+                d = locals()
+                exec('mytest = zone%d.collidepoint(mx, my)' % (i+1,), globals(), d)
+                mytest = d['mytest']
                 if (mytest):
                     umode = i
                     wmode = wmodes[umode]
 
             # ---------- manual mode use case ----------
             if (umode == 0):
-                for i in xrange(6):
-                    exec 'mytest = b_rec%d.collidepoint(mx, my)' % (i,)
+                for i in range(6):
+                    d = locals()
+                    exec('mytest = b_rec%d.collidepoint(mx, my)' % (i,), globals(), d)
+                    mytest = d['mytest']
                     if (mytest):
                         if (i == 0):   # SYNC
                             sync = True - sync
@@ -450,7 +468,7 @@ while True: # the main game loop
         pygame.draw.rect(screen, DDGRY, (BW,BW,FW/3, 2*ZH), 0)
         pygame.draw.rect(screen, FGCOL, (BW,BW,FW/3, 2*ZH), 2)
 
-        for i in xrange(z0, z1+1):
+        for i in range(z0, z1+1):
             yy = 100 + 50 * (i - z0)
             hdl = font1.render(zlabel[i-z0],  True, FGCOL)
 
@@ -461,8 +479,9 @@ while True: # the main game loop
             active = False
             if mode_actv == i-z0:
                 active = True
-            draw_cursor(screen, (BW+FW/2+40, yy, 22, 200), 
-                        (amin, amax, z_vals[i-z0]), active)
+            co = (BW+FW/2+40, yy, 22, 200)
+            v = (amin, amax, z_vals[i-z0])
+            draw_cursor(screen, co, v, active)
 
         if sync:
             pygame.draw.rect(screen, GREEN, 
@@ -475,12 +494,12 @@ while True: # the main game loop
                          (bxs[0]-FW/6, bys[0], FW/3-2*BW, 1.5*ZH), 2)
         screen.blit(b_lbl0, b_rec0)
         
-        for i in xrange(1,6):
+        for i in range(1,6):
             pygame.draw.rect(screen, ORANG, 
                              (bxs[i]-FW/6, bys[i], FW/3-2*BW, 1.5*ZH), 0)
             pygame.draw.rect(screen, FGCOL, 
                              (bxs[i]-FW/6, bys[i], FW/3-2*BW, 1.5*ZH), 2)
-            exec 'screen.blit(b_lbl%d, b_rec%d), ' % (i,i,)
+            exec('screen.blit(b_lbl%d, b_rec%d), ' % (i,i,), globals(), locals())
 
         # ---------------------------------------------------------
             

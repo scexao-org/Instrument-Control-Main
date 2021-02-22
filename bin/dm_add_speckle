@@ -3,12 +3,10 @@
 import os
 import sys
 import numpy as np
+from xaosim.scexao_shmlib import shm
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-
-from   scexao_shm   import shm
-import zernike
 
 hmsg = """ --------------------------------------------------------------
 dm_add_zernike: adds a zernike polynomial to a given channel
@@ -24,7 +22,7 @@ Parameters:
 - kx, ky : spatial frequency (<0.5)
 - aa     : amplitude of the sine wave
 - phi    : phase of the sine wave
-- chn    : DM channel (default = 5)
+- chn    : DM channel (default = 6)
 -------------------------------------------------------------- """
 
 dms   = 50
@@ -75,15 +73,15 @@ def DM_sine(amp, kx, ky, phi=0.0):
     return(amp * np.sin(phase))
 
 def get_DM_disp(chn=3):
-    exec "map0 = disp%02d.get_data(False, True)" % (chn,)
+    exec("map0 = disp%02d.get_data(False, True)" % (chn,))
     return(map0)
 
 def disp_2_DM(dispm, chn=3):
-    exec "disp%02d.set_data(dispm.astype('float32'))" % (chn,)
+    exec("disp%02d.set_data(dispm.astype('float32'))" % (chn,))
     #os.system("imsempost "%(self.fname,))
 # ===========================================================
 
-print ("(kx, ky) = (%.2f,%.2f) => (a, phi) = (%.2f, %.2f) => chn = %02d" % \
+print("(kx, ky) = (%.2f,%.2f) => (a, phi) = (%.2f, %.2f) => chn = %02d" % \
            (kx, ky, aa, phi, chn))
 
 dmc  = shm('/tmp/dm00disp%02d.im.shm' % (chn,), verbose=False) # DM channel

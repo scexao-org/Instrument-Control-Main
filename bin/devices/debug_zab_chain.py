@@ -1,4 +1,4 @@
-#!/usr/env python
+#!/usr/env python3
 
 ''' -------------------------------------------------------------
 This is a script to use in case you need to debug something
@@ -20,7 +20,7 @@ import pdb
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-import zaber_chain
+import zaber_chain3 as zaber
 
 zabdev  = "/dev/serial/"
 
@@ -31,9 +31,9 @@ By commenting out the one you don't want to control
 #zabdev += "by-path/pci-0000:00:1d.0-usb-0:1.2.1:1.0-port0" # front chain
 #zabdev += "by-path/pci-0000:00:1d.0-usb-0:1.8.4.4.4.4:1.0-port0" # back chain
 #zabdev += "by-id/usb-FTDI_USB_Serial_Converter_FTG4YOPA-if00-port0" # vis chain
-zabdev += "by-path/pci-0000:00:1a.0-usb-0:1.5:1.0-port0"#temp chain
+zabdev += "by-path/pci-0000:00:1a.0-usb-0:1.4.1:1.0-port0"#temp chain
 # ------------------------------------------------------------
-zab = zaber_chain.zaber_chain(zabdev, quiet=False)
+zab = zaber.zaber()
 
 '''
 At this point, you have an instance of zaber chain object.

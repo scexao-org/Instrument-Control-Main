@@ -67,17 +67,17 @@ class flipmount:
 # =====================================================================
 
     def usage(self):
-        print """---------------------------------------
+        print("""---------------------------------------
 Usage: %s <command>
 ---------------------------------------
 COMMAND:
     status  displays status
      reset  reset status
----------------------------------------""" % (self.flipname,)
+---------------------------------------""") % (self.flipname,)
     
     # -----------------------------------------------------------------
     def quickhelp(self):
-        print "%20s       %s" % (self.flipname,self.description)
+        print("%20s       %s" % (self.flipname,self.description))
     
     # -----------------------------------------------------------------
     def flipit(self):
@@ -90,7 +90,7 @@ COMMAND:
     def savestate(self):
         if not os.path.isfile("/tmp/%s.im.shm" % (self.flipname,)):
             os.system("creashmim %s 1 1" % (self.flipname,))
-            print "Position unsure"
+            print("Position unsure")
             subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'UNKNOWN', '3'])
         intspshm = shm("/tmp/%s.im.shm" % (self.flipname,), verbose=False)
         intsp = int(intspshm.get_data())
@@ -107,15 +107,17 @@ COMMAND:
     # -----------------------------------------------------------------
     def status(self):
         if not os.path.isfile("/tmp/%s.im.shm" % (self.flipname,)):
-            print "Position unsure"
+            print("Position unsure")
             subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'UNKNOWN', '3'])
-
-        exec "intspshm = shm('/tmp/%s.im.shm', verbose=False)" % (self.flipname,)
+        
+        d = locals()
+        exec("intspshm = shm('/tmp/%s.im.shm', verbose=False)" % (self.flipname,), globals(), d)
+        intspshm = d['intspshm']
         intsp = int(intspshm.get_data())
         if intsp:
-            print "Flip mount is in"
+            print("Flip mount is in")
             subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'IN', '0'])
         else:
-            print "Flip mount is out"
+            print("Flip mount is out")
             subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'OUT', '1'])
         intspshm.close()

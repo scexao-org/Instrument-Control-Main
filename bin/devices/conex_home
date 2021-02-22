@@ -51,11 +51,20 @@ sleep 1
 echo "OAP4 phi:"
 oap4 phi home &
 sleep 1
-echo "CHARIS pickoff:"
-charis_pickoff home &
+echo "Steering:"
+steering home &
 sleep 1
-echo "MKIDS pickoff:"
-mkids_pickoff home &
+echo "CHARIS pickoff wheel:"
+charis_pickoff wheel home &
+sleep 1
+echo "CHARIS pickoff theta:"
+charis_pickoff theta home &
+sleep 1
+echo "MKIDS pickoff wheel:"
+mkids_pickoff wheel home &
+sleep 1
+echo "MKIDS pickoff theta:"
+mkids_pickoff theta home &
 sleep 1
 echo "FIRST pickoff:"
 first_pickoff home &

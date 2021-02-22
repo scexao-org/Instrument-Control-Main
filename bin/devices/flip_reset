@@ -6,32 +6,20 @@ sleep 0.1
 echo "Integrating sphere pickoff:"
 intsphere reset
 sleep 0.1
-echo "IR cams Wollaston:"
-ircam_wollaston reset
-sleep 0.1
 echo "IR cams block:"
 ircam_block reset
 sleep 0.1
 echo "Chuckcam Pupil lens:"
 chuck_pup reset
 sleep 0.1
-echo "SAPHIRA Pupil lens:"
-saphira_pup reset
+echo "Buffycam Pupil lens:"
+buffy_pup reset
 sleep 0.1
 echo "LLOWFS block:"
 lowfs_block reset
 sleep 0.1
 echo "Pt Grey 2 pickoff:"
 PG2_pickoff reset
-sleep 0.1
-echo "CHARIS Wollaston:"
-charis_wollaston reset
-sleep 0.1
-echo "IR cams QWPs:"
-ircam_qwp reset
-sleep 0.1
-echo "Polarizer:"
-polarizer reset
 sleep 0.1
 echo "Compensating plate:"
 compplate reset

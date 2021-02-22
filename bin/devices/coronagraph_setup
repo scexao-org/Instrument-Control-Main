@@ -149,6 +149,7 @@ do
 done
 
 tmux new-session -d -s LLOWFSconf
+tmux new-session -d -s coronagraph_setup
 
 #=======================================================================
 # =================== STATE MACHINE ====================================
@@ -251,7 +252,7 @@ while true; do
 	then
 	    pupiln=6
 	    pname="vAPP 2"
-	elif [ $coro -ge 10 ] && [ $coro -le 18 ]
+	elif [ $coro -ge 11 ] && [ $coro -le 19 ]
 	then
 	    pupiln=8
 	    pname="shaped pupil"
@@ -317,7 +318,7 @@ while true; do
 	    menuitems+=( "07" "Manual vAPP alignment")
 	    menuitems+=( "-" "")
 	fi
-	if [ $coro -ge 10 ] && [ $coro -le 18 ]
+	if [ $coro -ge 11 ] && [ $coro -le 19 ]
 	then
 	    menuitems+=( "06" "Move the shaped pupil in")
 	    menuitems+=( "07" "Manual pupil alignment")
@@ -344,7 +345,7 @@ while true; do
 	then
 	    menuitems+=( "16" "Move vAPP out")
 	fi
-	if [ $coro -ge 10 ] && [ $coro -le 18 ]
+	if [ $coro -ge 11 ] && [ $coro -le 19 ]
 	then
 	    menuitems+=( "16" "Move shaped pupil out")
 	fi
@@ -388,7 +389,7 @@ while true; do
    		    02) #moving PIAA1 wheel
 			echo "moving $piname 1 in"
 			log "CORO: moving $piname 1 in"
-			piaa1 $piaan &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa1 $piaan &" C-m
 			state="menuconfmanage";;
 		    03) state="menuconf_p1align"
 			log "CORO: Manually aligning $piname 1"
@@ -396,7 +397,7 @@ while true; do
 		    04) # moving PIAA2 wheel
 			echo "moving $piname 2 in"
 			log "CORO: moving $piname 2 in"
-			piaa2 $piaan &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa2 $piaan &" C-m
 			state="menuconfmanage";;
 		    05) state="menuconf_p2align"
 			log "CORO: Manually aligning $piname 2"
@@ -404,7 +405,7 @@ while true; do
 		    06) # moving shape pupil/vAPP
 			echo "moving pupil wheel to $pname"
 			log "CORO: moving pupil wheel to $pname"
-			pupil $pupiln &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil $pupiln &" C-m
 			state="menuconfmanage";;
 		    07) state="menuconf_pupilalign"
 			log "CORO: Manually aligning the $pname"
@@ -412,7 +413,7 @@ while true; do
 		    08) # moving FPM
 			echo "moving fpm wheel to $coroname"
 			log "CORO: moving fpm wheel to $coroname"
-			fpm ${nf[$confnb1]} &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm ${nf[$confnb1]} &" C-m
 			state="menuconfmanage";;
 		    09) state="menuconf_fpmalign"
 			log "CORO: Manually aligning the FPM"
@@ -420,8 +421,8 @@ while true; do
 		    10) echo "moving FPM sideways"
 			((yf2=${yf[$confnb1]}-30000))
 			((xf2=${xf[$confnb1]}+6000))
-			fpm y goto $yf2
-			fpm x goto $xf2
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm y goto $yf2" C-m
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm x goto $yf2" C-m
 			sleep 0.1
 			log "CORO: moving the FPM sideways"
 			scexaostatus set fpm_st "FPM SIDEWAYS" 3
@@ -429,7 +430,7 @@ while true; do
 		    11) # moving lyot stop
 			echo "moving lyot wheel to $lyotname"
 			log "CORO: moving lyot wheel to $lyotname"
-			lyot $lyot &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/lyot $lyot &" C-m
 			state="menuconfmanage";;
 		    12) state="menuconf_lyotalign"
 			log "CORO: Manually aligning the Lyot mask"
@@ -437,32 +438,32 @@ while true; do
 		    13) # moving inverse PIAA stage
 			echo "moving inverse $piname in"
 			log "CORO: moving inverse $piname in"
-			invpiaa $piaan &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa $piaan &" C-m
 			state="menuconfmanage";;
 		    14) state="menuconf_ipalign"
 			log "CORO: Manually aligning inverse $piname"
 			manualinvpiaaalign=0;;
 		    15) echo "moving $piname out"
 			log "CORO: moving the $piname out"
-			piaa1 1 &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa1 7 &" C-m
 			sleep 10
-			piaa2 1 &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa2 7 &" C-m
 			state="menuconfmanage";;
 		    16) echo "moving $pname out"
-			pupil 1 &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil 1 &" C-m
 			log "CORO: moving the $pname out"
 			state="menuconfmanage";;
 		    17) echo "moving FPM out"
-			fpm 01 &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm 10 &" C-m
 			log "CORO: moving the FPM out"
 			state="menuconfmanage";;
 		    18) echo "moving Lyot out"
-			lyot 1 &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/lyot 1 &" C-m
 			log "CORO: moving the Lyot out"
 			state="menuconfmanage";;
 		    19) echo "moving inverse $piname out"
 			log "CORO: moving the inverse $piname out"
-			invpiaa1 $ipnrest &
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa $ipnrest &" C-m
 			state="menuconfmanage";;
 		    20) state="menuconf_imsize";;
    		    21) state="menuconf_nbav";;
@@ -545,23 +546,23 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_p1amp";;
 		    1)
-			((yp1[$piaan]+=$piaa1amp))
-			piaa1 y goto ${yp1[$piaan]}
+			((yp1[$piaan]+=2*$piaa1amp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa1 y goto ${yp1[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_p1align";;
 		    2)
-			((yp1[$piaan]-=$piaa1amp))
-			piaa1 y goto ${yp1[$piaan]}
+			((yp1[$piaan]-=2*$piaa1amp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa1 y goto ${yp1[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_p1align";;
 		    3)
 			((xp1[$piaan]+=$piaa1amp))
-			piaa1 x goto ${xp1[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa1 x goto ${xp1[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_p1align";;
 		    4)
 			((xp1[$piaan]-=$piaa1amp))
-			piaa1 x goto ${xp1[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa1 x goto ${xp1[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_p1align";;
 		esac
@@ -662,23 +663,23 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_p2amp";;
 		    1)
-			((yp2[$piaan]-=$piaa2amp))
-			piaa2 y goto ${yp2[$piaan]}
+			((yp2[$piaan]-=2*$piaa2amp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa2 y goto ${yp2[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_p2align";;
 		    2)
-			((yp2[$piaan]+=$piaa2amp))
-			piaa2 y goto ${yp2[$piaan]}
+			((yp2[$piaan]+=2*$piaa2amp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa2 y goto ${yp2[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_p2align";;
 		    3)
 			((xp2[$piaan]-=$piaa2amp))
-			piaa2 x goto ${xp2[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa2 x goto ${xp2[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_p2align";;
 		    4)
 			((xp2[$piaan]+=$piaa2amp))
-			piaa2 x goto ${xp2[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa2 x goto ${xp2[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_p2align";;
 		esac
@@ -778,23 +779,23 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_pupilamp";;
 		    1)
-			((yp[$pupiln]+=$pupilamp))
-			pupil y goto ${yp[$pupiln]}
+			((yp[$pupiln]+=2*$pupilamp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil y goto ${yp[$pupiln]}" C-m
 			sleep 0.1
 			state="menuconf_pupilalign";;
 		    2) 
-			((yp[$pupiln]-=$pupilamp))
-			pupil y goto ${yp[$pupiln]}
+			((yp[$pupiln]-=2*$pupilamp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil y goto ${yp[$pupiln]}" C-m
 			sleep 0.1
 			state="menuconf_pupilalign";;
 		    3) 
 			((xp[$pupiln]-=$pupilamp))
-			pupil x goto ${xp[$pupiln]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil x goto ${xp[$pupiln]}" C-m
 			sleep 0.1
 			state="menuconf_pupilalign";;
 		    4) 
 			((xp[$pupiln]+=$pupilamp))
-			pupil x goto ${xp[$pupiln]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil x goto ${xp[$pupiln]}" C-m
 			sleep 0.1
 			state="menuconf_pupilalign";;
 		esac
@@ -897,33 +898,33 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_fpmamp";;
 		    1) 
-			((yf[$confnb1]-=$fpmamp))
-			fpm y goto ${yf[$confnb1]}
+			((yf[$confnb1]-=2*$fpmamp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm y goto ${yf[$confnb1]}" C-m
 			sleep 0.1
 			state="menuconf_fpmalign";;
 		    2) 
-			((yf[$confnb1]+=$fpmamp))
-			fpm y goto ${yf[$confnb1]}
+			((yf[$confnb1]+=2*$fpmamp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm y goto ${yf[$confnb1]}" C-m
 			sleep 0.1
 			state="menuconf_fpmalign";;
 		    3) 
-			((xf[$confnb1]+=$fpmamp))
-			fpm x goto ${xf[$confnb1]}
+			((xf[$confnb1]-=$fpmamp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm x goto ${xf[$confnb1]}" C-m
 			sleep 0.1
 			state="menuconf_fpmalign";;
 		    4) 
-			((xf[$confnb1]-=$fpmamp))
-			fpm x goto ${xf[$confnb1]}
+			((xf[$confnb1]+=$fpmamp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm x goto ${xf[$confnb1]}" C-m
 			sleep 0.1
 			state="menuconf_fpmalign";;
 		    5) 
 			((zf[$confnb1]+=$fpmamp))
-			fpm f goto ${zf[$confnb1]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm f goto ${zf[$confnb1]}" C-m
 			sleep 0.1
 			state="menuconf_fpmalign";;
 		    6) 
 			((zf[$confnb1]-=$fpmamp))
-			fpm f goto ${zf[$confnb1]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm f goto ${zf[$confnb1]}" C-m
 			sleep 0.1
 			state="menuconf_fpmalign";;
 		esac
@@ -1024,23 +1025,23 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_lyotamp";;
 		    1) 
-			((yl[$lyot]-=$lyotamp))
-			lyot y goto ${yl[$lyot]}
+			((yl[$lyot]-=2*$lyotamp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/lyot y goto ${yl[$lyot]}" C-m
 			sleep 0.1
 			state="menuconf_lyotalign";;
 		    2) 
-			((yl[$lyot]+=$lyotamp))
-			lyot y goto ${yl[$lyot]}
+			((yl[$lyot]+=2*$lyotamp))
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/lyot y goto ${yl[$lyot]}" C-m
 			sleep 0.1
 			state="menuconf_lyotalign";;
 		    3) 
 			((xl[$lyot]+=$lyotamp))
-			lyot x goto ${xl[$lyot]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/lyot x goto ${xl[$lyot]}" C-m
 			sleep 0.1
 			state="menuconf_lyotalign";;
 		    4) 
 			((xl[$lyot]-=$lyotamp))
-			lyot x goto ${xl[$lyot]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/lyot x goto ${xl[$lyot]}" C-m
 			sleep 0.1
 			state="menuconf_lyotalign";;
 		esac
@@ -1156,42 +1157,42 @@ while true; do
   		    1) state="menuconf_ipamp2";;
 		    2)
 			yip[$piaan]=$(bc <<< "scale=3;$yip[$piaan]+$invpiaaamp1/1000.")
-			invpiaa y goto ${yip[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa y goto ${yip[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_ipalign";;
 		    3) 
 			yip[$piaan]=$(bc <<< "scale=3;$yip[$piaan]-$invpiaaamp1/1000.")
-			invpiaa y goto ${yip[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa y goto ${yip[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_ipalign";;
 		    4) 
 			xip[$piaan]=$(bc <<< "scale=3;$xip[$piaan]+$invpiaaamp1/1000.")
-			invpiaa x goto ${xip[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa x goto ${xip[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_ipalign";;
 		    5) 
 			xip[$piaan]=$(bc <<< "scale=3;$xip[$piaan]-$invpiaaamp1/1000.")
-			invpiaa x goto ${xip[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa x goto ${xip[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_ipalign";;
 		    6)
 			((pip[$piaan]+=$invpiaaamp2))
-			invpiaa phi goto ${pip[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa phi goto ${pip[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_ipalign";;
 		    7) 
 			((pip[$piaan]-=$invpiaaamp2))
-			invpiaa phi goto ${pip[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa phi goto ${pip[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_ipalign";;
 		    8) 
 			((tip[$piaan]+=$invpiaaamp2))
-			invpiaa theta goto ${tip[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa theta goto ${tip[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_ipalign";;
 		    9) 
 			((tip[$piaan]-=$invpiaaamp2))
-			invpiaa theta goto ${tip[$piaan]}
+			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa theta goto ${tip[$piaan]}" C-m
 			sleep 0.1
 			state="menuconf_ipalign";;
 		esac
@@ -1311,7 +1312,7 @@ while true; do
 	done
 	    
 	echo "saving PIAA1 position"
-	piaa1 status &
+	tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa1 status &" C-m
 
 	state="menuconfmanage"
     fi
@@ -1329,7 +1330,7 @@ while true; do
 	done
 
 	echo "saving PIAA2 position"
-	piaa2 status &
+	tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa2 status &" C-m
 
 	state="menuconfmanage"
     fi
@@ -1347,7 +1348,7 @@ while true; do
 	done
 
 	echo "saving pupil position"
-	pupil status &
+	tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil status &" C-m
 
 	state="menuconfmanage"
     fi
@@ -1365,7 +1366,7 @@ while true; do
 	done
 
 	echo "saving Lyot positions"
-	lyot status &
+	tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/lyot status &" C-m
 
 	state="menuconfmanage"
     fi
@@ -1383,7 +1384,7 @@ while true; do
 	done
 
 	echo "saving FPM position"
-	fpm status &
+	tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm status &" C-m
 
 	state="menuconfmanage"
     fi
@@ -1444,7 +1445,7 @@ while true; do
 	done
 	    
 	echo "saving Inverse PIAA position"
-	invpiaa status &
+	tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/invpiaa status &" C-m
 
 	state="menuconfmanage"
     fi
@@ -1500,30 +1501,30 @@ while true; do
 
 	if [ $coro == 02 ] || [$coro == 07] || [ $coro -ge 17 ]
 	then
-	    piaa1 1 &
+	    tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa1 1 &" C-m
 	    sleep 0.5
-	    piaa2 1 &
+	    tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/piaa2 1 &" C-m
 	    sleep 0.5
 	fi
 	
 	if [ $coro -ge 3 ] && [ $coro -le 6 ]
 	then
-	    pupil 1 &
+	    tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil 1 &" C-m
 	    sleep 0.5
 	fi
 	
 	if [ $coro -ge 8 ] && [ $coro -le 16 ]
 	then
-	    pupil 1 &
+	    tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/pupil 1 &" C-m
 	    sleep 0.5
 	fi
 
 	if [ $coro -le 2 ] || [ $coro -ge 7 ]
 	then
-	    lyot 1 &
+	    tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/lyot 1 &" C-m
 	    sleep 0.5
 	fi
-	fpm 01
+	tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm 10 &" C-m
 	
 	log "CORO: Removing the full coronagraph"
 	

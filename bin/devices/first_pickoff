@@ -21,12 +21,15 @@ from devices import devices
 
 devname = "first_pickoff"
 
-conexids = ["usb-Newport_CONEX-AGP_A6WXET34-if00-port0"]
-conexnames = ["wheel"]
+#conexids = ["usb-Newport_CONEX-AGP_A6YJRQ8U-if00-port0"]
+conexids = ["usb-Newport_CONEX-AGP_A6YJRQ8U-if00-port0"]
+conexnames = ["x"]
 
-description = "Beamsplitter wheel for VAMPIRES and FIRST"
+description = "FIRST Pickoff"
+
+defpos = ["in", "out"]
 
 # GENERIC CODE
 
 args = sys.argv[1:]
-devices(devname, conexids, conexnames, args=args, description=description, color_st=True)
+devices(devname, conexids, conexnames, args=args, description=description, defpos=defpos, color_st=True)

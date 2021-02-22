@@ -57,12 +57,12 @@ class thorlabswheel:
         nparam = len(slots[0].split(';'))
         self.nend = nparam-1
         for i in range(nparam):
-            exec "self.param%d = []" % (i,)
+            exec("self.param%d = []" % (i,), globals(), locals())
             
         for j in range(self.nslots):
             sparam = slots[j].split(';')
             for i in range(nparam):
-                exec "self.param%d.append(sparam[i])" % (i,)
+                exec("self.param%d.append(sparam[i])" % (i,), globals(), locals())
                 
         na = args.__len__()  # number of arguments
         
@@ -100,43 +100,44 @@ class thorlabswheel:
             dev = "<dev> "
         else:
             dev = ""
-        print """---------------------------------------
+        print("""---------------------------------------
 Usage: %s %s <command>
----------------------------------------""" % (self.devname,dev)
+---------------------------------------""" % (self.devname,dev))
         if self.whnames != []:
-            print "DEV:"
+            print("DEV:")
             for i in range(len(self.whnames)):
-                    print "    %-6s  move %s stage" % (self.whnames[i], self.whnames[i])
-        print """COMMAND:
+                    print("    %-6s  move %s stage" % (self.whnames[i], self.whnames[i]))
+        print("""COMMAND:
     status  displays status
-     1 - 6 defined positions"""
-        print """ARG:
+     1 - 6 defined positions""")
+        print("""ARG:
     numerical value for position
-CONTENT:"""
+CONTENT:""")
         if self.whnames == []:
             for i in range(6):
-                print "   ", self.param0[i], self.param1[i]
+                print("   ", self.param0[i], self.param1[i])
         else:
             for j in range(len(self.whnames)):
-                print "   ", self.whnames[j]
+                print("   ", self.whnames[j])
                 for i in range(6):
-                    exec "print '   ', self.param0[i], self.param%d[i]" % (j+1,)
-                        
-        print "--------------------------------------- "
+                    exec("print('   ', self.param0[i], self.param%d[i])" % (j+1,), globals(), locals())
+        print("--------------------------------------- ")
 
     # -----------------------------------------------------------------
     def quickhelp(self):
-        print "%20s       %s" % (self.devname,self.description)
+        print("%20s       %s" % (self.devname,self.description))
         
     # -----------------------------------------------------------------
     def wheel_status(self):
         self.wh.open(self.whid)
         slot = self.wh.status()
         self.wh.close()
-        exec "params = self.param%d[slot-1]" % (self.windex+1,)
-        print "Position = "+str(slot)+", Conex is in position "+self.param0[slot-1]+", "+params
+        d = locals()
+        exec("params = self.param%d[slot-1]" % (self.windex+1,), globals(), d)
+        params = d['params']
+        print("Position = "+str(slot)+", Conex is in position "+self.param0[slot-1]+", "+params)
         if self.color_st:
-            exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[slot-1]])" % (self.nend,)
+            exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[slot-1]])" % (self.nend,), globals(), locals())
         else:
             subprocess.call(["/home/scexao/bin/scexaostatus","set", self.devnamew, params])
             
@@ -147,9 +148,11 @@ CONTENT:"""
             self.wh.open(self.whid)
             self.wh.move(slot, self.devnamew)
             self.wh.close()
-            exec "params = self.param%d[int(slot)-1]" % (self.windex+1,)
+            d = locals()
+            exec("params = self.param%d[int(slot)-1]" % (self.windex+1,), globals(), d)
+            params = d['params']
             if self.color_st:
-                exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[int(slot)-1]])" % (self.nend,)
+                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[int(slot)-1]])" % (self.nend,), globals(), locals())
             else:
                 subprocess.call(["/home/scexao/bin/scexaostatus","set", self.devnamew, params])
 

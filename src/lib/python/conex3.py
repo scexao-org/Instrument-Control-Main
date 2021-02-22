@@ -19,19 +19,19 @@ class conex(object):
         dummy = self.s.readlines() # flush the port
 
     def home(self, devname):
-        self.s.write("1RS\r\n")
+        self.s.write("1RS\r\n".encode())
         time.sleep(delay)
-        self.s.write("1OR\r\n")
+        self.s.write("1OR\r\n".encode())
         logit.logit(devname,'Homed')
     
     def move(self, pos, devname, log=True):
-        self.s.write("1PA"+str(pos)+"\r\n")
+        self.s.write(str.encode("1PA"+str(pos)+"\r\n"))
         time.sleep(delay)
         if log:
             logit.logit(devname,'moved_to_'+str(pos))
 
     def status(self, devname):
-        self.s.write("1TP\r\n")
+        self.s.write("1TP\r\n".encode())
         time.sleep(delay)
         pos = self.s.readlines()
         try:
@@ -41,8 +41,8 @@ class conex(object):
             pos = round(float(pos), 3)
             subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname, str(pos)])
         except:
-            print pos
-            print "NO STATUS SENT"
+            print(pos)
+            print("NO STATUS SENT")
         return pos
         
     def close(self):

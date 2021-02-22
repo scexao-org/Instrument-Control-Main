@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ====================================================== #
 #    ___       __    __  ___  __                      _  #
@@ -39,7 +39,7 @@ aoname="/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AH01JW35-if00-port0"
 modname='/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A600KPDY-if00-port0'
 
 def usage():
-    print """---------------------------------------
+    print("""---------------------------------------
 Usage: pywfs_mod_setup <arg> <arg>
 ---------------------------------------
 arg 1:\n-----
@@ -61,11 +61,11 @@ Frequency   Amplitude\n---------------------
 2500        0-1
 3000        0-1
 3500        0-1
---------------------------------------- """
+--------------------------------------- """)
     sys.exit()
 
 def quickhelp():
-    print "%20s       Setup PyWFS modulator" % ("pywfs_mod_setup",)
+    print("%20s       Setup PyWFS modulator" % ("pywfs_mod_setup",))
 
 # =====================================================================
 # =====================================================================
@@ -75,8 +75,8 @@ def main():
     na = args.__len__()  # number of arguments
     
     #if (na != 1) or (na != 2):
-    #    print 'test' 
-    #    print usage()
+    #    print('test')
+    #    print(usage())
     
     if ((na == 1) and (isinstance(args[0],str))):
         if "--help1" in args[0].lower():
@@ -96,7 +96,7 @@ def main():
                 os.system('nps_on1 3')    #HV driver
                 time.sleep(delaylong)
                 os.system('nps_on2 4')    #OCAM power
-                print "OCAM, tip/tilt modulator and HV electronics are on" 
+                print("OCAM, tip/tilt modulator and HV electronics are on")
                 sys.exit()
         elif args[0]=='off':
                 os.system('nps_off2 4')   #OCAM power
@@ -105,17 +105,17 @@ def main():
                 time.sleep(delay)        
                 os.system('nps_off2 5')  #tip/tilt electronics
                 time.sleep(delay)
-                print "OCAM, tip/tilt modulator and HV electronics are off" 
+                print("OCAM, tip/tilt modulator and HV electronics are off") 
                 sys.exit()
         else:
-            print usage()
+            print(usage())
 
     elif ((na == 2) and (isinstance(int(args[0]),int))):     
         if isinstance(float(args[1]),float):
             if (int(args[0])==500) and (float(args[1])>=0) and (float(args[1])<=1):
                 ao = analog_output.aoutput(aoname)
                 compvolt=-1.0*float(args[1])#95
-                #print compvolt
+                #print(compvolt)
                 ao.voltage('B',compvolt)
                 ao.close()
                 modulate = modulator.mod(modname)
@@ -226,11 +226,11 @@ def main():
                 modulate.close()
                 logit.logit('Modulator','Amplitude_changed_to_'+str(args[1])+'(V)')
             else:
-                print usage()
+                print(usage())
         else:
-            print usage()
+            print(usage())
     else:
-        print usage()
+        print(usage())
         
     
        

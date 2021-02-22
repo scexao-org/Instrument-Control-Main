@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #waeE7124Nf
 # ------------------------------------------------------------------- #
 #    _               _                 ___       _               _    #
@@ -37,16 +37,16 @@ class aoutput(object):
             if (float(voltage)>-9.0) and (float(voltage)<-1):
                 volts=int(float(voltage)*100)
                 text="AV"+str(channel)+str(volts)+"\r\n"
-                self.s.write(text)
+                self.s.write(text.encode())
             else:
-                print "DC offsets must be between -1.0 and -9.0 V"
+                print("DC offsets must be between -1.0 and -9.0 V")
         else:
             volts=int(float(voltage)*100)
             text="AV"+str(channel)+str(volts)+"\r\n"
-            self.s.write(text)
+            self.s.write(text.encode())
             #if (float(volts>-1000)) and (float(volts<1000)):
             #else:
-            #    print "Please enter a value between -10 and 10 V"
+            #    print("Please enter a value between -10 and 10 V")
         #else:
         #    volts=float(voltage)
         #    text=':CHAN2:VOLT '+str(volts)+'; \r\n'
@@ -58,7 +58,7 @@ class aoutput(object):
 
 
 def usage():
-    print """---------------------------------------
+    print("""---------------------------------------
 Usage: analog_out <command> <arg>
 ---------------------------------------
 command:\n-------
@@ -79,7 +79,7 @@ channel usage:\n-------------
     B - comparator voltage (0-1V)
     C - DC offset for tip (~-5V)
     D - DC offset for tilt (~-5V)
---------------------------------------- """
+--------------------------------------- """)
     sys.exit()
 
 def main():
@@ -104,11 +104,11 @@ def main():
                     #    dc.close()
                     logit.logit('Analog_output','Channel:'+str(args[1])+' Amplitude: '+str(args[2]))
                 else:
-                    print "Please enter a voltage between -10 and 10"
+                    print("Please enter a voltage between -10 and 10")
             else:
-                print "Please enter a number between -10 and 10"
+                print("Please enter a number between -10 and 10")
         else:
-            print "Please enter a channel between A and D"
+            print("Please enter a channel between A and D")
 
     else:
         usage()

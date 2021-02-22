@@ -17,7 +17,6 @@
                                      
 import socket
 import random
-import cPickle
 import time
 import sys
 import string
@@ -61,30 +60,30 @@ class nps:
 # =====================================================================
 
     def usage(self):
-        print """---------------------------------------
+        print("""---------------------------------------
 Usage: %s <command>
 ---------------------------------------
 COMMAND:
     on      turns on
     off     turns off
     status  displays status
----------------------------------------""" % (self.npsname,)
+        ---------------------------------------""" % (self.npsname,))
     
     # -----------------------------------------------------------------
     def quickhelp(self):
-        print "%20s       %s" % (self.npsname,self.description)
+        print("%20s       %s" % (self.npsname,self.description))
 
     # -----------------------------------------------------------------
     def npson(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(("scexaoNPS%d" %(self.npsid,), 23))
-            sock.send("@@@@\r\n")
+            sock.send("@@@@\r\n".encode())
             time.sleep(0.1)
             temp = sock.recv(1024)
             time.sleep(0.1)
             
-            cmd = "N0%i\r\n" % (self.portid,)
+            cmd = str.encode("N0%i\r\n" % (self.portid,))
             sock.send(cmd)
             time.sleep(1)
             temp = sock.recv(1024)
@@ -92,25 +91,24 @@ COMMAND:
             time.sleep(0.1)
             sock.close()
             time.sleep(0.1)
-            print self.npsname+" is ON"
+            print(self.npsname+" is ON")
         except:
-            print ""
-            print "-------------------------------------------------------"
-            print "nps_on could not connect to NPS."
-            print "check that environment variable NPS_IP is correctly set"
-            print "-------------------------------------------------------"
+            print("""-------------------------------------------------------
+nps_on could not connect to NPS.
+check that environment variable NPS_IP is correctly set
+-------------------------------------------------------""")
 
     # -----------------------------------------------------------------
     def npsoff(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(("scexaoNPS%d" %(self.npsid,), 23))
-            sock.send("@@@@\r\n")
+            sock.send("@@@@\r\n".encode())
             time.sleep(0.1)
             temp = sock.recv(1024)
             time.sleep(0.1)
             
-            cmd = "F0%i\r\n" % (self.portid,)
+            cmd = str.encode("F0%i\r\n" % (self.portid,))
             sock.send(cmd)
             time.sleep(1)
             temp = sock.recv(1024)
@@ -118,25 +116,24 @@ COMMAND:
             time.sleep(0.1)
             sock.close()
             time.sleep(0.1)
-            print self.npsname+" is OFF"
+            print(self.npsname+" is OFF")
         except:
-            print ""
-            print "-------------------------------------------------------"
-            print "nps_on could not connect to NPS."
-            print "check that environment variable NPS_IP is correctly set"
-            print "-------------------------------------------------------"
+            print("""-------------------------------------------------------
+nps_on could not connect to NPS.
+check that environment variable NPS_IP is correctly set
+-------------------------------------------------------""")
 
     # -----------------------------------------------------------------
     def status(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(("scexaoNPS%d" %(self.npsid,), 23))
-            sock.send("@@@@\r\n")
+            sock.send("@@@@\r\n".encode())
             time.sleep(0.1)
             temp = sock.recv(1024)
             time.sleep(0.1)
             
-            cmd = "DN0\r\n"
+            cmd = "DN0\r\n".encode()
             sock.send(cmd)
             time.sleep(1)
             npsstatus = sock.recv(1024)
@@ -152,12 +149,11 @@ COMMAND:
             time.sleep(0.1)
             sock.close()
             time.sleep(0.1)
-            print self.npsname+" is "+npsstatus3
+            print(self.npsname+" is "+npsstatus3)
             
         except:
-            print ""
-            print "-------------------------------------------------------"
-            print "nps_on could not connect to NPS."
-            print "check that environment variable NPS_IP is correctly set"
-            print "-------------------------------------------------------"
+            print("""-------------------------------------------------------
+nps_on could not connect to NPS.
+check that environment variable NPS_IP is correctly set
+-------------------------------------------------------""")
 

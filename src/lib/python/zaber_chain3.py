@@ -12,31 +12,35 @@ delay = 0.1
 
 def step2zaberByte(nstep):
     step = nstep        # local version of the variable
-    zbytes = [0,0,0,0]  # series of four bytes for Zaber
+    zbytes = [int(0),int(0),int(0),int(0)]  # series of four bytes for Zaber
     if step < 0: step += 256**4
     for i in range(3,-1,-1):
-        zbytes[i] = step / 256**i
+        zbytes[i] = step // 256**i
         step     -= zbytes[i] * 256**i
     return zbytes
                                                      
 def zaberByte2step(zb):
-    nstep = zb[3]*256**3 + zb[2]*256**2 + zb[1]*256 + zb[0]
-    if zb[3] > 127: nstep -= 256**4
+    nstep = 0
+    for i in range(len(zb)):
+        nstep += zb[i]*256**i
+        if i == 3:
+            if zb[3] > 127: nstep -= 256**4
+        
     return nstep
 
 def zab_cmd(cmd):
     nl = []
-    instr = map(int, cmd.split(' '))
+    instr = list(map(int, cmd.split(' ')))
 
     for c in instr:
         if c == 255: nl.extend([c,c])
         else:        nl.append(c)
 
-    buf = ''.join(map(chr, nl))
-    return buf
+    buf = ''.join(list(map(chr, nl)))
+    return buf.encode('latin-1')
 
 def zab_response(data):
-   r = map(ord, data)
+   r = list(map(ord, data))
    foo = r
    r = []
    flag = 0
@@ -45,7 +49,7 @@ def zab_response(data):
           r.append(c)
           if c == 255: flag = 1
       else: flag = 0
-   buf = string.join(map(str,r[-6:])).strip()
+   buf = string.join(list(map(str,r[-6:]))).strip()
    return buf
 
 class zaber:
@@ -78,12 +82,11 @@ class zaber:
     def command(self, idn, cmd, arg, quiet=True):
         args = ' '.join(map(str, step2zaberByte(int(arg))))
         full_cmd = '%s %d %s' % (idn, cmd, args)
-        if not quiet:
-            print full_cmd
+        #if not quiet:
         self.s.write(zab_cmd(full_cmd))
-        dummy = []
-        while dummy == []:
-            dummy = map(ord, self.s.readline())
+        dummy = ''.encode()
+        while dummy == ''.encode():
+            dummy = self.s.readline()
             time.sleep(0.1)
         reply = zaberByte2step(dummy[2:])
         if not quiet:

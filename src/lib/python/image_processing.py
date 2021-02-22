@@ -7,6 +7,8 @@ import scipy.optimize as opt
 from scipy.fftpack import fftfreq
 from astropy.modeling import models, fitting
 import math as m
+import matplotlib.pyplot as plt
+plt.ion()
 
 fitter = fitting.LevMarLSQFitter()
 
@@ -163,8 +165,8 @@ def centroid(image,bias=[],subt_bias=True, fact=0.01):
     image2 *= mask
     total = np.nansum(image2)
     X, Y = np.indices(np.shape(image2))
-    cx = (np.nansum(Y*image2)/total)
     cy = (np.nansum(X*image2)/total)
+    cx = (np.nansum(Y*image2)/total)
     cx += 0.5
     cy += 0.5
     return [cx, cy]
@@ -234,10 +236,14 @@ def radial_data(data,annulus_width=1,working_mask=None,x=None,y=None,rmax=None):
         working_mask = np.ones(data.shape,bool)
     
     npix, npiy = data.shape
-    if x==None or y==None:
-        x1 = np.arange(-npix/2.,npix/2.)
-        y1 = np.arange(-npiy/2.,npiy/2.)
-        x,y = np.meshgrid(y1,x1)
+    #print(npix, npiy)
+    try:
+        if x==None or y==None:
+            x1 = np.arange(-npix/2.,npix/2.)
+            y1 = np.arange(-npiy/2.,npiy/2.)
+            x,y = np.meshgrid(y1,x1)
+    except:
+        print("x and y provided")
 
     r = abs(x+1j*y)
 
@@ -248,6 +254,7 @@ def radial_data(data,annulus_width=1,working_mask=None,x=None,y=None,rmax=None):
     # Prepare the data container
     #---------------------
     dr = np.abs([x[0,0] - x[0,1]]) * annulus_width
+    #print("test",annulus_width,dr, x[0,:])
     radial = np.arange(rmax/dr)*dr + dr/2.
     nrad = len(radial)
     radialdata = radialDat()
@@ -305,7 +312,8 @@ def shift_fft(input_array,shift):
 # ========= 2D GAUSSIAN =================================
 # =======================================================
 
-def twoD_Gaussian((x, y), amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+def twoD_Gaussian(coor, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    (x,y) = coor
     xo = float(xo)
     yo = float(yo)    
     a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)

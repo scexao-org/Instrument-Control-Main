@@ -25,17 +25,17 @@ import subprocess
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-import ezstep_chain
+import ezstep_chain3 as ezstep_chain
 import logit #Custom logging library
 
 ttmdev  = "/dev/serial/by-path/"
-ttmdev += "pci-0000:00:1d.0-usb-0:1.4.2:1.0-port0" # all steppers
+ttmdev += "pci-0000:00:1d.0-usb-0:1.8.2:1.0-port0" # all steppers
 
 stagename = "fibinj_car"
 idn=3
 
 def usage():
-    print """---------------------------------------
+    print("""---------------------------------------
 Usage: fibinj_car <command>
 ---------------------------------------
 command:\n-------
@@ -50,18 +50,18 @@ examples:\n--------
    fibinj_car goto 1000000
    fibinj_car home
    fibinj_car reset
---------------------------------------- """
+--------------------------------------- """)
     sys.exit()
 
 def quickhelp():
-    print "%20s       Fiber injection carriage" % (stagename,)
+    print("%20s       Fiber injection carriage" % (stagename,))
 
 # =====================================================================
 # =====================================================================
 def main():
     args = sys.argv[1:]  # list of read arguments
     na = args.__len__()  # number of arguments
-    quiet = True
+    quiet = False
 
     if args == []: usage()
 
@@ -81,7 +81,7 @@ def main():
         position = ttm.home(idn)
         pos0 = -1.5
         pos = ttm.current_pos(idn)
-        print pos
+        print(pos)
         while pos0 != pos:
             pos0 = pos
             pos = ttm.current_pos(idn)
@@ -94,7 +94,7 @@ def main():
         position = ttm.current_pos(idn)
         subprocess.call(["scexaostatus", "set", stagename, str(position)])
         ttm.close()
-        print position
+        print(position)
         
     elif "goto" in args[0].lower():
         if na < 2: # safety

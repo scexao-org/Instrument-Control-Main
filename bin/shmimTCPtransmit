@@ -218,8 +218,8 @@ readshmimsize $1 __$1_size.txt
 quit
 EOF
 
-sizestring=$( cat _$1_size.txt )
-rm _$1_size.txt
+sizestring=$( cat __$1_size.txt )
+rm __$1_size.txt
 
 tmux new-session -d -s ${tmuxname}
 tmux send-keys -t ${tmuxname} "" C-m

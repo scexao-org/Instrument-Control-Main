@@ -19,7 +19,7 @@ from flipmount import flipmount
 # SPECIFIC PARAMETERS FOR THIS STAGE
 
 stagename = "polarizer"
-flipid = "E"
+flipid = "K"
 description = "Flip mount for polarizer"
 
 # GENERIC CODE

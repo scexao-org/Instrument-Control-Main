@@ -15,19 +15,19 @@ import numpy as np
 import matplotlib.cm as cm
 import struct 
 import os
-import Image
+from PIL import Image
 import time
 import math as m
 import copy
 import datetime as dt
 from astropy.io import fits as pf
 import subprocess
+from xaosim.scexao_shmlib import shm
 
 home = os.getenv('HOME')
 conf_dir = home + "/conf/chuckcam_aux/"
 sys.path.append(home+'/src/lib/python/')
-import colormaps as cmaps
-from xaosim.scexao_shmlib import shm
+
 import image_processing as impro
 
 
@@ -40,7 +40,9 @@ def open_shm(shm_name, dims=(1,1), check=False):
         os.system("creashmim %s %d %d"  % (shm_name,dims[0],dims[1]))
     shm_data = shm("/tmp/%s.im.shm" % (shm_name,), verbose=False)
     if check:
-        if shm_data.mtdata['size'][:2] != dims:
+        tmp = shm_data.mtdata['x'], shm_data.mtdata['y']
+        if tmp != dims:
+        #if shm_data.mtdata['size'][:2] != dims:
             os.system("rm /tmp/%s.im.shm" % (shm_name,))
             os.system("creashmim %s %d %d"  % (shm_name,xsizeim,ysizeim))
             shm_data = shm("/tmp/%s.im.shm" % (shm_data,), verbose=False)
@@ -84,7 +86,7 @@ def get_img_data(bias=None, badpixmap=None, subt_ref=False, ref=None,
         #isat = np.percentile(temp, 99.995)
         isat = np.max(temp)
 
-    cam_clean.set_data(temp.astype(np.float32))
+    #cam_clean.set_data(temp.astype(np.float32))
 
     if subt_ref:
         temp -= ref
@@ -131,6 +133,8 @@ def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref = False, lin_scale = Tr
             xmax = round(xsizeim/float(z2))
         elif xmax == xsizeim:
             xmin = xsizeim-round(xsizeim/float(z2))
+        ymin, ymax = int(ymin), int(ymax)
+        xmin, xmax = int(xmin), int(xmax)
         arr2 = arr[ymin:ymax,xmin:xmax].astype('float')
     else:
         arr2 = arr.astype('float')
@@ -174,7 +178,7 @@ def arr2im(arr, vmin=0., vmax=10000.0, pwr=1.0, subt_ref = False, lin_scale = Tr
         arr3 = np.roll(temp, yshift, axis=0)
         
     img = Image.fromarray(arr3)
-    rimg = img.resize((xws, yws))
+    rimg = img.resize((xws, yws), resample=Image.NEAREST)
     rarr = np.asarray(rimg)
     test = mycmap(rarr.transpose())
     return((255*test[:,:,:3]).astype('int'),z3, xmin, xmax, ymin, ymax, xshift, yshift)
@@ -186,8 +190,8 @@ def whatfps(fps, crop):
 
     #define if we are in a predifined crop mode and set max FPS
     cropmode = -1
-    fpsmax = max(fps,400.) # if unknow configuration, set current fps as max or 400Hz (full frame) as a safeguard. Usually the current frame rate is the max one.
-    for i in range(10):
+    fpsmax = max(fps,600.) # if unknow configuration, set current fps as max or 600Hz (full frame) as a safeguard. Usually the current frame rate is the max one.
+    for i in range(12):
         if np.all(crop == setcrops[:,i]):
             cropmode = i
             fpsmax = fpsmaxs[i]
@@ -205,15 +209,15 @@ def whatfps(fps, crop):
 # ------------------------------------------------------------------
 #  define range of expt
 # ------------------------------------------------------------------
-def whatexpt(etime, fps):
+def whatexpt(etime, fps, delay = 0.):
 
     # and the closest matching value in our etimes array
-    if np.where(1e6/fps == etimes)[0].shape[0] > 0:
-        net2 = np.where(1e6/fps == etimes)[0][0]+1
+    if np.where(1e6/fps-delay == etimes)[0].shape[0] > 0:
+        net2 = np.where(1e6/fps-delay == etimes)[0][0]+1
         etimes2 = etimes[:net2]
     else:
-        etimes2 = etimes[np.where(etimes < 1.e6/fps)[0]]
-        etimes2 = np.append(etimes2, 1.e6/fps)
+        etimes2 = etimes[np.where(etimes < 1.e6/fps-delay)[0]]
+        etimes2 = np.append(etimes2, 1.e6/fps-delay)
         net2 = np.size(etimes2)
     if etime <= etimes2[-1]:
         tindex = np.where(np.abs(etimes2-etime) == np.min(np.abs(etimes2-etime)))[0][0]
@@ -288,6 +292,25 @@ def make_badpix(bias,filt=3.5):
     return(bpmap)
 
 # ------------------------------------------------------------------
+#  Top message
+# ------------------------------------------------------------------
+def whatmsg(pup,reachphoto,gpin,rpin):
+    msgtops = ["                ", "     PUPIL      ", "     REACH      ", "REACH PHOTOMETRY", "     GLINT      "]
+    if reachphoto:
+        msgtop = msgtops[3]
+    else:
+        if pup and not rpin:
+            msgtop = msgtops[1]
+        elif rpin:
+            msgtop = msgtops[2]
+        else:
+            if gpin:
+                msgtop = msgtops[4]
+            else:
+                msgtop = msgtops[0]
+    return(msgtop)
+
+# ------------------------------------------------------------------
 # ------------------------------------------------------------------
 
 hmsg = """CHUCK's INSTRUCTIONS
@@ -303,12 +326,13 @@ CRTL+o      : increase frame rate
 CTRL+l      : decrease frame rate
 CTRL+h      : hotspotalign
 CTRL+p      : camera to pupil plane/focus plane
-CTRL+i      : PCFI mode in/out
+CTRL+i      : REACH mode in/out
 CTRL+b      : take new darks
 CTRL+SHIFT+b: take new dark for current exp
 CTRL+r      : save a reference image
 CTRL+s      : start/stop logging images
 CTRL+d      : save a HDR image
+CTRL+n      : switch to external/internal trigger
 CTRL+1-6    : change filter wheel slot:
               1. OPEN 
               2. y-band
@@ -319,17 +343,19 @@ CTRL+1-6    : change filter wheel slot:
 CTRL+7      : ircam block
 CTRL+ARROW  : move PSF in focal plane
 CTRL+ALT+f  : change to full frame
-CTRL+ALT+0-9: change window size:
-  [0]  320 x 256    ( 160-479 x  128-383)  fps = 1192.3 Hz
-  [1]  224 x 188    ( 192-415 x  160-347)  fps = 1872.6 Hz
-  [2]  128 x 128    ( 256-383 x  192-319)  fps = 3192.6 Hz
-  [3]   64 x  64    ( 288-351 x  224-287)  fps = 6428.9 Hz
-  [4]  192 x 192    ( 224-415 x  160-351)  fps = 1949.8 Hz
-  [5]  320 x 256    ( 128-447 x  128-383)  fps = 1192.3 Hz
-  [6]  224 x 188    ( 160-383 x  160-347)  fps = 1872.6 Hz
-  [7]  128 x 128    ( 224-351 x  192-319)  fps = 3192.6 Hz
-  [8]   64 x  64    ( 256-319 x  224-287)  fps = 6428.9 Hz
-  [9]  192 x 192    ( 192-383 x  160-351)  fps = 1949.8 Hz
+CTRL+ALT+0-=: change window size:
+  [0]  320 x 256    ( 160-479 x  128-383)  fps = 1500.1 Hz
+  [1]  224 x 188    ( 192-415 x  160-347)  fps = 2050.2 Hz
+  [2]  128 x 128    ( 256-383 x  192-319)  fps = 4500.6 Hz
+  [3]   64 x  64    ( 288-351 x  224-287)  fps = 9203.6 Hz
+  [4]  192 x 192    ( 224-415 x  160-351)  fps = 2200.0 Hz
+  [5]   96 x  72    ( 256-351 x  220-291)  fps = 8002.6 Hz
+  [6]  320 x 256    ( 128-447 x  128-383)  fps = 1500.1 Hz
+  [7]  224 x 188    ( 160-383 x  160-347)  fps = 2050.2 Hz
+  [8]  128 x 128    ( 224-351 x  192-319)  fps = 4500.6 Hz
+  [9]   64 x  64    ( 256-319 x  224-287)  fps = 9203.6 Hz
+  [-]  192 x 192    ( 192-383 x  160-351)  fps = 2200.0 Hz
+  [=]   96 x  72    ( 224-319 x  220-291)  fps = 8002.6 Hz
 
 display controls:
 ----------------
@@ -340,6 +366,7 @@ m         : color/gray color-map
 o         : bullseye on the PSF
 i         : history of PSF positions
 v         : start/stop accumulating and averaging frames
+g         : seeing measurement (averaging must be on)
 z         : zoom/unzoom on the center of the image
 r         : subtract a reference image
 
@@ -362,28 +389,31 @@ if args != []:
 # ------------------------------------------------------------------
 #                access to shared memory structures
 # ------------------------------------------------------------------
-camid = 0#2 # camera identifier (1: science camera)
+camid = 0 # camera identifier (0: science camera)
 cam = shm("/tmp/ircam%d.im.shm" % (camid,), verbose=False)
-(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
-print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
+xsizeim, ysizeim = cam.mtdata['x'], cam.mtdata['y']
+
 
 (xsize, ysize) = (320,256) #Force size of old chuck for the display
 
 cam_dark = open_shm("ircam%d_dark" % (camid,), dims=(xsizeim, ysizeim), check=True)
 cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid,), dims=(xsizeim, ysizeim), check=True)
-cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
+#cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
 cam_paused = open_shm("ircam%d_paused" % (camid,))
 new_dark = open_shm("ircam%d_newdark" % (camid,))
 ircam_filter = open_shm("ircam_filter")
 pupshm = open_shm("chuck_pup")
-irdshm = open_shm("chuck_pup_fcs")
-nuller_pickoff = open_shm("nuller_pickoff")
+reachphotoshm = open_shm("chuck_pup_fcs")
+glint_pickoff = open_shm("nuller_pickoff")
+reach_pickoff = open_shm("reach_pickoff")
 telescope_status = open_shm("telescope_status", dims=(6,1))
+ircam_synchro = open_shm("ircam_synchro", dims=(6,1))
 pup = int(pupshm.get_data())
-ird = int(irdshm.get_data())
-npin = int(nuller_pickoff.get_data())
+reachphoto = int(reachphotoshm.get_data())
+gpin = int(glint_pickoff.get_data())
+rpin = int(reach_pickoff.get_data())
 
-pscale = 15.3 #mas per pixel in Chuckcam
+pscale = 16.9 #mas per pixel in Chuckcam
 
 filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
@@ -395,7 +425,7 @@ for i in range(ncor):
     cort[1,i] = float(corparam[3])
 cort /= pscale
 cor = np.array([0,0])
-if npin:
+if gpin:
     cor = cort[:,0]
 
 # ------------------------------------------------------------------
@@ -408,7 +438,8 @@ mycmap = cm.gray
 # -----------------------
 #   set up the window
 # -----------------------
-pygame.init()
+pygame.display.init()
+pygame.font.init()
 
 FPSdisp = 20                    # frames per second setting
 fpsClock = pygame.time.Clock()  # start the pygame clock!
@@ -419,7 +450,11 @@ screen = pygame.display.set_mode((XW, YW), 0, 32)
 pygame.display.set_caption('SCIENCE camera display!')
 
 os.system("tmux new-session -d -s ircam%d" % (camid,)) #start a tmux session for messsages
-# Ircam_Filter ID
+os.system("tmux new-session -d -s ircam_synchro") #start a tmux session for FLC synchro
+os.system("tmux new-session -d -s telescope_status") #start a tmux session for telescope status
+res = subprocess.check_output("ps aux | grep ircam_synchro", shell=True)
+if b'/home/scexao/bin/devices/ircam_synchro' not in res:
+    tmux("ircam_synchro", session="ircam_synchro")
 
 slot = int(ircam_filter.get_data())
 
@@ -449,19 +484,21 @@ net = np.size(etimes)
 
 fpss = np.array([10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000])
 nfps = np.size(fpss)
-fpsmaxs = np.array([1192.3,1872.6,3192.6,6428.9,1949.8,1192.3,1872.6,3192.6,6428.9,1949.8])
+fpsmaxs = np.array([1500.2,2050.2,4500.6,9203.6,2200.0,8002.6,1500.2,2050.2,4500.6,9203.6,2200.0,8002.6])
 
-setcrops = np.zeros((4,10))
+setcrops = np.zeros((4,12))
 setcrops[:,0] = [160,479,128,383]
 setcrops[:,1] = [192,415,160,347]
 setcrops[:,2] = [256,383,192,319]
 setcrops[:,3] = [288,351,224,287]
 setcrops[:,4] = [224,415,160,351]
-setcrops[:,5] = [128,447,128,383]
-setcrops[:,6] = [160,383,160,347]
-setcrops[:,7] = [224,351,192,319]
-setcrops[:,8] = [256,319,224,287]
-setcrops[:,9] = [192,383,160,351]
+setcrops[:,5] = [256,351,220,291]
+setcrops[:,6] = [128,447,128,383]
+setcrops[:,7] = [160,383,160,347]
+setcrops[:,8] = [224,351,192,319]
+setcrops[:,9] = [256,319,224,287]
+setcrops[:,10] = [192,383,160,351]
+setcrops[:,11] = [224,319,220,291]
 
 ndrs = np.array([1, 2, 4, 8, 16, 32, 64, 128, 255])
 nndr = np.size(ndrs)
@@ -473,14 +510,26 @@ tmux("gNDR", session="ircam%dctrl"%(camid,))
 time.sleep(1)
 tmux("gfps", session="ircam%dctrl"%(camid,))
 time.sleep(1)
-etime = cam.get_expt()*1e6
-fps = cam.get_fps()
+sync_param = ircam_synchro.get_data().astype(np.int)[0]
+lag = 7
+cam_ro = 22-lag
+sync_param[4] = 160
+flc_oft = sync_param[4]-lag
+ircam_synchro.set_data(sync_param.astype(np.float32))
+if not sync_param[0] and sync_param[1]:
+    etime = sync_param[2]
+    fps = sync_param[3]
+    delay = cam_ro+flc_oft+3*lag
+else:
+    etime = cam.get_expt()*1e6
+    fps = cam.get_fps()
+    delay = 0
 ndr = int(cam.get_ndr())
 crop = cam.get_crop().astype(int)
 etimet = etime*ndr
 
 (fpss2, nfps2, findex) = whatfps(fps, crop)
-(etimes2, net2, tindex) = whatexpt(etime, fps)
+(etimes2, net2, tindex) = whatexpt(etime, fps, delay)
 nindex = whatndr(ndr)
 
 # ----------------------------
@@ -546,6 +595,11 @@ mcoor2 = font4.render(msgcoor2, True, CYAN)
 rct_mcoor2  = mcoor2.get_rect()
 rct_mcoor2.bottomleft = (15*z1, 240*z1)
 
+msgsee = "                                     "
+msee = font4.render(msgsee, True, CYAN)
+rct_msee  = msee.get_rect()
+rct_msee.center = (xws/2, 30*z1)
+
 dinfo = font3.render("                     ", True, FGCOL, BGCOL)
 rct_dinfo  = dinfo.get_rect()
 rct_dinfo.center = (110*z1, 335*z1)
@@ -594,12 +648,12 @@ sc2 = font4.render(msgsc1, True, CYAN)
 rct_sc2  = sc2.get_rect()
 rct_sc2.bottomleft = (5*z1-4, ysc-ktot)
 
-#IRD parameters
-dird = 64.*z1
-xird = -4.*z1
-yird = -11.5*z1
-pird = dird/7.
-irdc = pird/2.
+#REACH Photometry parameters
+dreachphoto = 64.*z1
+xreachphoto = -3.5*z1
+yreachphoto = -11.5*z1
+preachphoto = dreachphoto/7.
+reachphotoc = preachphoto/2.
 
 #parallactic angles
 xcpa = xws-25*z1
@@ -637,11 +691,10 @@ rct_wh  = wh.get_rect()
 rct_wh.topright = (xws-6*z1, 5*z1)
 
 #pupil lens
-msgpups = ["     ", "PUPIL", "IRD"]
-msgpup = msgpups[pup*(pup+ird)]
-pupm = font1.render(msgpup, True, CYAN)
-rct_pup  = pupm.get_rect()
-rct_pup.midtop = (xws/2, 5*z1)
+msgtop = whatmsg(pup,reachphoto,gpin,rpin)
+topm = font1.render(msgtop, True, CYAN)
+rct_top  = topm.get_rect()
+rct_top.midtop = (xws/2, 5*z1)
 
 imin, imax = 0, 0
 surf_live = pygame.surface.Surface((xws, yws))
@@ -665,13 +718,16 @@ lin_scale    = True  # flag for linear range
 average      = False # flag for averaging
 saveim       = False # flag to save images
 logexpt      = False # flag to log the exposure time
+logndr       = False # flag to log the exposure time
 seeing       = False
 seeing_plot  = False
 plot_pa      = False
 clr_scale    = 0     # flag for the display color scale
 shmreload    = 0
+keeprpin     = False
 
 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
+
 ref_im = np.zeros_like(bias)*badpixmap
 
 pygame.mouse.set_cursor(*pygame.cursors.broken_x)
@@ -681,6 +737,7 @@ cntl = 0
 cnta = 0
 cnti = 0
 timeexpt = []
+timendr = []
 
 nhist = 100
 ih = 0
@@ -697,6 +754,8 @@ while True: # the main game loop
     cnti += 1
     clicked = False
     pwr0 = 1.0
+    gpin = int(glint_pickoff.get_data())
+    rpin = int(reach_pickoff.get_data())
     if not lin_scale:
         pwr0 = 0.3
 
@@ -707,15 +766,15 @@ while True: # the main game loop
             mycmap = cm.seismic
         else:
             if clr_scale == 1:
-                mycmap = cmaps.inferno
+                mycmap = cm.inferno
             else:
-                mycmap = cmaps.plasma
+                mycmap = cm.plasma
     
     # ------------------------------------------------------------------
     # check if camera is paused due to change of window size from other chuckcam
     campaused = int(cam_paused.get_data())
     while campaused:
-        print "Chuck is changing size"
+        print("Chuck is changing size")
         time.sleep(1)
         campaused = int(cam_paused.get_data())
         shmreload = True
@@ -764,15 +823,16 @@ while True: # the main game loop
     # ------------------------------------------------------------------
     # Relaod shared memory with different size due to change in window size
     if shmreload:
-        print "reloading SHM"
+        print("reloading SHM")
         cam = shm("/tmp/ircam%d.im.shm" % (camid,), verbose=False)
-        (xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
+        xsizeim, ysizeim = cam.mtdata['x'], cam.mtdata['y']
+        #(xsizeim, ysizeim) = cam.mtdata['size'][:2]#size[:cam.naxis]
         print("image xsize=%d, ysize=%d" % (xsizeim, ysizeim))
         os.system("rm /tmp/ircam%d_*" % (camid,))
         time.sleep(1)
         cam_dark = open_shm("ircam%d_dark" % (camid,), dims=(xsizeim, ysizeim), check=True)
         cam_badpixmap = open_shm("ircam%d_badpixmap" % (camid,), dims=(xsizeim, ysizeim), check=True)
-        cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
+        #cam_clean = open_shm("ircam%d_clean" % (camid,), dims=(xsizeim, ysizeim), check=True)
         time.sleep(1)
         tmux("gtint", session="ircam%dctrl"%(camid,))
         time.sleep(1)
@@ -784,20 +844,27 @@ while True: # the main game loop
     else:
         # ------------------------------------------------------------------
         # read changes in expt, fps, ndr and crop
-        etimen = cam.get_expt()*1e6
-        fpsn = cam.get_fps()
+        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+        flc_oft = sync_param[4]-lag
+        if not sync_param[0] and sync_param[1]:
+            etimen = sync_param[2]
+            fpsn = sync_param[3]
+            delay = cam_ro+flc_oft+3*lag
+        else:
+            etimen = cam.get_expt()*1e6
+            fpsn = cam.get_fps()
+            delay = 0
         ndrn = int(cam.get_ndr())
         cropn = cam.get_crop().astype(int)
-        npin = int(nuller_pickoff.get_data())
-        if npin:
+        if gpin:
             cor = cort[:,0]
         else:
             cor = np.array([0,0])
         if etimen != etime or fpsn != fps or ndrn != ndr or np.any(cropn != crop):
-            print "reloading bias and badpixmap"
+            print("reloading bias and badpixmap")
             (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
             (fpss2, nfps2, findex) = whatfps(fpsn, cropn)
-            (etimes2, net2, tindex) = whatexpt(etimen, fpsn)
+            (etimes2, net2, tindex) = whatexpt(etimen, fpsn, delay)
             nindex = whatndr(ndrn)
             etime = etimen
             fps = fpsn
@@ -819,24 +886,17 @@ while True: # the main game loop
                 temp2 += temp/float(cnta)
             if seeing:
                 #try:
+                pf.writeto("seeing.fits", temp2, overwrite=True)
                 [cx,cy] = impro.centroid(temp2)
                 radc = m.sqrt(np.sum(temp2>(temp2.max()/4.))/m.pi)
-                print(cx,cy,radc)
-                se_param = impro.fit_TwoD_Gaussian(temp2, cx, cy, radc)
+                se_param = impro.fit_TwoD_Gaussian(temp2, cy, cx, radc)
                 seeing = False
                 seeing_plot = True
-                se_xstd = se_param.x_stddev.value
-                se_ystd = se_param.y_stddev.value
-                se_xc = se_param.x_mean.value
-                se_yc = se_param.y_mean.value
+                se_ystd = se_param.x_stddev.value
+                se_xstd = se_param.y_stddev.value
+                se_yc = se_param.x_mean.value
+                se_xc = se_param.y_mean.value
                 se_theta = se_param.theta.value
-                print(se_xstd, se_ystd, se_xc, se_yc, se_theta)
-            if seeing_plot:
-                pygame.draw.line(screen, RED1, (se_xc-se_xstd*m.cos(se_theta), se_yc-se_xstd*m.sin(se_theta)), (se_xc+se_xstd*m.cos(se_theta), se_yc+se_xstd*m.sin(se_theta)), 1)
-                pygame.draw.line(screen, RED1, (se_xc-se_ystd*m.sin(se_theta), se_yc+se_ystd*m.cos(se_theta)), (se_xc+se_ystd*m.sin(se_theta), se_yc-se_ystd*m.cos(se_theta)), 1)
-                #except:
-                #    print "cannot fit a Gaussian"
-                #    seeing = False
                 
         else:
             temp2 = copy.deepcopy(temp)
@@ -846,6 +906,16 @@ while True: # the main game loop
         (myim,z3,xmin,xmax,ymin,ymax,xshift,yshift) = arr2im(temp2, pwr=pwr0, subt_ref = subt_ref, lin_scale = lin_scale, pos = pos2)
         pygame.surfarray.blit_array(surf_live, myim)
         screen.blit(surf_live, rect1)
+        if average and seeing_plot:
+            msgsee = "x = %.2f as, y = %.2f as, t = %d deg" % (se_ystd*pscale/1000.*2.355, se_xstd*pscale/1000.*2.355, np.rad2deg(se_theta))
+            msee = font4.render(msgsee, True, CYAN)
+            screen.blit(msee, rct_msee)
+            cx = (se_xc+0.5-xmin+xshift)*z1*z2*z3
+            cy = (se_yc-ymin+yshift)*z1*z2*z3
+            stdx = se_xstd*z1*z2*z3*2.355/2.
+            stdy = se_ystd*z1*z2*z3*2.355/2.
+            pygame.draw.line(screen, RED1, (cx-stdx*m.cos(se_theta), cy-stdx*m.sin(se_theta)), (cx+stdx*m.cos(se_theta), cy+stdx*m.sin(se_theta)), 1)
+            pygame.draw.line(screen, RED1, (cx-stdy*m.sin(se_theta), cy+stdy*m.cos(se_theta)), (cx+stdy*m.sin(se_theta), cy-stdy*m.cos(se_theta)), 1)
         
         # ------------------------------------------------------------------
         # display expt and image information
@@ -923,8 +993,8 @@ while True: # the main game loop
             # ------------------------------------------------------------------
             # display mouse information
             [xmou, ymou] = pygame.mouse.get_pos()
-            xim = xmou/z1/z2/z3+xmin-xshift
-            yim = ymou/z1/z2/z3+ymin-yshift
+            xim = int(xmou/z1/z2/z3+xmin-xshift)
+            yim = int(ymou/z1/z2/z3+ymin-yshift)
             if not plot_hotspot and not plot_history:
                 try:
                     fim = temp2[yim, xim]
@@ -957,11 +1027,11 @@ while True: # the main game loop
             dinfo = font3.render(msg, True, FGCOL, BGCOL)
         screen.blit(dinfo, rct_dinfo)
         
-        if isat > 16000:
+        if isat > 12000:
             msg = "     !!!SATURATION!!!     "
             dinfo2 = font3.render(msg, True, BGCOL, SACOL)
             screen.blit(dinfo2, rct_dinfo2)
-        elif isat > 15000 and isat <=16000:
+        elif isat > 10000 and isat <=12000:
             msg = "     !!!NON-LINEAR!!!     "
             dinfo2 = font3.render(msg, True, SACOL, BGCOL)
             screen.blit(dinfo2, rct_dinfo2)
@@ -983,15 +1053,15 @@ while True: # the main game loop
         screen.blit(sc2, rct_sc2)
         screen.blit(zm, rct_zm)
         screen.blit(wh, rct_wh)
-        screen.blit(pupm, rct_pup)
+        screen.blit(topm, rct_top)
         
         # ------------------------------------------------------------------
         # display the cross
         if plot_cross:
-            if ird:
-                #IRD spot positions
+            if reachphoto:
+                #REACH spot positions
                 for i in range(8):
-                    pygame.draw.circle(screen, GREEN, (int(xws/2+xird*z2*z3+(i-3.5)*pird*z2*z3),int(yws/2+yird*z2*z3)), int(irdc*z2*z3), 1)
+                    pygame.draw.circle(screen, GREEN, (int(xws/2+xreachphoto*z2*z3+(i-3.5)*preachphoto*z2*z3),int(yws/2+yreachphoto*z2*z3)), int(reachphotoc*z2*z3), 1)
             else:
                 if pup:
                     #Pupil cross
@@ -1008,7 +1078,7 @@ while True: # the main game loop
 
         if plot_pa:
             temp = telescope_status.get_data()
-            pad = temp[0][3]
+            pad = temp[0][4]
             pap = temp[0][5]
             pygame.draw.line(screen, RED, (xcpa, ycpa), (xcpa-20*z1*m.cos(m.radians(pad)), ycpa-20*z1*m.sin(m.radians(pad))), 1)
             pygame.draw.line(screen, RED, (xcpa, ycpa), (xcpa-20*z1*m.sin(m.radians(pad)), ycpa+20*z1*m.cos(m.radians(pad))), 1)
@@ -1056,9 +1126,9 @@ while True: # the main game loop
             screen.blit(savem1, rct_savem1)
             screen.blit(savem2, rct_savem2)
             screen.blit(savem3, rct_savem3)
-            rects = [rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm, rct_dinfo, rct_dinfo2, rct_savem1, rct_savem2, rct_savem3, rct_sc1, rct_sc2, rct_wh, rct_pup]
+            rects = [rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm, rct_dinfo, rct_dinfo2, rct_savem1, rct_savem2, rct_savem3, rct_sc1, rct_sc2, rct_wh, rct_top]
         else:
-            rects = [rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm, rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_pup]
+            rects = [rect1, rct_info0, rct_info1, rct_info2, rct_info3, rct_zm, rct_dinfo, rct_dinfo2, rct_sc1, rct_sc2, rct_wh, rct_top]
 
         if logexpt:
             time.sleep(0.1)
@@ -1068,6 +1138,14 @@ while True: # the main game loop
                 os.system("/home/scexao/bin/log Chuckcam: changing exposure time to %d" %etime)
                 timeexpt = []
                 logexpt = False
+        if logndr:
+            time.sleep(0.1)
+            timendr = np.append(timendr, time.time())
+            time.sleep(0.1)
+            if timendr[-1]-timendr[0] > 4:
+                os.system("/home/scexao/bin/log Chuckcam: changing exposure time to %d" %etime)
+                timendr = []
+                logndr = False
         if cnti % 20 == 0:
             slot = int(ircam_filter.get_data())
             msgwhl = ircam_filters[slot-1]
@@ -1077,9 +1155,9 @@ while True: # the main game loop
                 wh = font1.render(msgwhl, True, RED1)
                 
             pup = int(pupshm.get_data())
-            ird = int(irdshm.get_data())
-            msgpup = msgpups[pup*(pup+ird)]
-            pupm = font1.render(msgpup, True, CYAN)
+            reachphoto = int(reachphotoshm.get_data())
+            msgtop = whatmsg(pup,reachphoto,gpin,rpin)
+            topm = font1.render(msgtop, True, CYAN)
         
     
     # =====================================================================
@@ -1095,13 +1173,13 @@ while True: # the main game loop
             cam.close()
             cam_dark.close()
             cam_badpixmap.close()
-            cam_clean.close()
+            #cam_clean.close()
             new_dark.close()
             ircam_filter.close()
             pupshm.close()
-            irdshm.close()
+            reachphotoshm.close()
             telescope_status.close()
-            nuller_pickoff.close()
+            glint_pickoff.close()
             print("Chuckcam has ended normally.")
             sys.exit()
         elif event.type == KEYDOWN:
@@ -1111,13 +1189,13 @@ while True: # the main game loop
                 cam.close()
                 cam_dark.close()
                 cam_badpixmap.close()
-                cam_clean.close()
+                #cam_clean.close()
                 new_dark.close()
                 ircam_filter.close()
                 pupshm.close()
-                irdshm.close()
+                reachphotoshm.close()
                 telescope_status.close()
-                nuller_pickoff.close()
+                glint_pickoff.close()
                 print("Chuckcam has ended normally.")
                 sys.exit()
 
@@ -1142,11 +1220,23 @@ while True: # the main game loop
                     if (tindex < net2-1):
                         tindex += 1
                         etimec = etimes2[tindex]
-                        tmux("stint %f" % (etimec*1.e-6,), session="ircam%dctrl"%(camid,))
-                        time.sleep(1)
-                        etime = cam.get_expt()*1e6
+                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        if not sync_param[0] and sync_param[1]:
+                            sync_param[2] = etimec
+                            sync_param[0] = 1
+                            ircam_synchro.set_data(sync_param.astype(np.float32))
+                            time.sleep(1)
+                            sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                            etime = sync_param[2]
+                            flc_oft = sync_param[4]-lag
+                            delay = cam_ro+flc_oft+3*lag
+                        else:
+                            tmux("stint %f" % (etimec*1.e-6,), session="ircam%dctrl"%(camid,))
+                            time.sleep(1)
+                            etime = cam.get_expt()*1e6
+                            delay = 0
                         etimet = etime*ndr
-                        (etimes2, net2, tindex) = whatexpt(etime, fps)
+                        (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         logexpt = True
                 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
 
@@ -1168,11 +1258,23 @@ while True: # the main game loop
                     if (tindex > 0):
                         tindex -= 1
                         etimec = etimes2[tindex]
-                        tmux("stint %f" % (etimec*1.e-6,), session="ircam%dctrl"%(camid,))
-                        time.sleep(1)
-                        etime = cam.get_expt()*1e6
+                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        if not sync_param[0] and sync_param[1]:
+                            sync_param[2] = etimec
+                            sync_param[0] = 1
+                            ircam_synchro.set_data(sync_param.astype(np.float32))
+                            time.sleep(1)
+                            sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                            etime = sync_param[2]
+                            flc_oft = sync_param[4]-lag
+                            delay = cam_ro+flc_oft+3*lag
+                        else:
+                            tmux("stint %f" % (etimec*1.e-6,), session="ircam%dctrl"%(camid,))
+                            time.sleep(1)
+                            etime = cam.get_expt()*1e6
+                            delay = 0
                         etimet = etime*ndr
-                        (etimes2, net2, tindex) = whatexpt(etime, fps)
+                        (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         logexpt = True
                 (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
 
@@ -1184,13 +1286,26 @@ while True: # the main game loop
                     if (findex < nfps2-1):
                         findex += 1
                         fpsc = fpss2[findex]
-                        tmux("sfps %f" % (fpsc,), session="ircam%dctrl"%(camid,))
-                        time.sleep(1)
-                        fps = cam.get_fps()
-                        tmux("gtint", session="ircam%dctrl"%(camid,))
-                        time.sleep(1)
-                        etime = cam.get_expt()*1e6
-                        (etimes2, net2, tindex) = whatexpt(etime, fps)
+                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        if not sync_param[0] and sync_param[1]:
+                            sync_param[3] = fpsc
+                            sync_param[0] = 1
+                            ircam_synchro.set_data(sync_param.astype(np.float32))
+                            time.sleep(1)
+                            sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                            fps = sync_param[3]
+                            etime = sync_param[2]
+                            flc_oft = sync_param[4]-lag
+                            delay = cam_ro+flc_oft+3*lag
+                        else:
+                            tmux("sfps %f" % (fpsc,), session="ircam%dctrl"%(camid,))
+                            time.sleep(1)
+                            fps = cam.get_fps()
+                            tmux("gtint", session="ircam%dctrl"%(camid,))
+                            time.sleep(1)
+                            etime = cam.get_expt()*1e6
+                            delay = 0
+                        (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         (fpss2, nfps2, findex) = whatfps(fps, crop)
                         logfps = True
                         (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
@@ -1206,13 +1321,26 @@ while True: # the main game loop
                     if (findex > 0):
                         findex -= 1
                         fpsc = fpss2[findex]
-                        tmux("sfps %f" % (fpsc,), session="ircam%dctrl"%(camid,))
-                        time.sleep(1)
-                        fps = cam.get_fps()
-                        tmux("gtint", session="ircam%dctrl"%(camid,))
-                        time.sleep(1)
-                        etime = cam.get_expt()*1e6
-                        (etimes2, net2, tindex) = whatexpt(etime, fps)
+                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        if not sync_param[0] and sync_param[1]:
+                            sync_param[3] = fpsc
+                            sync_param[0] = 1
+                            ircam_synchro.set_data(sync_param.astype(np.float32))
+                            time.sleep(1)
+                            sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                            fps = sync_param[3]
+                            etime = sync_param[2]
+                            flc_oft = sync_param[4]-lag
+                            delay = cam_ro+flc_oft+3*lag
+                        else:
+                            tmux("sfps %f" % (fpsc,), session="ircam%dctrl"%(camid,))
+                            time.sleep(1)
+                            fps = cam.get_fps()
+                            tmux("gtint", session="ircam%dctrl"%(camid,))
+                            time.sleep(1)
+                            etime = cam.get_expt()*1e6
+                            delay = 0
+                        (etimes2, net2, tindex) = whatexpt(etime, fps, delay)
                         (fpss2, nfps2, findex) = whatfps(fps, crop)
                         logfps = True
                         (badpixmap, bias, bpmhere, biashere) = updatebiasbpm()
@@ -1236,10 +1364,10 @@ while True: # the main game loop
                 if (mmods & KMOD_LCTRL):
                     if pup:
                         tmux("chuck_pup")
-                        if ird:
+                        if reachphoto:
                             tmux("chuck_pup_fcs pupil &")
-                            tmux("pcfi_pickoff out &")
-                            tmux("saphira_pickoff out &")
+                            tmux("reach_pickoff out &")
+                            tmux("buffycam_pickoff out &")
                         tmux("ircam_fcs chuck")
                     else:
                         lin_scale = True
@@ -1248,6 +1376,21 @@ while True: # the main game loop
                         tmux("ircam_fcs chuck_pup")
                 else:
                     plot_pa = not plot_pa
+                    timestamp = dt.datetime.utcnow().strftime('%Y%m%d')
+                    res = subprocess.check_output("ps aux | grep telescope_status", shell=True)
+                    if b'/home/scexao/bin/telescope_status' not in res:
+                        tmux("telescope_status", session="telescope_status")
+                    if plot_pa:
+                        savepathst = '/media/data/'+timestamp+'/telescope_status/'
+                        ospathst = os.path.dirname(savepathst)
+                        if not os.path.exists(ospathst):
+                            os.makedirs(ospathst)
+                            # creating a tmux session for logging
+                        os.system("tmux new-session -d -s telescope_status_log")
+                        tmux("logshim telescope_status 1 %s" % (savepathst,), session="telescope_status_log")
+                    if not plot_pa:
+                        tmux("logshimkill", session="telescope_status_log")
+                        tmux("", session="telescope_status_log", command="kill-session")
 
             # Save new darks for one/all exposure times
             # -----------------------------------------
@@ -1265,8 +1408,10 @@ while True: # the main game loop
                         
                         print("In the time it takes Chuck Norris to sidekick a")
                         print("red-headed stepchild, we'll acquire this dark.")
-                        
-                        os.system("ircam_block")          # blocking the light
+                        if not reachphoto:
+                            os.system("ircam_block")          # blocking the light
+                        else:
+                            os.system("PG1_pickoff")
                         msgwhl = ircam_filters[6]
                         wh = font1.render(msgwhl, True, RED1)
                         screen.blit(wh, rct_wh)
@@ -1286,8 +1431,10 @@ while True: # the main game loop
 
                         bias = ave_dark*badpixmap
                         time.sleep(0.2)
-                        
-                        os.system("ircam_block")          # blocking the light
+                        if not reachphoto:
+                            os.system("ircam_block")          # blocking the light
+                        else:
+                            os.system("PG1_pickoff")
                         os.system("scexaostatus set darkchuck 'OFF             ' 1")
                         os.system("log Chuckcam: Done saving current internal dark")
                         cam_dark.set_data(bias.astype(np.float32))
@@ -1311,13 +1458,23 @@ while True: # the main game loop
                         screen.blit(wh, rct_wh)
                         pygame.display.update([rct_dinfo2, rct_wh])
                         time.sleep(2.0)        # safety
-                        
+
+                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
                         for tint in etimes2:
-                            tmux("stint %f" % (tint*1.e-6,), session="ircam%dctrl"%(camid,))
-                            time.sleep(1)
+                            if not sync_param[0] and sync_param[1]:
+                                sync_param[2] = tint
+                                fps = sync_param[3]
+                                sync_param[0] = 1
+                                ircam_synchro.set_data(sync_param.astype(np.float32))
+                                time.sleep(1)
+                                sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                                tint = sync_param[2]
+                            else:
+                                tmux("stint %f" % (tint*1.e-6,), session="ircam%dctrl"%(camid,))
+                                time.sleep(1)
+                                tint = cam.get_expt()*1e6
                             ndark = int(1*fps/float(ndr)) # 1s of dark per exposure
                             ave_dark = ave_img_data(ndark, clean=False, disp=True, tint=tint)
-                            tint = cam.get_expt()*1e6
                             bname = conf_dir + "bias%04d_%06d_%03d_%03d_%03d_%03d_%03d.fits" \
                                     % (fps, tint, ndr, crop[0], crop[2], xsizeim, ysizeim)
                             pf.writeto(bname, ave_dark, overwrite=True)
@@ -1332,7 +1489,12 @@ while True: # the main game loop
                         os.system("scexaostatus set darkchuck 'OFF             ' 1")
                         os.system("log Chuckcam: Done saving internal darks")
 
-                        tmux("stint %f" % (tint*1.e-6,), session="ircam%dctrl"%(camid,))
+                        if not sync_param[0] and sync_param[1]:
+                            sync_param[2] = tint
+                            sync_param[0] = 1
+                            ircam_synchro.set_data(sync_param.astype(np.float32))
+                        else:
+                            tmux("stint %f" % (tint*1.e-6,), session="ircam%dctrl"%(camid,))
                         biashere = True
                         bpmhere = True
 
@@ -1381,11 +1543,13 @@ while True: # the main game loop
                         tmux("logshim ircam%d %i %s" % (camid,nimsave, savepath), session="ircam%dlog"%(camid,))
                         os.system("log Chuckcam: start logging images")
                         os.system("scexaostatus set logchuck 'LOGGING         ' 3")
+                            
                     else:
                         tmux("logshimkill", session="ircam%dlog"%(camid,))
                         tmux("", session="ircam%dlog"%(camid,), command="kill-session")
                         os.system("log Chuckcam: stop logging images")
                         os.system("scexaostatus set logchuck 'OFF             ' 1")
+                            
 
             # Save an HDR image/Subtract dark
             #--------------------------------
@@ -1482,22 +1646,40 @@ while True: # the main game loop
                 clr_scale += 1
                 clr_scale %= 3
                 
-            # Display history of position/IRD mode
+            # Display history of position/REACH mode
             #-------------------------------------
             if event.key == K_i:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    if ird:
-                        tmux("chuck_pup")
-                        tmux("chuck_pup_fcs pupil &")
-                        tmux("saphira_pickoff out &")
-                        tmux("pcfi_pickoff out &")
+                    if (mmods & KMOD_LSHIFT):
+                        if rpin:
+                            tmux("reach_pickoff out &")
+                            tmux("oap4 onaxis &")
+                            tmux("steering onaxis &")
+                            keeprpin = False
+                        else:
+                            tmux("reach_pickoff in &")
+                            tmux("oap4 reach &")
+                            tmux("steering reach &")
+                            keeprpin = True
                     else:
-                        if not pup:
+                        if reachphoto:
                             tmux("chuck_pup")
-                        tmux("chuck_pup_fcs ird &")
-                        tmux("saphira_pickoff ird &")
-                        tmux("pcfi_pickoff in &")
+                            tmux("chuck_pup_fcs pupil &")
+                            tmux("buffycam_pickoff out &")
+                            if not keeprpin:
+                                tmux("reach_pickoff out &")
+                                tmux("oap4 onaxis &")
+                                tmux("steering onaxis &")
+                        else:
+                            if not pup:
+                                tmux("chuck_pup")
+                            tmux("chuck_pup_fcs reach &")
+                            tmux("buffycam_pickoff in &")
+                            if not rpin:
+                                tmux("reach_pickoff in &")
+                                tmux("oap4 reach &")
+                                tmux("steering reach &")
                 else:
                     plot_history = not plot_history
 
@@ -1530,25 +1712,47 @@ while True: # the main game loop
             # Camera in full frame
             #---------------------
             if event.key == K_f:
-                if xsizeim != 640 and ysizeim != 512:
-                        cam_paused.set_data(np.ones(1, dtype = np.float32))
-                        tmux("stop", session="ircam%dctrl"%(camid,))
-                        time.sleep(2)
-                        tmux("cropOFF", session="ircam%dctrl"%(camid,))
-                        time.sleep(2)
-                        tmux("scrop_cols 0 639", session="ircam%dctrl"%(camid,))
-                        time.sleep(2)
-                        tmux("scrop_rows 0 511", session="ircam%dctrl"%(camid,))
-                        time.sleep(2)
-                        tmux("start", session="ircam%dctrl"%(camid,))
-                        time.sleep(5)
-                        tmux("stop", session="ircam%dctrl"%(camid,))
-                        time.sleep(2)
-                        tmux("start", session="ircam%dctrl"%(camid,))
-                        time.sleep(5)
-                        cam_paused.set_data(np.zeros(1, dtype = np.float32))
-                        shmreload = True
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    if (mmods & KMOD_LALT):
+                        if xsizeim != 640 and ysizeim != 512:
+                            cam_paused.set_data(np.ones(1, dtype = np.float32))
+                            tmux("stop", session="ircam%dctrl"%(camid,))
+                            time.sleep(2)
+                            tmux("cropOFF", session="ircam%dctrl"%(camid,))
+                            time.sleep(2)
+                            tmux("scrop_cols 0 639", session="ircam%dctrl"%(camid,))
+                            time.sleep(2)
+                            tmux("scrop_rows 0 511", session="ircam%dctrl"%(camid,))
+                            time.sleep(2)
+                            tmux("start", session="ircam%dctrl"%(camid,))
+                            time.sleep(5)
+                            tmux("stop", session="ircam%dctrl"%(camid,))
+                            time.sleep(2)
+                            tmux("start", session="ircam%dctrl"%(camid,))
+                            time.sleep(5)
+                            cam_paused.set_data(np.zeros(1, dtype = np.float32))
+                            shmreload = True
                     
+            # Camera in full frame
+            #---------------------
+            if event.key == K_n:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    if (mmods & KMOD_LALT):
+                        sync_param = ircam_synchro.get_data().astype(np.int)[0]
+                        if not sync_param[0] and not sync_param[1]:
+                            sync_param[2] = etime
+                            sync_param[3] = fps
+                            sync_param[0] = 1
+                            sync_param[1] = 1
+                            ircam_synchro.set_data(sync_param.astype(np.float32))
+                            time.sleep(1)
+                        else:
+                            sync_param[0] = 1
+                            sync_param[1] = 0
+                            ircam_synchro.set_data(sync_param.astype(np.float32))
+                            time.sleep(1)
 
             # Ircam_Filter/block/Crop modes
             #------------------------------
@@ -1687,27 +1891,59 @@ while True: # the main game loop
                         cam_paused.set_data(np.zeros(1, dtype = np.float32))
                         shmreload = True
 
+            if event.key == K_MINUS:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    if (mmods & KMOD_LALT):
+                        cam_paused.set_data(np.ones(1, dtype = np.float32))
+                        tmux("setcrop 10", session="ircam%dctrl"%(camid,))
+                        time.sleep(12)
+                        cam_paused.set_data(np.zeros(1, dtype = np.float32))
+                        shmreload = True
+
+            if event.key == K_EQUALS:
+                mmods = pygame.key.get_mods()
+                if (mmods & KMOD_LCTRL):
+                    if (mmods & KMOD_LALT):
+                        cam_paused.set_data(np.ones(1, dtype = np.float32))
+                        tmux("setcrop 11", session="ircam%dctrl"%(camid,))
+                        time.sleep(12)
+                        cam_paused.set_data(np.zeros(1, dtype = np.float32))
+                        shmreload = True
+
             # DM stage
             #----------
             if event.key == K_UP:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    tmux("dm_stage y push -20")
+                    if (mmods & KMOD_LSHIFT):
+                        tmux("dm_stage y push -100")
+                    else:
+                        tmux("dm_stage y push -20")
 
             if event.key == K_DOWN:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    tmux("dm_stage y push +20")
+                    if (mmods & KMOD_LSHIFT):
+                        tmux("dm_stage y push +100")
+                    else:
+                        tmux("dm_stage y push +20")
 
             if event.key == K_LEFT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    tmux("dm_stage x push -20")
+                    if (mmods & KMOD_LSHIFT):
+                        tmux("dm_stage x push -100")
+                    else:
+                        tmux("dm_stage x push -20")
 
             if event.key == K_RIGHT:
                 mmods = pygame.key.get_mods()
                 if (mmods & KMOD_LCTRL):
-                    tmux("dm_stage x push +20")
+                    if (mmods & KMOD_LSHIFT):
+                        tmux("dm_stage x push +100")
+                    else:
+                        tmux("dm_stage x push +20")
 
     pygame.display.update(rects)
 

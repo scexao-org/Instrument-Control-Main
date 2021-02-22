@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import serial
 import os
 import time
@@ -36,6 +36,7 @@ def touch(fname, times=None):
 
 def ezs_response(cmd, data, quiet=False):
     res = ""
+    print(data)
     a = binascii.b2a_hex(data)
 
     if not quiet:

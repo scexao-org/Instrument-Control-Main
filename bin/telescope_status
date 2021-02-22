@@ -14,10 +14,9 @@ import sys, os
 from datetime import datetime
 import numpy as np
 from g2base.remoteObjects import remoteObjects as ro
+from itertools import chain
 
-home = os.getenv('HOME')
-sys.path.append(home+"/src/lib/python/")
-from scexao_shm import shm
+from xaosim.scexao_shmlib import shm
 
 # ------------------------------------------------------------------
 #                access to shared memory structures
@@ -45,7 +44,7 @@ stobj = ro.remoteObjectProxy('status')
 
 while True:
     result = stobj.fetch({'STATS.RA': 0, 'STATS.DEC': 0, 'STATS.AZ': 0, 'STATS.EL': 0, 'AON.IMR.PAD': 0, 'AON.IMR.PAP': 0})
-    tsshm.set_data(np.array(result.values(), dtype=np.float32))
+    tsshm.set_data(np.array(list(chain(result.values())), dtype=np.float32))
     
     time.sleep(10.0)
 

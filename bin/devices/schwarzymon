@@ -23,10 +23,10 @@ import sys
 import numpy as np
 import datetime as dt
 from datetime import datetime
+from xaosim.scexao_shmlib import shm
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-from   scexao_shm   import shm
 
 hmsg = """SCHWARZY's INSTRUCTIONS
 -------------------

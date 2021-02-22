@@ -88,12 +88,12 @@ class devices:
         nparam = len(slots[0].split(';'))
         self.nend = nparam-1
         for i in range(nparam):
-            exec "self.param%d = []" % (i,)
+            exec("self.param%d = []" % (i,), globals(), locals())
             
         for j in range(self.nslots):
             sparam = slots[j].split(';')
             for i in range(nparam):
-                exec "self.param%d.append(sparam[i])" % (i,)
+                exec("self.param%d.append(sparam[i])" % (i,), globals(), locals())
                 
         if self.nbdev == 1:
             self.col = 2
@@ -185,7 +185,7 @@ class devices:
                     self.zaber_goto_slot(inddef+1, 1)
                     self.col += 1
             if self.color_st:
-                exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', devname+'_st', self.param1[inddef], self.param%d[inddef]])" % (self.nend,)
+                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', devname+'_st', self.param1[inddef], self.param%d[inddef]])" % (self.nend,), globals(), locals())
             else:
                 subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", self.param1[inddef]])
 
@@ -213,16 +213,16 @@ class devices:
                     self.zab.close()
             for i in range(self.nslots):
                 for j in range(self.nbdev):
-                    exec "paramf[j] = float(self.param%d[i])" %(j+2,)
+                    exec("paramf[j] = float(self.param%d[i])" %(j+2,), globals(), locals())
                 if (np.sum(paramf[1:]) > 0 and np.all(pos == paramf)) or (np.sum(paramf[1:]) == 0 and pos[0] == paramf[0]):
-                    print "Device is in position "+self.param0[i]+", "+self.param1[i]
+                    print("Device is in position "+self.param0[i]+", "+self.param1[i])
                     if self.color_st:
-                        exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                        exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                     else:
                         subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devname+"_st", self.param1[i][:16]])
                     found = True
             if not found:
-                print "Device is not in a defined position. Try homing."
+                print("Device is not in a defined position. Try homing.")
                 subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         
         else:
@@ -235,44 +235,46 @@ class devices:
             dev = "<dev> "
         else:
             dev = ""
-        print """---------------------------------------
+        print("""---------------------------------------
 Usage: %s %s <command> <arg>
----------------------------------------""" % (self.devname,dev)
+---------------------------------------""" % (self.devname,dev))
         if self.nbdev > 1:
-            print "DEV:"
+            print("DEV:")
             if self.conexnames != []:
                 for i in range(len(self.conexnames)):
-                    print "    %-6s  move %s stage" % (self.conexnames[i], self.conexnames[i])
+                    print("    %-6s  move %s stage" % (self.conexnames[i], self.conexnames[i]))
             if self.zabernames != []:
                 for i in range(len(self.zabernames)):
-                    print "    %-6s  move %s stage" % (self.zabernames[i], self.zabernames[i])
-        print "    status  status of the full device"
-        print """COMMAND:
+                    print("    %-6s  move %s stage" % (self.zabernames[i], self.zabernames[i]))
+        print("    status  status of the full device")
+        print("""COMMAND:)
     status  displays status
       home  sends home
       goto  moves to absolute position: numerical value
-     1 - %d defined positions""" % (self.nslots,)
+     1 - %d defined positions""" % (self.nslots,))
         if self.defpos != []:
             for i in range(len(self.defpos)):
-                print "    %-6s  move stage to %s position" % (self.defpos[i], self.defpos[i])
-        print """ARG:
+                print("    %-6s  move stage to %s position" % (self.defpos[i], self.defpos[i]))
+        print("""ARG:
     numerical value for position
-CONTENT:"""
+CONTENT:""")
         for i in range(self.nslots):
-            print "   ", self.param0[i], self.param1[i]
+            print("   ", self.param0[i], self.param1[i])
                         
-        print "--------------------------------------- "
+        print("--------------------------------------- ")
 
     # -----------------------------------------------------------------
     def quickhelp(self):
-        print "%20s       %s" % (self.devname,self.description)
+        print("%20s       %s" % (self.devname,self.description))
 
     # -----------------------------------------------------------------
     def conex_home(self, conu):
         self.con.open(self.conexid)
         self.con.home(self.devnamec)
         pos0 = -1000.
-        exec "paramf = map(float, self.param%d)" %(self.col,)
+        d = locals()
+        exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
+        paramf = d['paramf']
         pos = self.con.status(self.devnamec)
         subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
@@ -285,7 +287,7 @@ CONTENT:"""
                     for i in range(self.nslots):
                         if pos == paramf[i]:
                             if self.color_st:
-                                exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                             else:
                                 subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec+"_st", self.param1[i][:16]])
                 else:
@@ -298,19 +300,21 @@ CONTENT:"""
         pos = self.con.status(self.devnamec)
         self.con.close()
         if pos == 0:
-            print "Conex is home."
-        exec "paramf = map(float, self.param%d)" %(self.col,)
+            print("Conex is home.")
+        d = locals()
+        exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
+        paramf = d['paramf']
         if pos in paramf:
             for i in range(self.nslots):
                 if pos == paramf[i]:
-                    print "Position = "+str(pos)+", Conex is in position "+self.param0[i]+", "+self.param1[i]
+                    print("Position = "+str(pos)+", Conex is in position "+self.param0[i]+", "+self.param1[i])
                     if conu == 0:
                         if self.color_st:
-                            exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                            exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                         else:
                             subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec+"_st", self.param1[i][:16]])
         else:
-            print "Position = "+str(pos)+", Conex is not in a defined position. Try homing."
+            print("Position = "+str(pos)+", Conex is not in a defined position. Try homing.")
             if conu == 0:
                 subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
               
@@ -319,7 +323,9 @@ CONTENT:"""
         self.con.open(self.conexid)
         self.con.move(pos, self.devnamec)
         pos0 = -1000.
-        exec "paramf = map(float, self.param%d)" %(self.col,)
+        d = locals()
+        exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
+        paramf = d['paramf']
         pos = self.con.status(self.devnamec)
         subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
@@ -332,7 +338,7 @@ CONTENT:"""
                     for i in range(self.nslots):
                         if pos == paramf[i]:
                             if self.color_st:
-                                exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                             else:
                                 subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec+"_st", self.param1[i][:16]])
                 else:
@@ -343,10 +349,14 @@ CONTENT:"""
     def conex_goto_slot(self, slot, conu):
         if (1 <= slot <= self.nslots):
             self.con.open(self.conexid)
-            exec "pos = self.param%d[slot-1]" %(self.col,)
+            d = locals()
+            exec("pos = self.param%d[slot-1]" %(self.col,), globals(), d)
+            pos = d['pos']
             self.con.move(float(pos), self.devnamec, log=False)
             pos0 = -1000.
-            exec "paramf = map(float, self.param%d)" %(self.col,)
+            d = locals()
+            exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
+            paramf = d['paramf']
             pos = self.con.status(self.devnamec)
             subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
             while pos0 != pos:
@@ -359,7 +369,7 @@ CONTENT:"""
                         for i in range(self.nslots):
                             if pos == paramf[i]:
                                 if self.color_st:
-                                    exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                                    exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                                 else:
                                     subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec+"_st", self.param1[i][:16]])
                     else:
@@ -374,7 +384,9 @@ CONTENT:"""
         self.zab.open(self.zaberchain)
         self.zab.home(self.zaberid, self.devnamez)
         pos0 = -1.5
-        exec "paramf = map(float, self.param%d)" %(self.col,)
+        d = locals()
+        exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
+        paramf = d['paramf']
         pos = self.zab.status(self.zaberid, self.devnamez)
         subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
@@ -387,7 +399,7 @@ CONTENT:"""
                     for i in range(self.nslots):
                         if pos == paramf[i]:
                             if self.color_st:
-                                exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                             else:
                                 subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez+"_st", self.param1[i][:16]])
                 else:
@@ -400,19 +412,21 @@ CONTENT:"""
         pos = self.zab.status(self.zaberid, self.devnamez)
         self.zab.close()
         if pos == 0:
-            print "Zaber is home."
-        exec "paramf = map(int, self.param%d)" %(self.col,)
+            print("Zaber is home.")
+        d = locals()
+        exec("paramf = list(map(int, self.param%d))" %(self.col,), globals(), d)
+        paramf = d['paramf']
         if pos in paramf:
             for i in range(self.nslots):
                 if pos == paramf[i]:
-                    print "Position = "+str(pos)+", Zaber is in position "+self.param0[i]+", "+self.param1[i]
+                    print("Position = "+str(pos)+", Zaber is in position "+self.param0[i]+", "+self.param1[i])
                     if zabu == 0:
                         if self.color_st:
-                            exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                            exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                         else:
                             subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez+"_st", self.param1[i][:16]])
         else:
-            print "Position = "+str(pos)+", Zaber is not in a defined position. Try homing."
+            print("Position = "+str(pos)+", Zaber is not in a defined position. Try homing.")
             if zabu == 0:
                 subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
               
@@ -421,7 +435,9 @@ CONTENT:"""
         self.zab.open(self.zaberchain)
         self.zab.move(self.zaberid, pos, self.devnamez)
         pos0 = -1.5
-        exec "paramf = map(float, self.param%d)" %(self.col,)
+        d = locals()
+        exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
+        paramf = d['paramf']
         pos = self.zab.status(self.zaberid, self.devnamez)
         subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
@@ -434,7 +450,7 @@ CONTENT:"""
                     for i in range(self.nslots):
                         if pos == paramf[i]:
                             if self.color_st:
-                                exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                             else:
                                 subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez+"_st", self.param1[i][:16]])
                 else:
@@ -445,11 +461,15 @@ CONTENT:"""
     def zaber_goto_slot(self, slot, zabu):
         if (1 <= slot <= self.nslots):
             self.zab.open(self.zaberchain)
-            exec "pos = self.param%d[slot-1]" %(self.col,)
+            d = locals()
+            exec("pos = self.param%d[slot-1]" %(self.col,), globals(), d)
+            pos = d['pos']
             if int(pos) > 0:
                 self.zab.move(self.zaberid, int(pos), self.devnamez, log=False)
                 pos0 = -1.5
-                exec "paramf = map(float, self.param%d)" %(self.col,)
+                d = locals()
+                exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
+                paramf = d['paramf']
                 pos = self.zab.status(self.zaberid, self.devnamez)
                 subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
                 while pos0 != pos:
@@ -462,7 +482,7 @@ CONTENT:"""
                             for i in range(self.nslots):
                                 if pos == paramf[i]:
                                     if self.color_st:
-                                        exec "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,)
+                                        exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                                     else:
                                         subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez+"_st", self.param1[i][:16]])
                         else:

@@ -5,10 +5,7 @@ import time
 import sys, os
 from datetime import datetime
 import numpy as np
-
-home = os.getenv('HOME')
-sys.path.append(home+"/src/lib/python/")
-from scexao_shm import shm
+from xaosim.scexao_shmlib import shm
 
 # ------------------------------------------------------------------
 #                access to shared memory structures
@@ -18,7 +15,7 @@ if not os.path.isfile("/tmp/labjack.im.shm"):
 if not os.path.isfile("/tmp/labjack_stream.im.shm"):
     os.system("creashmim labjack_stream 1 1")
 
-aishm = shm("/tmp/labjack.im.shm") #SHM of data
+aishm = shm("/tmp/labjack.im.shm") #SM of data
 strshm = shm("/tmp/labjack_stream.im.shm") #SHM of flag
 
 # ------------------------------------------------------------------

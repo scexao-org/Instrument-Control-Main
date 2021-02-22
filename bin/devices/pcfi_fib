@@ -30,7 +30,7 @@ conexnames = ["x", "y", "f"]
 
 description = "Post-coro fiber injection fiber xyz stage stage"
 
-defpos = ["smi", "mmi"]
+defpos = ["smicy","smicj","smich","smi2y","smi2j","smi2h", "mmi"]
 
 # GENERIC CODE
 

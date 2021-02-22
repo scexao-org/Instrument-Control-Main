@@ -18,19 +18,17 @@
 import sys
 import numpy as np
 import os
-import Image
+from PIL import Image
 import time
 import math as m
 import datetime as dt
 from astropy.io import fits as pf
 import subprocess
-
-home = os.getenv('HOME')
-conf_dir = home + "/conf/chuckcam_aux/"
-sys.path.append(home+'/src/lib/python/')
-import colormaps as cmaps
 from xaosim.scexao_shmlib import shm
-import image_processing as impro
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import conex3 as conex
+con = conex.conex()
 
 # ------------------------------------------------------------------
 #             short hands for opening and checking flags
@@ -53,11 +51,45 @@ def check_dm_flag(flagname, run, it):
 #             short hands for opening and checking flags
 # ------------------------------------------------------------------
 
-def write_im_flag(flagname, filename):
+def write_im_flag(flagname, filename,done=True):
     f = open(flagname, 'w')
-    f.write('%s done' %(filename,))
+    if done:
+        f.write('%s done' %(filename,))
+    else:
+        f.write('starting %s' %(filename,))
+        
     f.close()
     return()
+
+# ------------------------------------------------------------------
+#                Read parameters
+# ------------------------------------------------------------------
+
+hmsg = """AMES control interface
+---------------------------------------
+Usage: ames_interface <run> <it0> <nim> <hdr>
+---------------------------------------
+run: run number. It has to match the folder and the run number in the name of the DM commands.
+it0: First iteration number to wait for.
+nim: Number of frames to average. If nim = -1, the value is pulled from the header.
+hdr: Boolean (0 or 1) signaling if parameters are read through header.
+
+"""
+
+args = sys.argv[1:]
+try:
+    run = int(args[0]) # run number
+    it0 = int(args[1]) # start iteration number
+    nim = int(args[2]) # number of images to average
+    hdr = int(args[3]) == 1
+    hdrnim = nim == -1
+except:
+    print(hmsg)
+    sys.exit()
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from image_processing import find_outlier_pixels as find_outlier_pixels
 
 # ------------------------------------------------------------------
 #                access to shared memory structures
@@ -72,15 +104,6 @@ chn_probe = 6
 dmc_probe  = shm('/tmp/dm00disp%02d.im.shm' % (chn_probe,)) # DM channel (probe)
 
 # ------------------------------------------------------------------
-#                Read parameters
-# ------------------------------------------------------------------
-
-args = sys.argv[1:]
-run = int(args[0]) # run number
-it0 = int(args[1]) # start iteration number
-nim = int(args[2]) # number of images to average
-
-# ------------------------------------------------------------------
 #                Define paths
 # ------------------------------------------------------------------
 
@@ -89,6 +112,8 @@ path_DM = path_run+"DM/"
 path_IM = path_run+"IMAGES/"
 dm_flag = path_DM+"log.txt"
 im_flag = path_IM+"log.txt"
+f = open(im_flag, 'w')
+f.close()
 
 # ------------------------------------------------------------------
 #                Initialize parameters
@@ -97,6 +122,29 @@ im_flag = path_IM+"log.txt"
 it = it0
 cnt = 0 # intialize camera counters
 cnt0 = -1
+irnd0 = -1
+optnd0 = -1
+fps = 0
+expt = 0
+irnds = np.array([0,0.3,1,1.3,2,3])
+optnds = np.array([0,0.3,1,2,3,4,4.3,5,6,7])
+occy0 = 0
+highval = False
+
+fibpos_file = "/home/scexao/bin/devices/conf/conf_src_fib.txt"
+
+f = open(fibpos_file,'r')
+f2 = f.readlines()
+f.close()
+pos0 = np.zeros((3,2))
+for i in range(2):
+    pos0[:,i] = [s.split(';')[2+i].rstrip() for s in f2 if s.split(';')[2+i].rstrip()]
+
+x0 = pos0[0,0]
+y0 = pos0[0,1]
+
+conexidx = "/dev/serial/by-id/usb-Newport_CONEX-AGP_A60QY9WJ-if00-port0"
+conexidy = "/dev/serial/by-id/usb-Newport_CONEX-AGP_A6XTSLMS-if00-port0"
 
 ####################################################################
 #                LOOP
@@ -106,16 +154,139 @@ while True:
     flagdm,it = check_dm_flag(dm_flag, run, it)
     if not flagdm:
         time.sleep(0.1)
-        sys.stdout.write('\r WAITING FOR DM COMMAND                  \r')
+        sys.stdout.write('\r run %d iter %4d WAITING FOR DM COMMAND  \r'% (run,it))
+        if highval:
+            os.system("dmdispzero 00 07")
+            os.system("dmdispzero 00 08")
+            highval = False
+            
     else:
-        time.sleep(1)
+        time.sleep(2)
         sys.stdout.flush()
 
         # ----------------------------------------------------------
-        #                Read and send the new DM command
+        #                Read the new DM command
+        # ----------------------------------------------------------
+        
+        if hdr:
+            dmfits = pf.open(path_DM+"run%06dit%06ddm.fits" % (run,it))
+            hdrdm = dmfits[0].header
+            dmfits.close()
+            irnd = hdrdm["IRND"]
+            if irnd != irnd0:
+                if irnd in irnds:
+                    nir = np.where(irnds == irnd)[0][0]+1
+                    os.system("src_flux irnd %d" % (nir,))
+                else:
+                    print("iter %4d: IRND value %f not valid!" %(it,irnd))
+                irnd0 = irnd
+            optnd = hdrdm["OPTND"]
+            if optnd != optnd0:
+                if optnd in optnds:
+                    optnd2 = optnd%4
+                    nopt = np.where(optnds == optnd2)[0][0]+1
+                    nfilt = 1+(optnd//4)*5
+                    os.system("src_flux optnd %d" % (nopt,))
+                    os.system("src_flux filter %d" % (nfilt,))
+                else:
+                    print("iter %4d: OPTND value %f not valid!" % (it,optnd))
+                optnd0 = optnd
+            srcx = hdrdm["SOURCEX"]
+            if srcx < 1:
+                con.open(conexidx)
+                con.move(x0+srcx, "", False)
+                con.close()
+            else:
+                print("iter %4d: SOURCEX: value too big :%f" % (it,srcx))
+            srcy = hdrdm["SOURCEY"]
+            if srcy < 1:
+                con.open(conexidy)
+                con.move(y0+srcy, "", False)
+                con.close()
+            else:
+                print("iter %4d: SOURCEY: value too big :%f" % (it,srcy))
+            occy = hdrdm["OCCY"]
+            if occy != occy0:
+                if occy == 0:
+                    os.system("fpm y 38")
+                elif occy == 1:
+                    f = open("/home/scexao/bin/devices/conf/conf_fpm.txt","r")
+                    f2 = f.readlines()
+                    fy = int(f2[12].split(";")[4])
+                    fy2 = fy-12000
+                    os.system("fpm y goto %d" %(fy2,))
+                    f.close()
+                elif occy ==2:
+                    f = open("/home/scexao/bin/devices/conf/conf_fpm.txt","r")
+                    f2 = f.readlines()
+                    fy = int(f2[12].split(";")[4])
+                    fy2 = fy-30000
+                    os.system("fpm y goto %d" %(fy2,))
+                    f.close()
+                    
+                else:
+                    print("iter %4d: OCCY: Wrong value: %f" %(it,occy))
+                occy0 = occy
+            try:
+                align = hdrdm["ALIGN"]
+                if align != align0 and align == 1:
+                    os.system("src_fib in")
+                    time.sleep(1)
+                    os.system("dmdispzero 00 06")
+                    os.system("dmdispzero 00 07")
+                    os.system("dmdispzero 00 08")
+                    time.sleep(1)
+                    os.system("src_flux irnd 4")
+                    irnd0 = 1.3
+                    os.system("src_flux optnd 5")
+                    os.system("src_flux filter 1")
+                    optnd0 = 7
+                    time.sleep(1)
+                    os.system("tmux send-keys -t ircam0 'hotspotalign' Enter")
+                    time.sleep(20)
+                    os.system("tmux send-key -t ircam0 'TTloop 0 0 5' Enter")
+                    time.sleep(10)
+                    if irnd in irnds:
+                        nir = np.where(irnds == irnd)[0][0]+1
+                        os.system("src_flux irnd %d" % (nir,))
+                        irnd0 = irnd
+                    if optnd in optnds:
+                        optnd2 = optnd%4
+                        nopt = np.where(optnds == optnd2)[0][0]+1
+                        nfilt = 1+(optnd//4)*5
+                        os.system("src_flux optnd %d" % (nopt,))
+                        os.system("src_flux filter %d" % (nfilt,))
+                        optnd0 = optnd
+                    if srcx < 1:
+                        con.open(conexidx)
+                        con.move(x0+srcx, "", False)
+                        con.close()
+                    if srcy < 1:
+                        con.open(conexidy)
+                        con.move(y0+srcy, "", False)
+                        con.close()
+                    if srcy < 0:
+                        os.system("coronagraph_autoalign")
+                        time.sleep(5)
+                align = align0
+            except:
+                align0 = align = 0
+                
+                
+            #fps = hdrdm["FPS"]
+            #expt = hdrdm["EXPT"]
+            if hdrnim:
+                nim = hdrdm["NEXP"]
+        
+
+        # ----------------------------------------------------------
+        #                Send the new DM command
         # ----------------------------------------------------------
         
         dmit = pf.getdata(path_DM+"run%06dit%06ddm.fits" % (run,it))
+        highval = np.std(dmit) > 0.5
+        if highval:
+            print("iter %4d: DM amplitude is too high: %f" %(it,np.std(dmit)))
         ndim = dmit.ndim
         if ndim == 3:
             ndmc = dmit.shape[0]
@@ -128,13 +299,15 @@ while True:
                 else:
                     dmc_ctrl.set_data(dmit.astype('float32'))
             else:
-                dmc_probe.set_data(dmit[i,:,:].astype('float32'))
+                dmc_probe.set_data((dmit[i,:,:]-dmit[0,:,:]).astype('float32'))
             time.sleep(0.01)
             
             # ------------------------------------------------------
             #                Create the averaged image
             # ------------------------------------------------------
             
+            imagename = "run%06dit%06d.fits" % (run,it)
+            write_im_flag(im_flag, imagename, False)
             imit = 0 # initialize averaging counter
             while imit < nim:
                 cnt = cam.get_counter() # read current image counter
@@ -145,7 +318,7 @@ while True:
                         ave_im = cam.get_data(check=True, reform=True, timeout=1.0).astype('float')/float(nim)
                     else: # accumulate to average
                         ave_im += cam.get_data(check=True, reform=True, timeout=1.0).astype('float')/float(nim)
-                    sys.stdout.write('\r run %d iter %4d dmcom %d acqu #%5d\r' % (run,it,i,imit))
+                    sys.stdout.write('\r run %d iter %4d dmcom %d acqu #%5d    \r' % (run,it,i,imit))
                     sys.stdout.flush()
                     imit += 1
                     cnt0 = cnt
@@ -156,7 +329,7 @@ while True:
             
             bias = cam_dark.get_data(check=True, reform=True, timeout=1.0).astype('float') # load bias
             ave_im -= bias # subtract bias
-            temp, ave_im2 = impro.find_outlier_pixels(ave_im, tolerance=2.5) # remove bad pixels
+            temp, ave_im2 = find_outlier_pixels(ave_im, tolerance=2.5) # remove bad pixels
             
             # ------------------------------------------------------
             #                Concatenate cube
@@ -174,9 +347,9 @@ while True:
         # ----------------------------------------------------------
         
         dmc_probe.set_data(np.zeros((50,50)).astype('float32'))
-        imagename = "run%06dit%06d.fits" % (run,it)
         pf.writeto(path_IM+imagename, im_cube.astype('float32'), overwrite=True)
-        write_im_flag(im_flag, imagename)
+        time.sleep(1)
+        write_im_flag(im_flag, imagename,True)
         it += 1
 
 # ------------------------------------------------------------------
