@@ -1,0 +1,283 @@
+Contents
+   Starting TelStat
+   Controls
+   Display Panes
+   Error Indicators
+   Evaluation
+
+--------------
+
+Starting TelStat
+
+   The Subaru Telescope Status Window (OSSO_TelStat) displays information about 
+   the state of the telescope, the current observation target, and 
+   environmental monitoring data.
+
+   You may start it by changing directory to the OSSO_TelStat install directory
+   and typing "OSSO_TelStat [options]", where options may be any combination of:
+
+        -l              Run TelStat with data logging turned on; this will
+        -logdata        produce a file named 'TelStat_ReplayData_<timetag>.log'
+                        in the current directory, containing all of the 
+                        status alias values used by TelStat until either the
+                        end of the run or until logging is turned off with
+                        the Options menu.
+
+        -d              Run TelStat with debug menu turned on.
+        -debug
+
+        -s              Run TelStat in local simulation mode for debugging.
+        -sim
+
+        -g2             Run TelStat in OCS Gen 2 mode, pulling status data
+        -gen2           from a Gen 2 status.py server.  If not specified,
+                        TelStat is run in SOSS mode, using OSSC_screenPrint
+                        calls to pull status data from OBS.
+
+        -r <logSpec>    Run TelStat to replay a data log created by the -l 
+    -replay <logSpec>   option.  This also turns debugging mode on, to
+                        allow control of the playback.
+
+        -i <n>          When -r is specified, -i <n> will skip the first
+        -initskip <n>   n records before starting the replay.  If the replay
+                        session is restarted (by selecting 
+                        Options/Restart Data Replay), TelStat will again
+                        skip the first n records, thus restarting at the
+                        same record as initially requested.
+
+        -n              Initialize TelStat to do no data updates
+        -norefresh      (this only makes sense if debugging is turned on, 
+                        so this does nothing if -d was not specified).
+
+   Examples:
+
+    Run TelStat to use the standard OSSC_screenPrint as a data source, to
+    retrieve, display and log actual telescope data:
+
+        OSSO_TelStat -l
+
+    Run TelStat in Gen2 mode to use the Gen 2 status process as a data source, 
+    to retrieve, display and log actual telescope data:
+
+        OSSO_TelStat -g2 -l
+
+    Run TelStat in simulation mode, to rapidly view most TelStat features:
+
+        OSSO_TelStat -s
+
+    Run TelStat in simulation mode with debug turned on and initially
+    static data (you can use the Debug menu to step forward and/or
+    turn refresh on at various rates):
+
+        OSSO_TelStat -s -d -n
+
+    Run TelStat to replay TelStat_ReplayData_2004_1_22_123027.log, with
+    debug turned on and no initial refresh, to allow control of the
+    playback through the Debug menu:
+
+        OSSO_TelStat -d -n -r TelStat_ReplayData_2004_1_15_184121.log
+
+    Run TelStat to replay TelStat_ReplayData_2004_1_22_123027.log, as above,
+    skipping the first 3200 records:
+
+        OSSO_TelStat -d -n -r TelStat_ReplayData_2004_1_15_184121.log -i 3200
+
+--------------
+
+Controls
+
+   Scale Change Control
+      The horizontal scale of any of the graphs may be changed by moving the 
+      mouse pointer over the graph and double-clicking.  To expand the scale, 
+      double-click the left mouse button.  To shrink the scale, double-click
+      the middle mouse button.
+
+   Close Menu
+      "Close" option terminates the TelStat window.
+
+   Options Menu
+      "Turn Prototype Telescope Ray On/Off" option (only available if Debugging
+      is turned on) turns the telescope ray on/off.  This ray depicts the 
+      light path of the telescope with respect to the wind screen and top 
+      screen.  If it intersects the filled-in portion of either screen 
+      graphic, then the light path will be partially or fully obstructed.
+
+      The "Set refresh delay" options select the delay between data updates.
+
+      The "Switch to Simulator data" option is for debugging and should not
+      be selected during operations.
+
+      "Test sound" option causes several of the TelStat warnings to be
+      sounding, allowing the user to check speaker volume.
+
+   Debug Menu
+      This menu only appears if the -d option was selected on the TelStat
+      command line.
+
+      Dashed line is the "tear-off" option -- when you select it, a small 
+      pop-up window will appear with the other debug options in it.  This is 
+      useful during debugging when we select these options frequently.
+
+      "Toggle refresh" option turns the data update on/off.  When refresh is
+      turned off, the screen will be static.  In this case, the "Single step" 
+      option will command a single data refresh.
+
+      "Single step" option performs a single fetch of data from either
+      OSSC_screenPrint (non-replay mode) or a data log file (replay mode,
+      see the -l command-line option).
+
+      The "Set refresh delay" options select the delay between data updates.
+
+      "Set replay sample period" option, visible only in replay mode, pops 
+      up a dialog to allow the user to set a sample period, in units of 
+      data records.  With the default value of 1, every playback record is
+      read; if more than 1, then every n-th playback record is read.  E.g.
+      if the record sample period was 5 seconds, then a replay sample period
+      of 10 will display data from approximately every 50 seconds.
+
+      "Turn Data Logging On/Off" option turns status alias value logging 
+      on/off.  When turned on, all data values are written in time-tagged
+      records to a file named "TelStat_ReplayData_<timetag>.log"
+      (e.g. "TelStat_ReplayData_2004_1_15_184121.log"), which may later be
+      replayed through TelStat for debugging or review of the values monitored.
+
+      The "Log dictionary" option is used to write a file with all status
+      values currently being used by TelStat.
+
+      The "Print geometry" option is used (during debugging) to send the X
+      geometry of the main window and one or two of the panes to standard out.
+
+      The "Alarm Condition Dialog" option should be ignored.  It is for 
+      testing a feature that has not been implemented.
+
+      In replay mode only, the "Playback window" option will pop up a window
+      that allows random access of the data log file. The scale shows the number
+      of data records in the log file. The slider allows the user to "seek" to
+      one of these records and begin playback there. When the "Start playback"
+      button is pressed, the timestamp of the record chosen appears in the
+      display at the top of the window. 
+
+
+   Help Menu
+      Options bring up this manual or short help dialogs on specific features.
+
+      "Manual"              displays this manual in a scrolled text window
+      "Alerts"              displays a reference to audible and visual alerts
+      "Close help"          pop-up help for the Close menu
+      "Options help"        pop-up help for the Options menu
+      "Debug help"          pop-up help for the Debug menu
+      "Scale-change help"   pop-up help for changing scale of graph widgets
+      "About"               TelStat version info and credits
+      "Release Notes"       identifies version bug fixes and enhancements
+
+--------------
+
+Display Panes
+
+   Menu Bar
+      Provides Close, Options, Debug and Help pull-down menus.
+      See Controls section, above, for details.
+
+   Pointing Pane
+      Just below the Menu Bar, displays current and commanded telescope 
+      pointing values.
+
+   Time Pane
+      At the bottom of the page, displays date/time and current hour angle.
+
+   Telescope Pane
+      At page center, displays a graphical representation of dome and telescope
+      states, including state of screens and shutters, focus and secondary in 
+      use, and modes of rotators and ADC's.  Optionally depicts telescope
+      light path to show interference with wind and top screens.  When undefined
+      or anomalous data is detected, the displayed object turns red, an audible
+      alert is issued and a message is logged.
+
+   Limits Pane
+      Below the Telescope Pane, displays positions of azimuth, rotators and
+      AG probe relative to their respective limits.  Indicators turn red when
+      approaching their limits, an audible alert is issued and a message is
+      logged.
+
+   Tracking Pane
+      Left of the Telescope Pane, displays scatter plot of AG error, strip 
+      charts of guide star brightness and seeing, as well as AG and SV 
+      exposure times, AG probe locations and AG detector threshold.  
+      AG scales and strip-chart horizonal scales may be changed with
+      mouse clicks (see "Scale Change Control" above).  When guide star
+      brightness or seeing go out of the acceptable range, the background
+      of the strip chart turns yellow (warning threshold exceeded) or red
+      (alarm threshold exceeded), an audible alert is issued and a message is 
+      logged.
+
+   Target Pane
+      Right of the Telescope Pane, just below the Pointing Pane, displays the
+      current proposal ID, observation target, air mass, time until limit
+      and pointing angle.  When the estimated time to the Azimuth limit is
+      short or the position angle (PA) is out of the acceptable range, the
+      background of the value turns yellow (warning threshold exceeded) or red
+      (alarm threshold exceeded), an audible alert is issued and a message is 
+      logged.
+
+   Dome Lamps Pane
+      Below the Target Pane, identifies dome lamp that is turned on.
+
+   Calibration Lamps Pane
+      Below the Dome Lamps Pane, identifies calibration lamps that are on.
+
+   Environment Pane
+      Below the Calibration Lamps Pane, displays strip charts of inside and 
+      outside temperature, humidity and wind speed.  Horizonal scales may be 
+      changed with mouse clicks (see "Scale Change Control" above).
+
+--------------
+
+Error Indicators
+
+   TelStat detects many anomalous conditions, and responds to them all
+   in a (mostly) consistent manner:  
+
+      Alarm conditions, mandating prompt operator response, change the 
+      color of the relevant icons or text backgrounds to red and provide 
+      audio messages.
+
+      Data error conditions, including missing or invalid status data, 
+      change the color of the relevant icons or text backgrounds to red 
+      but provide no audio messages.  The actual status value in hex,
+      or "No Data" for missing data, may be displayed to provide more
+      information.
+
+      Warning conditions, requiring operator awareness but not necessarily
+      response, change the color of the relevant icons or text backgrounds 
+      to yellow.  More important warning conditions, such as a warning that 
+      the humidity is approaching the 80% threshold for closing the dome,
+      will provide audio messages.  Abnormal operating modes, such as 
+      turning two or more dome flat lamps on at the same time, will change
+      the indicator color to yellow but will issue no audible warning.
+
+   See Help/Alerts for a list of the alarm and warning conditions, and
+   for more details on when and how often audible alerts may be issued.
+
+   In all these cases, intelligible text messages are logged to the
+   TelStat diagnostic log file on the host running TelStat:
+
+      /app/OSS/LOCAL/OSS_PRGLOG/TelStat_<obs ID>_<date tag>.log
+
+--------------
+
+Evaluation
+
+   We would appreciate your critical feedback on TelStat.  This might take
+   the form of E-mail, scribbled notes, calling, or simply coming by room 211
+   and chatting with us.  We may be reached at:
+
+        Bruce Bon       934-5092    bruce.bon@SubaruTelescope.org
+        Arne Grimstrup  934-5943    arne.grimstrup@SubaruTelescope.org
+
+   Things you might want to think about include:  features missing, features
+   you think have little use, color schemes, shapes of graphical objects in
+   the Telescope Pane, etc.
+
+--------------
+
+Last update:  2007-04-11

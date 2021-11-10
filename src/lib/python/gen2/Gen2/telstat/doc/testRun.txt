@@ -1,0 +1,37 @@
+testRun.txt -- 2008-04-23
+
+Crib sheet for running TelStat locally on ssd01, etc.
+
+Pre-requisites:
+ - Pmw must be installed.  E.g.
+    su
+    cd /usr/lib/python2.5/site-packages
+    tar xvfz ~eric/download/SuSE/Pmw.1.2.tar.gz
+    chmod -R ugo+r .
+    chmod -R g-w Pmw
+
+Prior to running TelStat:
+
+- cd to the directory containing OSSO_TelStat and subdirectory OSSO_TelStatLib,
+      e.g. /home/bon/Svn/soss3/branches/solaris8_01/product/OSSO/OSSO_TelStat.d
+
+If site-packages is not already in PYTHONPATH:
+ - setenv PYTHONPATH ${PYTHONPATH}:OSSO_TelStatLib:/usr/lib/python2.5/site-packages
+
+If site-packages IS already in PYTHONPATH:
+ - setenv PYTHONPATH ${PYTHONPATH}:OSSO_TelStatLib
+
+To run on a data log file with debugging turned on:
+
+ - OSSO_TelStat -n -d -r test.log
+    where test.log is in this directory, or substitute a
+    complete path, e.g.
+      /home/bon/proj/TelStatLogs/TelStat_ReplayData_o00096_2007_12_26_182725.log
+ - OSSO_TelStat -n -d -r /home/bon/proj/TelStatLogs/TelStat_ReplayData_o00096_2007_12_26_182725.log
+
+To run with the TelStat simulator, with debugging turned on:
+
+   - OSSO_TelStat -n -d -s
+
+
+

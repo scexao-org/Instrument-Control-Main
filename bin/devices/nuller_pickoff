@@ -17,7 +17,6 @@ import time
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from devices import devices
-from xaosim.scexao_shmlib import shm
 import numpy as np
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
@@ -33,24 +32,5 @@ defpos = ["in", "out"]
 
 # GENERIC CODE
 
-mydata = np.zeros((1,1)).astype(np.float32)
-
-if not os.path.isfile("/tmp/"+devname+".im.shm"):
-    os.system("creashmim %s 1 1" % (devname,))
-    time.sleep(0.5)
-
-d = locals()
-exec("whshm = shm('/tmp/%s.im.shm', verbose=False)" % (devname,), globals(), d)
-whshm = d['whshm']
-
 args = sys.argv[1:]
 devices(devname, conexids, conexnames, args=args, description=description, defpos=defpos, color_st=True)
-
-if ((args[0] == 'in') or (args[0].isdigit() and (int(args[0] == 1)))):
-    mydata[0,0] = 1
-    whshm.set_data(mydata)
-else:
-    mydata[0,0] = 0
-    whshm.set_data(mydata)
-    
-whshm.close()

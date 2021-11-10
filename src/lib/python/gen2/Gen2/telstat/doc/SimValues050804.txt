@@ -1,0 +1,120 @@
+*** NEW SET OF FOCUSINFO VALUES ADC_PF_CS: ***
+
+Ndx   FOCUSINFO  ADCInOut  ADCONOFF_PF  ADCMODE_PF | FOCUS     M2     ROT          ADC
+
+1-5     None                                         NoFoc.. No Data  <none>       <none>
+6-10  ffffff00                                       FocUnd.. M2Und   <none>       <none>
+11-12 01000000               None                    PF_OPT   SPCAM   ROT_INSR     No ADC On/Off Data
+13-17 01000000               0x2=Off                 PF_OPT   SPCAM   ROT_INSR     ADC Free
+18-20 01000000               0x1=On      None        PF_OPT   SPCAM   ROT_INSR     No ADC Mode Data
+
+21-25 01000000               0x1=On      0x40=Link   PF_OPT   SPCAM   ROT_INSR     ADC Link
+26-30 01000000               0x1=On      0x80=Free   PF_OPT   SPCAM   ROT_INSR     ADC Free
+31-32 01000000               0x1=On      0xff=undef  PF_OPT   SPCAM   ROT_INSR     ADC Undefined (1,ff)
+33-37 01000000               0xf=undef               PF_OPT   SPCAM   ROT_INSR     ADC Undefined (f,40)
+
+
+Ndx   FOCUSINFO  ADCInOut   ADCOnOff     ADCMode   | FOCUS     M2     ROT          ADC
+
+38-40 00000080                                       FocUnd.. M2Und   <none>       <none>
+
+41-45 04000000    None                               CS_OPT   CS_OPT  ROT_INSR     ADC No Data
+46-50 08000000   0x10=Out                            CS_OPT   CS_OPT  ROT_INSR     ADC Undefined
+51-52 04000000   0x08=In                             CS_OPT   CS_OPT  ROT_INSR     ADC Undefined
+53-57 04000000   0x10=Out                            CS_OPT   CS_OPT  ROT_INSR     No ADC
+58-60 08000000   0x08=In     None                    CS_OPT   CS_OPT  ROT_INSR     No ADC On/Off Data
+
+61-65 08000000   0x08=In     0x2=Off                 CS_OPT   CS_OPT  ROT_INSR     ADC Free
+66-70 08000000   0x08=In     0x1=On      None        CS_OPT   CS_OPT  ROT_INSR     No ADC Mode Data
+71-72 08000000   0x08=In     0x1=On      0x04=Link   CS_OPT   CS_OPT  ROT_INSR     ADC Link
+73-77 08000000   0x08=In     0x1=On      0x08=Free   CS_OPT   CS_OPT  ROT_INSR     ADC Free
+78-80 08000000   0x08=In     0x1=On      0xff=undef  CS_OPT   CS_OPT  ROT_INSR     ADC Undefined (1,ff)
+
+*** NEW SET OF FOCUSINFO VALUES ADC_NS_ROT_PF: ***
+
+1-5   08000000   0x08=In     0xf=undef               CS_OPT   CS_OPT  ROT_INSR     ADC Undefined (f,4)
+
+6-10  10000000    None                               NS_OPT   CS_OPT  <none>       ADC No Data
+11-12 20000000   0x10=Out                            NS_OPT   CS_OPT  <none>       ADC Undefined
+13-17 40000000   0x08=In                             NS_OPT   CS_OPT  ROT_IMRB     ADC Undefined
+18-20 00010000   0x10=Out                            NS_OPT   CS_OPT  ROT_IMRR     No ADC
+
+21-25 80000000   0x08=In     None                    NS_OPT   CS_OPT  ROT_IMRB     No ADC On/Off Data
+26-30 00020000   0x08=In     0x2=Off                 NS_OPT   CS_OPT  ROT_IMRR     ADC Free
+31-32 00200000   0x08=In     0x1=On      None        NS_OPT   CS_OPT  <none>       No ADC Mode Data
+33-37 00800000   0x08=In     0x1=On      0x04=Link   NS_OPT   NS_OPT  ROT_IMRB     ADC Link
+38-40 00000200   0x08=In     0x1=On      0x08=Free   NS_OPT   NS_OPT  ROT_IMRR     ADC Free
+
+41-45 00004000   0x08=In     0x1=On      0xff=undef  NS_OPT   IR      <none>       ADC Undefined (1,ff)
+46-50 00000001   0x08=In     0xf=undef               NS_OPT   IR      ROT_IMRB     ADC Undefined (f,8)
+
+
+Ndx   FOCUSINFO  FOCUSALARM  INSROTROTATION_PF  INSROTMODE_PF   | FOCUS     M2        ROT
+
+51-52   None                                                      NoFoc..   No Data   <none>
+53-57 00000020                                                    FocUnd..  M2 Undef  <none>
+58-60 01000000     0x40                                           FocChng   M2 Undef  <none>
+
+61-65 01000000     0x80                                           PF_OPT    M2 Undef  Rotator Undefined
+66-70 01000000      0                               None          PF_OPT    SPCAM     No Rot Data
+71-72 02000000      0          (TSCS.INSROTPOS_PF=None)           PF_IR     FMOS      No Rot Pos Data
+73-77 01000000      0          (TSCS.INSROTCMD_PF=None)           PF_OPT    SPCAM     No Rot Pos Data
+78-80 02000000      0             0x02(off)                       PF_IR     FMOS      InsRot Free
+
+*** NEW SET OF FOCUSINFO VALUES ROT_PF_CS_NS: ***
+
+1-5   01000000      0             0x01(on)          0x20(free)    PF_OPT    SPCAM     InsRot Free
+6-10  02000000      0             0x01              0x10(link)    PF_IR     FMOS      InsRot Link
+11-12 01000000      0             0x01              0x40(undef)   PF_OPT    SPCAM     InsRot Undefined (1,40)
+13-17 02000000      0             0x04(undef)       0x10          PF_IR     FMOS      InsRot Undefined (4,10)
+
+
+Ndx   FOCUSINFO  FOCUSALARM    InsRotRotation     InsRotMode    | FOCUS     M2        ROT
+
+18-20 04000000     0x40                                           FocChng   M2 Undef  <none>
+
+21-25 04000000     0x80                                           CS_OPT    M2 Undef  Rotator Undefined
+26-30 04000000      0          (TSCS.INSROTPOS=None)              CS_OPT    CS_OPT    No Rot Pos Data
+31-32 08000000      0          (TSCS.INSROTCMD=None)              CS_OPT    CS_OPT    No Rot Pos Data
+33-37 00001000      0             0x02(off)                       CS_IR      IR       InsRot Free
+38-40 04000000      0             0x01(on)          0x02(free)    CS_OPT    CS_OPT    InsRot Free
+
+41-45 08000000      0             0x01              0x01(link)    CS_OPT    CS_OPT    InsRot Link
+46-50 00001000      0             0x01              0x40(undef)   CS_IR      IR       InsRot Undefined (1,40)
+51-52 04000000      0             0x04(undef)       0x01          CS_OPT    CS_OPT    InsRot Undefined (4,1)
+53-57 08000000      0                               None          CS_OPT    CS_OPT    No Rot Data
+
+
+Ndx   FOCUSINFO  FOCUSALARM  ImgRotRotation  ImgRotMode  ImgRotType | FOCUS    M2       ROT
+              (rot)
+58-60 10000000     0x40                                               FocChng  M2 Undef <none>
+
+61-65 10000000     0x80                                               NS_OPT   M2 Undef Rotator Undefined
+66-70 00040000      0           0x01(on)        None                  NS_IR    CS_OPT   No Rot Data
+71-72 40000000(inB) 0           0x01(on)      0x01(link)  0x12(blue)  NS_OPT   CS_OPT   ImgRot Link (Blue) cmd not achvd
+73-77 40000000(inB) 0           0x03(undef)   0x01(link)  0x12(blue)  NS_OPT   CS_OPT   No Rot Pos Data
+                                             (TSCS.ImgRotPos=None)
+78-80 40000000(inB) 0           0x02(off)     0x01(link)  0x0C(red)   NS_OPT   CS_OPT   No Rot Pos Data
+                                             (TSCS.IMGROTCMD=None)
+ImgRot Undefined (3,1,4)/No Rot Pos Data
+*** NEW SET OF FOCUSINFO VALUES ROT_NS: ***
+
+1-5   10000000(out) 0           0x01(on)      0x02(free)  0x12(blue)  NS_OPT   CS_OPT   ImgRot Out (Blue?)
+6-10  40000000(inB) 0           0x01(on)      0x02(free)  0x0C(red)   NS_OPT   CS_OPT   ImgRot Free (Red) cmd not achvd
+11-12 80000000(inB) 0           0x01(on)      0x01(link)  0x12(blue)  NS_OPT   CS_OPT   ImgRot Link (Blue) cmd not achvd
+13-17 00010000(inR) 0           0x01(on)      0x01(link)  0x0C(red)   NS_OPT   CS_OPT   ImgRot Link (Red)
+18-20 00020000(inR) 0           0x01(on)      0x01(link)  0x04(OWred) NS_OPT   CS_OPT   ImgRot Link (OnWay-Red)
+
+21-25 00080000(in)  0           0x01(on)      0x01(link)  0x04(OWred) NS_IR    CS_OPT   ImgRot Link
+26-30 00400000(inB) 0           0x01(on)      0x01(link)  0x04(OWred) NS_OPT   NS_OPT   ImgRot Link (OnWay-Red)
+31-32 00800000(inB) 0           0x01(on)      0x01(link)  0x0f(undef) NS_OPT   NS_OPT   ImgRot Link, ImgRot Type Undefined (f)
+33-37 00000100(inR) 0           0x01(on)      0x01(link)    None      NS_OPT   NS_OPT   ImgRot Link, No ImgRot Type Data
+38-40 00000200(inR) 0           0x02(off)     0x01(link)  0x04(OWred) NS_OPT   NS_OPT   ImgRot Free (OnWay-Red)
+
+41-45 00000800(in)  0           0x01(on)      0x02(free)    None      NS_IR    NS_OPT   ImgRot Free
+46-50 00008000(inB) 0           0x01(on)      0x01(link)  0x0f(undef) NS_OPT    IR      ImgRot Undefined (1,1,f)
+51-52 00000001(inB) 0           0x01(on)      0x02(free)  0x10(OWblu) NS_OPT    IR      ImgRot Free (OnWay-Blue)
+53-57 00000002(inR) 0           0x01(on)      0x01(link)  0x04(OWred) NS_OPT    IR      ImgRot Link (OnWay-Red)
+58-60 00000004(inR) 0           0x01(on)      0x02(free)  0x14(none)  NS_OPT    IR      ImgRot Free (none type)
+
+61-65 00000010(in)  0           0x01(on)      0x01(link)  0x12(blue)  NS_IR     IR      ImgRot Link/cmd not achvd

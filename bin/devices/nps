@@ -1,0 +1,114 @@
+#!/usr/bin/python
+
+import os
+import sys
+import time
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from nps import nps
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+def message(npsid=0):
+    if npsid == 1:
+        print("------------------------------------")
+        print("          NPS1 contents             ")
+        print("------------------------------------")
+        print("Port 1: SCExAO comp 4 redundant")
+        print("Port 2: SCExAO comp 2 primary")
+        print("Port 3: High voltage tip/tilt driver")
+        print("Port 4: VAMPIRES camera")
+        print("Port 5: Source box")
+        print("Port 6: DM electronics")
+        print("Port 7: VAMPIRES synchro & FLC")
+        print("Port 8: VAMPIRES differential wheel")
+        print("------------------------------------")
+    elif npsid == 2:
+        print("------------------------------------")
+        print("          NPS2 contents             ")
+        print("------------------------------------")
+        print("Port 1: SCExAO comp 4 primary")
+        print("Port 2: SCExAO comp 2 redundant")
+        print("Port 3: RAJNICAM")
+        print("Port 4: OCAM power")
+        print("Port 5: Tip/Tilt modulator")
+        print("Port 6: FIRST Neon cal source")
+        print("Port 7: DM Vacuum Pump")
+        print("Port 8: --")
+        print("------------------------------------")
+    elif npsid == 3:
+        print("------------------------------------")
+        print("          NPS3 contents             ")
+        print("------------------------------------")
+        print("Port 1: --")
+        print("Port 2: VAMPIRES computer")
+        print("Port 3: BUFFYCAM power")
+        print("Port 4: 15V power supplies (Zaber)")
+        print("Port 5: 5 and 12V supplies (Wheels)")
+        print("Port 6: 24V power supplies (Ez step)")
+        print("Port 7: GLINT picomotors")
+        print("Port 8: CHUCKCAM")
+        print("------------------------------------")
+    else:
+        print("------------------------------------")
+        print("There are only 3 NPSs!")
+        print("------------------------------------")
+    print("Usage: nps <dev> <port> <command>")
+    print("------------------------------------")
+    print("DEV:")
+    print("    1-3     NPS #1 to #3")
+    print("PORT:")
+    print("    status  status of the full device")
+    print("    1-8     select port #N")
+    print("COMMAND:")
+    print("    status  status of port #N")
+    print("    on      turn on port #N")
+    print("    off     turn off port #N")
+    print("------------------------------------")        
+    exit()
+
+# -----------------------------------------------------------------
+def quickhelp(name, description):
+    print("%20s       %s" % (name, description))
+    exit()
+
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
+
+name = "nps"
+description = "turn on/off/status port on a power switch"
+
+args = sys.argv[1:]
+
+if args[0] == "--help1":
+    quickhelp(name, description)
+
+
+try:
+    npsid = int(args[0])
+except:
+    message()
+
+if 1 <= npsid <= 3:
+    if len(args) >= 2:
+        if args[1] == "status":
+            for i in range(8):
+                portid = i+1
+                npsname = "mps %d port %d" %(npsid, portid)
+                args2 = ["status"]
+                nps(npsname, npsid, portid, args=args2, description=description)
+        else:
+            portid = int(args[1])
+            if 1 <= portid <= 8:
+                args2 = args[2:]
+                npsname = "mps %d port %d" %(npsid, portid)
+                nps(npsname, npsid, portid, args=args2, description=description)
+            else:
+                message(npsid)
+    else:
+        message(npsid)
+else:
+    message(npsid)
+
+

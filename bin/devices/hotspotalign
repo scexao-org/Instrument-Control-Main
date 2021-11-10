@@ -17,20 +17,23 @@ import pdb
 import numpy as np
 from astropy.io import fits as pf
 import numpy.linalg as la
+import asyncio
+#from newfocus8742.usb import NewFocus8742USB as USB
+
+from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxkw.redisutil.typed_db import Redis
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from camera_tools import cam_cmd
-from xaosim.scexao_shmlib import shm
+#from xaosim.scexao_shmlib import shm
 #from scexao_shm import shm
-import ezstep_chain3 as ezstep_chain
+from pyMilk.interfacing.isio_shmlib import SHM as shm
+import image_processing as impro
 
-ttmdev  = "/dev/serial/by-path/"
-ttmdev += "pci-0000:00:1d.0-usb-0:1.8.2:1.0-port0" # all steppers now connected together
-
-shm_im = shm("/tmp/ircam0.im.shm")
-shm_im_dark = shm("/tmp/ircam0_dark.im.shm")
-shm_im_badpixmap = shm("/tmp/ircam0_badpixmap.im.shm")
+shm_im = shm("ircam0")
+shm_im_dark = shm("ircam0_dark")
+shm_im_badpixmap = shm("ircam0_badpixmap")
 
 # Reading in shared memory
 #------------------------
@@ -43,6 +46,25 @@ def read_shm():
     im_chuck *= badpixmap_chuck
     return im_chuck
 
+# ------------------------------------------------------------------
+#  Read database for some stage status
+# ------------------------------------------------------------------
+def RDB_pull(rdb):
+
+    fits_keys_to_pull = {'X_NULPKO','X_RCHPKO'}
+    # Now Getting the keys
+    with rdb.pipeline() as pipe:
+        for key in fits_keys_to_pull:
+            pipe.hget(key, 'FITS header')
+            pipe.hget(key, 'value')
+        values = pipe.execute()
+    status = {k: v for k,v in zip(values[::2], values[1::2])}
+
+    gpin = status['X_NULPKO'].strip() == 'IN'
+    rpin = status['X_RCHPKO'].strip() == 'IN'
+
+    return(gpin,rpin)
+
 # Find center of image
 #------------------------
 
@@ -52,45 +74,35 @@ def find_center(shiftx, shifty):
             im_chuck = read_shm()/100.
         else:
             im_chuck += read_shm()/100.
-    #imin = np.percentile(im_chuck, 99.97)
-    iflux = np.percentile(im_chuck, 99.999)
-    imin = iflux*0.01
-    print(imin, iflux, np.max(im_chuck))
-    im_chuck = im_chuck-imin
-    mask = im_chuck > 0
-    im_chuck = im_chuck*mask
-    if iflux < 200:
-        print(iflux)
-        print("Not enough flux, aborting")
-        os.system("/home/scexao/bin/log Hotspotalign: Not enough flux, aborting")
-        os.system("scexaostatus set hotspot 'LOW FLUX' 0")
-        sys.exit()
-    #pf.writeto("./temp_chuck.fits",im_chuck,clobber='True')
-    total = np.sum(im_chuck)
-    X, Y = np.indices(np.shape(im_chuck)) 
-    cx = (np.sum(Y*im_chuck)/total)
-    cy = (np.sum(X*im_chuck)/total)
-    cx = cx-shiftx
-    cy = cy-shifty
+    [cx,cy] = impro.centroid(im_chuck,method="default")
+    cx -= shiftx
+    cy -= shifty
     return [cx, cy]
 
 # Main
 #------------------------
 
-#reset the steering mirror
-os.system("steering home")
-time.sleep(1)
-os.system("steering onaxis")
-time.sleep(1)
+# ------------------------------------------------------------------
+#            Configure communication with SCExAO's redis
+# ------------------------------------------------------------------
+rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+# Is the server alive ?
+try:
+    alive = rdb.ping()
+    if not alive:
+        raise ConnectionError
+except:
+    print('Error: can\'t ping redis DB.')
+    sys.exit(1)
+
+gpin,rpin = RDB_pull(rdb)
+
+os.system('cp %s/src/lib/python/%s_PSF_%s.fits %s/src/lib/python/simref.fits' %(home,"Chuckcam","H",home))
 
 # parameters of the target point
 with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
     pos = np.array([[float(digit) for digit in line.split()] for line in file])
 
-if not os.path.isfile("/tmp/nuller_pickoff.im.shm"):
-    os.system("creashmim nuller_pickoff 1 1")
-nuller_pickoff = shm("/tmp/nuller_pickoff.im.shm", verbose=False)
-npin = int(nuller_pickoff.get_data())
 pscale = 15.3 #mas per pixel in Chuckcam
 
 filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
@@ -103,7 +115,7 @@ for i in range(ncor):
     cort[1,i] = float(corparam[3])
 cort /= pscale
 cor = np.array([0,0])
-if npin:
+if gpin:
     cor = cort[:,0]
 
 im_chuck = read_shm()
@@ -115,28 +127,30 @@ shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5
 shifty = pos[0,1]-crop[2]+256+cor[1]-0.5
 print( shiftx, shifty)
 # parameters of the loop
-gain = 0.2
+gain = 0.5
 precision = 0.2
 
-A = np.matrix([[-8.8/100., -0.0/100.],[0.0/100., -4.7/100.]])
-invA = la.inv(A)
+os.system("/home/scexao/bin/log Hotspotalign: starting alignment")
+os.system("scexaostatus set hotspot 'IN PROGRESS' 3")
 
-# Try to find the center a first time, to check the flux
-c0 = find_center(shiftx, shifty)
-# move a first time in negative values in x and y
-ttm = ezstep_chain.ezstep_chain(ttmdev)
-ttm.dmove(1, -100)
-time.sleep(0.1)
-ttm.dmove(2, -100)
-time.sleep(0.1)
+#reset the steering mirror
+os.system("steering home")
+time.sleep(1)
+if rpin:
+    os.system("steering reach")
+else:
+    os.system("steering onaxis")    
+time.sleep(1)
+
+A = np.matrix([[-1/100., 0],[0, 1/100.]])
+invA = la.inv(A)
 
 #initialize the position
 cnt = 0
 c0 = find_center(shiftx, shifty)
 print(c0)
 
-os.system("/home/scexao/bin/log Hotspotalign: starting alignment")
-os.system("scexaostatus set hotspot 'IN PROGRESS' 3")
+#dev = USB.connect()
 
 # loop
 while (((c0[0]**2+c0[1]**2)**0.5) > precision) and (cnt < 500):
@@ -144,45 +158,23 @@ while (((c0[0]**2+c0[1]**2)**0.5) > precision) and (cnt < 500):
     c0 = find_center(shiftx, shifty)
     print(c0)
     
-    # if the psf is still north-west of the hotspot, move south-east
-    if (c0[0] > precision) and (c0[1] > precision):
-        ttm.dmove(1, -100)
-        time.sleep(0.1)
-        ttm.dmove(2, -100)
-        if cnt > 20:
-            precision = precision+0.05
-    
-    # if the psf is still south-west of the hotspot, move east
-    elif (c0[0] > precision) and (c0[1] < precision):
-        ttm.dmove(2, -100)
-        if cnt > 20:
-            precision = precision+0.05
-    
-    # if the psf is still north-east of the hotspot, move south
-    elif (c0[0] < precision) and (c0[1] > precision):
-        ttm.dmove(1, -100)
-        if cnt > 20:
-            precision = precision+0.05
+    com = np.dot(invA, c0)
+    print(com)
+    com0x = int(round(com[0,0]*gain))
+    com0y = int(round(com[0,1]*gain))
+    os.system("dm_stage theta push %i" %com0x)
+    #dev.set_relative(1,com0x)
+    #time.sleep(0.1)
+    os.system("dm_stage phi push %i" %com0y)
+    #dev.set_reltive(2,com0y)
+    #time.sleep(0.1)
 
-    # else, if the psf is south-east of the hotspot, move closer to the hotspot
-    else:
-        com = np.dot(invA, c0)
-        print(com)
-        com0x = int(round(com[0,0]*gain))
-        com0y = int(round(com[0,1]*gain))
-        com0x = min([com0x, 100])
-        com0y = min([com0y, 100])
-        if (com0x > 0):
-            ttm.dmove(2, com0x)
-            time.sleep(0.1)
-        if (com0y > 0):
-            ttm.dmove(1, com0y)
-            time.sleep(0.1)
-
-# close the communication with the tip-tilt mount
-ttm.close()
 shm_im.close()
-nuller_pickoff.close()
+
+#for i in range(2)+1:
+#    pos = dev.get_position(i)
+#    print(pos)
+#    dev.finish(i)
 
 os.system("/home/scexao/bin/log Hotspotalign: alignment done")
 os.system("scexaostatus set hotspot 'OFF' 1")

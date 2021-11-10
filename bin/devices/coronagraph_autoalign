@@ -1,0 +1,175 @@
+#!/usr/bin/env python
+
+import numpy as np
+import os,sys,time
+import matplotlib.pyplot as plt
+from astropy.io import fits as pf
+from astropy.modeling import models, fitting
+from scipy.interpolate import griddata
+import subprocess
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from xaosim.scexao_shmlib import shm
+import colormaps as cmaps
+import image_processing as impro
+import vibration as vib
+import zaber_chain3 as zaber
+zab = zaber.zaber()
+
+
+plt.ion()
+
+camid = 0
+cam = shm("/tmp/ircam%d.im.shm" % (camid,), verbose=False)
+(xsize, ysize) = cam.mtdata['size'][:2]#size[:cam.naxis]
+cam_dark = shm("/tmp/ircam%d_dark.im.shm" % (camid,), verbose=False)
+cam_badpixmap = shm("/tmp/ircam%d_badpixmap.im.shm" % (camid,), verbose=False)
+fitter = fitting.LinearLSQFitter()
+
+args = sys.argv[1:]
+
+if len(args) == 4:
+    coro = int(args[0])
+    am = int(args[1])
+    npt = int(args[2]) 
+    nscans = int(args[3])
+elif len(args) == 3:
+    coro = int(args[0])
+    am = int(args[1])
+    npt = int(args[2]) 
+    nscans = 1
+elif len(args) == 2:
+    coro = int(args[0])
+    am = int(args[1])
+    npt = 5
+    nscans = 2
+elif len(args) == 1:
+    coro = int(args[0])
+    am = 400
+    npt = 5
+    nscans = 2
+else:
+    coro = 38
+    am = 400
+    npt = 5
+    nscans = 2
+
+# ------------------------------------------------------------------
+#             short hands for shared memory data access
+# ------------------------------------------------------------------
+def get_img_data(bias=None, badpixmap=None, subt_ref=False, ref=None,
+                 line_scale=True, clean=True, check=True):
+    ''' ----------------------------------------
+    Return the current image data content,
+    formatted as a 2D numpy array.
+    Reads from the already-opened shared memory
+    data structure.
+    ---------------------------------------- '''
+    temp = cam.get_data(check, reform=True, timeout=1.0).astype('float')
+    if clean:
+        if badpixmap is not None:
+            temp *= badpixmap
+        #isat = np.percentile(temp, 99.995)
+        isat = np.max(temp)
+        if bias is not None:
+            temp -= bias
+    else:
+        #isat = np.percentile(temp, 99.995)
+        isat = np.max(temp)
+
+    #cam_clean.set_data(temp.astype(np.float32))
+
+    if subt_ref:
+        temp -= ref
+        if not lin_scale:
+            temp = np.abs(temp)
+
+    return(temp, isat)
+
+# ------------------------------------------------------------------
+#             short hands for image averaging
+# ------------------------------------------------------------------
+def ave_img_data(nave, bias=None, badpixmap=None, clean=True):
+
+    for i in range(nave):
+        if i == 0:
+            ave_im = get_img_data(bias=bias, badpixmap=badpixmap, clean=clean)[0]/float(nave)
+        else:
+            ave_im += get_img_data(bias=bias, badpixmap=badpixmap, clean=clean)[0]/float(nave)
+
+    return(ave_im)
+
+#os.system("fpm x home")
+#time.sleep(2)
+#os.system("fpm x goto %d" % (coro,))
+#time.sleep(2)
+#os.system("fpm y home")
+#time.sleep(2)
+#os.system("fpm y goto %d" % (coro,))
+
+conexids = ["usb-Newport_CONEX-AGP_A6WRSEMC-if00-port0"]
+conexnames = ["wheel"]
+
+zaberchain = "irback"
+zaberids = [1, 2, 3]
+zabernames = ["x", "y", "f"]
+
+nave = 1000
+
+#zab.open(zaberchain)
+
+ramp = (vib.make_ramp(-am,am,npt,1)/50).astype('int')*50
+ramp2 = vib.make_ramp(-am,am,npt*10,1)
+
+dark = cam_dark.get_data()
+badpixmap = cam_badpixmap.get_data()
+
+flux = np.zeros((nscans*2,npt))
+fluxfit = np.zeros((nscans*2,npt*10))
+pos0 = np.zeros((nscans+1,2))
+
+axis = ["x","y"]
+
+fpm_file = "/home/scexao/bin/devices/conf/conf_fpm.txt"
+
+f = open(fpm_file,'r')
+f2 = f.readlines()
+f.close()
+for i in range(2):
+    pos0[0,i] = int(f2[coro-1].split(';')[3+i].rstrip())
+
+for j in range(nscans*2):
+    for i in range(npt):
+        print(int(pos0[j//2,j%2]+2**(j%2)*ramp[i]))
+        #zab.move(zaberids[j%2],int(pos0[j//2,j%2]+ramp[i]),"",log=False)
+        os.system("fpm %s goto %d" % (axis[j%2], int(pos0[j//2,j%2]+2**(j%2)*ramp[i])))
+        time.sleep(0.1)
+        im = ave_img_data(nave, bias=dark, badpixmap=badpixmap, clean=True)
+        flux[j,i] = np.sum(im)
+    model_initx = models.Polynomial1D(degree=2)
+    #flux[j,:] /= np.min(flux[j,:])
+    lin_fitx = fitter(model_initx,2**(j%2)*ramp,flux[j,:])
+    fluxfit[j,:] = lin_fitx(2**(j%2)*ramp2)
+    cor = -lin_fitx.parameters[1]/(2*lin_fitx.parameters[2])
+    cor = min(2**(j%2)*am,max(-2**(j%2)*am,cor))
+    print(j," correction: ",cor)
+    pos0[j//2+1,j%2] = pos0[j//2,j%2]+int(round(cor/50))*50
+    print(int(pos0[j//2+1,j%2]))
+    #zab.move(zaberids[j%2],int(pos0[j//2+1,j%2]),"",log=False)
+    os.system("fpm %s goto %d" % (axis[j%2], int(pos0[j//2+1,j%2])))
+    time.sleep(1)
+#zab.close()
+
+f2[coro-1] = f2[coro-1][:26]+"%-6s;%-6s" % (int(pos0[-1,0]),int(pos0[-1,1]))+f2[coro-1][39:]
+
+with open(fpm_file,"w") as f:
+    for i in range(len(f2)):
+        f.write(f2[i])
+f.close()
+
+fig = plt.figure()
+plt.plot(ramp,flux.T)
+plt.plot(ramp2,fluxfit.T)
+plt.xlabel("position [steps]")
+plt.ylabel("flux [ADU]")
+

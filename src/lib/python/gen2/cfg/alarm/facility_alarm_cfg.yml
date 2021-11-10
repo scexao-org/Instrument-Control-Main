@@ -1,0 +1,47 @@
+#
+# facility_alarm_cfg.yml - This configuration file has status variables
+#                          and alarms for facility-related items, e.g.,
+#                          oil and water storage tank.
+#
+#[ Russell Kackley (rkackley@naoj.org) --
+#  Last edit: Tue Feb 19 17:48:51 HST 2013
+#]
+#
+
+Facility:
+  # High oil storage tank level alarm
+   - !DigitalSV
+      ID:     Melco_00B3038
+      Name:   CONT BLDG Oil Tank High Alarm
+      Gen2Alias: TSCV.OIL!M04
+      Alarm:
+        Warning: !DigitalAlarm
+          MinNotifyInterval: 300
+  # Low oil storage tank level alarm
+   - !DigitalSV
+      ID:     Melco_00B3039
+      Name:   CONT BLDG Oil Tank Low Alarm
+      Gen2Alias: TSCV.OIL!M08
+      Alarm:
+        Warning: !DigitalAlarm
+          MinNotifyInterval: 300
+  # High water storage tank level alarm
+  # TSC seems to be reporting the Water Tank High Alarm
+  # as continuously "On". Perhaps the sensor or connection
+  # is bad so set it to "Ignore" (19 February 2013).
+   - !DigitalSV
+      ID:     Melco_00B3036
+      Name:   CONT BLDG Water Tank High Alarm
+      Gen2Alias: TSCV.WATER!M10
+      Alarm:
+        Warning: !DigitalAlarm
+          MinNotifyInterval: 300
+          Ignore: Yes
+  # Low water storage tank level alarm
+   - !DigitalSV
+      ID:     Melco_00B3037
+      Name:   CONT BLDG Water Tank Low Alarm
+      Gen2Alias: TSCV.WATER!M20
+      Alarm:
+        Warning: !DigitalAlarm
+          MinNotifyInterval: 300

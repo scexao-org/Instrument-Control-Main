@@ -3,4 +3,4 @@
 3;1550nm, 25nm BW ;0
 4;1550nm, 50nm BW ;0
 5;J-band          ;2
-6;H-band (deflt)  ;1
+6;H-band          ;1

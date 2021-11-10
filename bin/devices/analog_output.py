@@ -92,17 +92,16 @@ def main():
         if na < 2:
             usage()
         elif (args[1]=="A") or (args[1]=="B") or (args[1]=="C") or (args[1]=="D"):
+            # CHANNEL SWITCHER TEMP !!
+            args[1] = {'A':'A', 'B':'B', 'C':'D', 'D':'C'}[args[1]]
             if isinstance(float(args[2]),float):
                 if (float(args[2])>-10) and (float(args[2])<10):
                     ao = aoutput(aoname)
                     ao.voltage(args[1],args[2])
                     ao.close()
-                    #if args[1]!="A":
-                    #else:
-                    #    dc = aoutput(dcname)
-                    #    dc.voltage(args[1],args[2])
-                    #    dc.close()
-                    logit.logit('Analog_output','Channel:'+str(args[1])+' Amplitude: '+str(args[2]))
+
+                    logit.logit('Analog_output','Channel [C-D SWITCHED]:'+str(args[1])+' Amplitude: '+str(args[2]))
+
                 else:
                     print("Please enter a voltage between -10 and 10")
             else:

@@ -1,0 +1,65 @@
+    '''
+    From TVDataView
+    # I previously used this method for sanity checking the cache; if the display cache-walks
+    # looked like something was amiss, I could click to trigger a comparison between the minmax
+    # from the top of the cache vs a minmax from the data directly, & if it's not right I set
+    # a reason that could trigger the debugger in the cache, without having debugging code
+    # triggering in all the caches all the time.  This code needs some work to bring it
+    # up to date with the current structure of the code (and I believe it's worthwhile,
+    # as I write this comment I think I've (just once) seen what looks like a cache traversal
+    # error that is rarely evident because the problem is alignment specific and most data
+    # doesn't make it obvious.  (Unit testing anyone?)
+    
+    def mousePressEvent(self, event):
+        position = event.buttonDownPos(Qt.LeftButton)
+        
+        timeInterval = self.endTime - self.startTime
+        width = self.graph.dataViewRect.width()
+        timePerWidth = timeInterval / width
+        
+        clickTime = self.startTime + (position.x() * timePerWidth)
+        for i, dataStore in enumerate(self.graph.dataStores):
+            index = bisect(dataStore.T,clickTime)
+            #print "===========\n%s dataStore[%d] index:%d  len:%d" %(self.graph.key, i,index, len(dataStore)) 
+            #print "    clickTime: %s" % (time.strftime("%H:%M:%S", time.localtime(clickTime)))
+            #print "    dataTime:  %s" % (time.strftime("%H:%M:%S", time.localtime(dataStore.T[index])))
+
+            i1,j1 = CTVData.indiceesForTimeRange(dataStore, self.startTime, self.endTime)
+            _l0  = CTVData.cachedMinMax(dataStore, i1,j1)
+            _lm1 = CTVData._minMaxNoneIndiceesAtLevel(dataStore, i1, j1, -1)[:2]
+            if _l0 != _lm1:
+                print "\n\nOh NOES! %s i:%d j:%d\n%s\n%s" % (self.graph.key, i1,j1,str(_l0), str(_lm1))
+                dataStore.addReason("debug", "cache", Reason.DOIT, timeout=5.05)
+                #raise
+            else:
+                print "\n\nOK, <%s> data is good" % (self.graph.key)
+                dataStore.addReason("debug", "cache", Reason.DOIT, timeout=5.05)
+            
+            #print "%s cache %d OK" % (self.graph.key, i)
+        #print "=====hello world I'm     TVDataView     mouse press event\n    %s" % (str(event))
+    '''
+
+    '''
+    def mousePressEvent(self, event):
+        self.addReason("display", "drawRects", Reason.DOIT, timeout=5.05)
+        print "xxxx mouse press event in tvdataview"
+    '''
+
+    
+********************************************
+    void MyWidget::paintEvent( QPaintEvent* e ) {
+        bitBlt( this e->rect().topLeft(), &bufferpixmap, e->rect() );
+    }
+    void bitBlt( QPaintDevice* dst, int dx, int dy,
+        const QPaintDevice* src, int sx = 0, int sy = 0,
+        int sw = -1, int sh = -1, RasterOp rop = CopyROP,
+        bool ignoreMask = false )
+    void MyWidget::paintEvent( QPaintEvent* e ) {
+        if( dirty ) {
+            QPainter painter( &bufferpixmap );
+            // perform any needed painting operations on the bufferpixmap
+            dirty = false; // updating of buffer pixmap is done
+        }
+        // copy the buffer pixmap over to the widget
+        bitBlt( this, e->rect().topLeft(), &bufferpixmap, e->rect() );
+    }

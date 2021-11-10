@@ -1,0 +1,19 @@
+TelStat's make file
+
+install target:
+    Copies TelStat sources to /soss/SRC/product/load
+        and /soss/SRC/product/load/OSSO_TelStatLib
+
+    Copies TelStat sources to /soss/SRC/product/remote/load
+        and /soss/SRC/product/remote/load/OSSO_TelStatLib
+
+
+Ultimate destination for TelStat sources:
+    Summit hosts (ows1-3, ana, ana2, ..., mows1, mana, ...):
+        /app/LOAD/DEBUG
+        /app/LOAD/DEBUG/OSSO_TelStatLib
+
+    Remote hosts (hows1-3, hana, hana2):
+        /app/OSS/remote/load
+        /app/OSS/remote/load/OSSO_TelStatLib/
+

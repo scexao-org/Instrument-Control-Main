@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+#
+import sys
+#import os
+import re
+import remoteObjects as ro
+
+def play(server, file):
+    try:
+        server.play(file)
+
+    except Exception, e:
+        sys.stderr.write("Error playing remote sound: %s" % str(e))
+        sys.stderr.flush()
+
+if __name__ == '__main__':
+
+    ro.init()
+    server = ro.remoteObjectProxy('sound')
+    
+    for arg in sys.argv:
+        match = re.search('^.+\.au$', arg)
+        if match:
+            # "&" means less delay for IntegGUI and TelStat
+            #os.system("%s %s &" % (play_prog, arg))
+            play(server, arg)
+
+    sys.exit(0)
+    
+#END

@@ -1,0 +1,30 @@
+*** NEW SET OF FOCUSINFO VALUES TIP_TILT_CHOP ***
+
+Ndx   FOCUSINFO  M2   MODE    DRIVE    DataAvail  ChopStat      | SUFFIX
+
+1-5   00001000   IR    0       0         0           0             none
+6-10  00001000   IR    0       0         0           0             none
+11-12 00001000   IR    2(TT)   5(On/R)   0           0             TT yellow
+13-17 00001000   IR    2(TT)   5(On/R)   1           0             TT
+18-20 00001000   IR    4(Pos)  5(On/R)   1           0             none (Position mode)
+
+21-25 00000008   IR    5(bad)  5(On/R)   1           0             UndefMode
+26-30 00000008   IR    2(TT)   5(On/R)   0           0             TT yellow
+31-32 00000008   IR    2(TT)   1(On)     1           0             TT
+33-37 00000008   IR    2(TT)   4(R)      1           0             none             Warning up to 5 times
+38-40 00000008   IR    2(TT)   2(OFF)    1           0             none
+
+Ndx   FOCUSINFO  M2   MODE    DRIVE    DataAvail  ChopStat
+
+41-45 00000008   IR    1(Ch)   None      0        2(Stop)          none
+46-50 00000008   IR    1(Ch)   5(On/R)   0        1(Start)         Chop yellow
+51-52 00000008   IR    1(Ch)   5(On/R)   0        4(R)             Chop yellow
+53-57 00000008   IR    1(Ch)   5(On/R)   0        5(Start/R)       Chop
+58-60 00000008   IR    1(Ch)   5(On/R)   0        7(Start/R)       Chop yellow
+
+61-65 00001000   IR    1(Ch)   5(On/R)   0        1(Start)         Chop yellow
+66-70 00001000   IR    1(Ch)   5(On/R)   0        2(Stop)          Chop yellow
+71-72 00001000   IR    1(Ch)   1(On)     0        5(Start/R)       Chop
+73-77 00001000   IR    1(Ch)   4(R)      0        5(Start/R)       none             Warning up to 5 times
+78-80 00001000   IR    1(Ch)   2(OFF)    0        5(Start/R)       none
+

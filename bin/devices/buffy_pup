@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+# ================================================ #
+#    ___        __  __         ___                 #
+#   / __\_   _ / _|/ _|_   _  / __\__ _ _ __ ___   #
+#  /__\// | | | |_| |_| | | |/ /  / _` | '_ ` _ \  #
+# / \/  \ |_| |  _|  _| |_| / /__| (_| | | | | | | #
+# \_____/\__,_|_| |_|  \__, \____/\__,_|_| |_| |_| #
+#                      |___/                       #
+#                    _ _   _                       #
+#  _ __  _   _ _ __ (_) | | | ___ _ __  ___        #
+# | '_ \| | | | '_ \| | | | |/ _ \ '_ \/ __|       #
+# | |_) | |_| | |_) | | | | |  __/ | | \__ \       #
+# | .__/ \__,_| .__/|_|_| |_|\___|_| |_|___/       #
+# |_|         |_|                                  #
+#                                                  #
+# ================================================ #
+
+import os,sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from flipmount import flipmount
+
+
+# SPECIFIC PARAMETERS FOR THIS STAGE
+
+stagename = "buffy_pup"
+flipid = "B"
+description = "Pupil lens for BuffyCam"
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+flipmount(stagename, flipid, args, description)

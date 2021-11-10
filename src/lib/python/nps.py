@@ -23,6 +23,10 @@ import string
 import os
 import subprocess
 
+SCEXAO_NPS_IP = {1: "133.40.162.194",
+                 2: "133.40.162.195",
+                 3: "133.40.162.198"}
+
 # =====================================================================
 # =====================================================================
 
@@ -77,7 +81,7 @@ COMMAND:
     def npson(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect(("scexaoNPS%d" %(self.npsid,), 23))
+            sock.connect((SCEXAO_NPS_IP[self.npsid], 23))
             sock.send("@@@@\r\n".encode())
             time.sleep(0.1)
             temp = sock.recv(1024)
@@ -102,7 +106,7 @@ check that environment variable NPS_IP is correctly set
     def npsoff(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect(("scexaoNPS%d" %(self.npsid,), 23))
+            sock.connect((SCEXAO_NPS_IP[self.npsid], 23))
             sock.send("@@@@\r\n".encode())
             time.sleep(0.1)
             temp = sock.recv(1024)
@@ -127,7 +131,7 @@ check that environment variable NPS_IP is correctly set
     def status(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect(("scexaoNPS%d" %(self.npsid,), 23))
+            sock.connect((SCEXAO_NPS_IP[self.npsid], 23))
             sock.send("@@@@\r\n".encode())
             time.sleep(0.1)
             temp = sock.recv(1024)

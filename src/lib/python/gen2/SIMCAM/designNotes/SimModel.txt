@@ -1,0 +1,83 @@
+SimModel.txt -- 2007-05-22
+
+Notes on the design of a model engine for simulation time, telescope 
+position, and other dynamic state variables for Subaru telescope
+simulation.
+
+The model engine (SIMMODEL) will be a time server and scheduler for
+all SIMCAM modules.  The simulation time will be maintained in HST,
+but may be set and reset by the user.  This will allow an .ope file to
+be executed within the simulated time period that it is intended for,
+in order to get telescope pointing right (approximately).  If an
+instrument simulator is commanded to take an exposure, it will use
+SIMMODEL to schedule the end of the exposure, either with a
+modelSleep() call that won't return until the specified interval in
+simulation time has passed, or by some sort of event scheduling that
+would do a callback at the proper simulation time.
+
+SIMMODEL will also be a status source for some subset of TSC status,
+including at least RA, Dec, Az, El.  It will NOT keep or provide
+status for static state variables, which should be provided by TSCCAM. 
+(We might make a new SIMCAM module, TSCSTAT, which would construct
+TSC status packets and send them, using the TSC status interface, to
+Gen2.)
+
+It is also desirable for there to be a single place to initiate an
+orderly shutdown of all simulator modules.  This might be the GUI of
+SIMMODEL.  If all modules register shutdown callback with SIMMODEL,
+then SIMMODEL can call all of them when the operator hits the
+simulator shutdown button.
+
+My current thought on the GUI has it as a simple vertical array of
+buttons and fields, something like this:
+
+    HST                 simulated HST
+    Sidereal Time       simulated ST
+    Pause/Resume        a toggle button
+    Step 1 event
+    Step 1 second
+    Step 1 minute
+    Set HST...          pop-up to set sim time
+    Set speed...        pop-up to set speed
+    Shutdown
+
+Not all of this would be implemented at first, of course.
+
+
+Periodic thread:
+    Updates sim-time, HA, telescope RA and Dec, and any other
+    dynamic state variables about once per real second.  The
+    update rate in simulation time units depends on the ratio
+    of (a second of real time) to (a second of simulation time 
+    expressed in real seconds); I will call this ratio the
+    "speed-up factor", or simply "speed".  If the speed-up 
+    factor is 20, for example, then a 20-minute exposure should
+    take place in about 1 minute.  If it is 0.5, then the
+    exposure should take 40 minutes.
+
+    Controls will allow you to pause simulation time, thus
+    freezing all events that are under control of the simulation
+    (an FTP transfer would still complete, because we can't just
+    pause it!).  You could then step forward in some increment.
+    If you stepped forward in a large enough increment to 
+    encompass more than one scheduled event, then the simulation
+    will ensure that non-coincident events are separated by at
+    least 1 real second (or some other value).
+
+Scheduled events:
+    RO calls to SIMMODEL by SIMCAM modules include:
+      - regShutdown(sm) register shutdown method, sm
+      - modelSleep(dt)  sleep for dt simulation seconds, then return
+      - regCB(cb,dt)    return immediately, but call method cb in
+                            dt simulation seconds
+
+Scheduled event thread:
+    This thread would maintain an ordered list of scheduled
+    events.  When the simulation time of each event passes,
+    a function/method is called for the event and the entry
+    is removed from the list.  Possibly sleep for a second
+    after each event.
+
+
+
+

@@ -1,0 +1,49 @@
+README -- 2005-03-01
+
+This is the main TelStat directory.  It contains the following files:
+    OSSO_TelStat            the main TelStat program
+    OSSC_screenPrint_sim    TelStat's OSSO_screenPrint simulator program
+    README                  this file
+    makefile                makefile for delivering and installing TelStat
+
+It contains additional files with the following extensions:
+    .sh     shell scripts to support installing and running TelStat
+    .hlp    text for Help pull-down menu items
+    .au     sound clips for audible alerts
+    .xbm    the stipple pattern for the telescope ray graphic overlay
+    .txt    detailed documentation on how status alias values are 
+               interpreted and used by TelStat
+
+Subdirectory OSSO_TelStatLib contains all of the .py files that 
+have all of the TelStat Python code not contained in OSSO_TelStat 
+and OSSC_screenPrint_sim.  These files implement the panes of the
+TelStat window and all of the other TelStat features.
+
+Subdirectory doc contains miscellaneous documentation files.
+Some of these relate to new features or algorithms requested
+for implementation, and others are crib sheets with notes on
+delivering and running TelStat.  The doc subdirectory is not
+delivered.
+
+Notes on using make:
+Python requires no compilation, so the only purpose for this makefile
+is to facilitate delivery and installation.  For this reason, the
+default target does nothing.  The make targets that will be
+most often used are:
+
+    deliver     creates tar file for copying to DBS
+    install     once a tar file created by the deliver target is
+                un-tarred into /soss/SSD/product/OSSO/OSSO_TelStat.d
+                on a DBS host, "make install" will copy to the install 
+                destination directories
+
+The deliver target uses 2 macros which will commonly be overridden
+on the make command line.  These are:
+
+    DELIVERDIR   = /home/bon/proj/soss/delivery
+    DELIVERNAME  = TelStat-RL1_0_13-rc11
+
+So a typical make deliver command might be something like this:
+
+    make deliver DELIVERDIR=~/delivery DELIVERNAME=test
+

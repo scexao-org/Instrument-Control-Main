@@ -24,18 +24,56 @@ import numpy as np
 from astropy.io import fits as pf
 import numpy.linalg as la
 
+from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxkw.redisutil.typed_db import Redis
+
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from camera_tools import cam_cmd
-from xaosim.scexao_shmlib import shm
+#from xaosim.scexao_shmlib import shm
+from pyMilk.interfacing.isio_shmlib import SHM as shm
+
+
+# ------------------------------------------------------------------
+#  Read database for some stage status
+# ------------------------------------------------------------------
+def RDB_pull(rdb):
+
+    fits_keys_to_pull = {'X_NULPKO'}
+    # Now Getting the keys
+    with rdb.pipeline() as pipe:
+        for key in fits_keys_to_pull:
+            pipe.hget(key, 'FITS header')
+            pipe.hget(key, 'value')
+        values = pipe.execute()
+    status = {k: v for k,v in zip(values[::2], values[1::2])}
+
+    gpin = status['X_NULPKO'].strip() == 'IN'
+
+    return(gpin)
+
+# ------------------------------------------------------------------
+#            Configure communication with SCExAO's redis
+# ------------------------------------------------------------------
+rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+# Is the server alive ?
+try:
+    alive = rdb.ping()
+    if not alive:
+        raise ConnectionError
+except:
+    print('Error: can\'t ping redis DB.')
+    sys.exit(1)
+
+gpin = RDB_pull(rdb)
 
 
 # Reading in shared memory
 #------------------------
-shm_im = shm("/tmp/ircam0.im.shm")
-shm_im_dark = shm("/tmp/ircam0_dark.im.shm")
-shm_im_badpixmap = shm("/tmp/ircam0_badpixmap.im.shm")
-dm = shm("/tmp/dm00disp08.im.shm", verbose=False)
+shm_im = shm("ircam0")
+shm_im_dark = shm("ircam0_dark")
+shm_im_badpixmap = shm("ircam0_badpixmap")
+dm = shm("dm00disp08")
 
 dark_chuck = shm_im_dark.get_data()
 badpixmap_chuck = shm_im_badpixmap.get_data()
@@ -126,11 +164,7 @@ timeout0 = 0
 with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
     pos = np.array([[float(digit) for digit in line.split()] for line in file])
 
-if not os.path.isfile("/tmp/nuller_pickoff.im.shm"):
-    os.system("creashmim nuller_pickoff 1 1")
-nuller_pickoff = shm("/tmp/nuller_pickoff.im.shm", verbose=False)
-npin = int(nuller_pickoff.get_data())
-pscale = 16.9 #mas per pixel in Chuckcam
+pscale = 16.2 #mas per pixel in Chuckcam
 
 filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
@@ -142,7 +176,7 @@ for i in range(ncor):
     cort[1,i] = float(corparam[3])
 cort /= pscale
 cor = np.array([0,0])
-if npin:
+if gpin:
     cor = cort[:,0]
 
 im_chuck = shm_im.get_data()
@@ -201,7 +235,6 @@ while True:
                 shm_im_dark.close()
                 shm_im_badpixmap.close()
                 dm.close()
-                nuller_pickoff.close()
                 sys.exit()
             
     except KeyboardInterrupt:
@@ -210,6 +243,5 @@ while True:
         shm_im_dark.close()
         shm_im_badpixmap.close()
         dm.close()
-        nuller_pickoff.close()
         
         sys.exit()

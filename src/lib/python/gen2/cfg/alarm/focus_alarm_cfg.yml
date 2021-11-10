@@ -1,0 +1,152 @@
+#
+# focus_alarm_cfg.yml - This file has status variables so that
+#                       alarm_handler can determine focal station
+#                       from TSCV.FOCUSINFO and TSCV.FOCUSINFO2.
+#                       There are no alarms defined in this file.
+#
+#[ Russell Kackley (rkackley@naoj.org) --
+#  Last edit: Thu Jun 21 12:33:22 HST 2012
+#]
+#
+
+Focus:
+  - !DigitalSV
+    ID:        Melco_00A13E4
+    Name:      POpt Selected
+    Gen2Alias: TSCV.FOCUSINFO!M01000000
+  - !DigitalSV
+    ID:        Melco_00A13E5
+    Name:      PIR Selected
+    Gen2Alias: TSCV.FOCUSINFO!M02000000
+  - !DigitalSV
+    ID:        Melco_00A13E6
+    Name:      Cs(CsOpt) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M04000000
+  - !DigitalSV
+    ID:        Melco_00A13E7
+    Name:      Cs(CsOpt)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M08000000
+
+  - !DigitalSV
+    ID:        Melco_00A13E8
+    Name:      NsOpt(CsOPt) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M10000000
+  - !DigitalSV
+    ID:        Melco_00A13E9
+    Name:      NsOpt(CsOpt)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M20000000
+  - !DigitalSV
+    ID:        Melco_00A13EA
+    Name:      NsOpt(CsOpt)+ImR(B) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M40000000
+  - !DigitalSV
+    ID:        Melco_00A13EB
+    Name:      NsOpt(CsOpt)+ImR(B)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M80000000
+
+  - !DigitalSV
+    ID:        Melco_00A13EC
+    Name:      NsOpt(CsOpt)+ImR(R) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00010000
+  - !DigitalSV
+    ID:        Melco_00A13ED
+    Name:      NsOpt(CsOpt)+ImR(R)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00020000
+  - !DigitalSV
+    ID:        Melco_00A13EE
+    Name:      NsIR(CsOpt) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00040000
+  - !DigitalSV
+    ID:        Melco_00A13EF
+    Name:      NsIR(CsOpt)+ImR Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00080000
+
+  - !DigitalSV
+    ID:        Melco_00A13F0
+    Name:      NsOpt(NsOpt) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00100000
+  - !DigitalSV
+    ID:        Melco_00A13F1
+    Name:      NsOpt(NsOpt)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00200000
+  - !DigitalSV
+    ID:        Melco_00A13F2
+    Name:      NsOpt(NsOpt)+ImR(B) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00400000
+  - !DigitalSV
+    ID:        Melco_00A13F3
+    Name:      NsOpt(NsOpt)+ImR(B)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00800000
+
+  - !DigitalSV
+    ID:        Melco_00A13F4
+    Name:      NsOpt(NsOpt)+ImR(R) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000100
+  - !DigitalSV
+    ID:        Melco_00A13F5
+    Name:      NsOpt(NsOpt)+ImR(R)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000200
+  - !DigitalSV
+    ID:        Melco_00A13F6
+    Name:      NsIR(NsOpt) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000400
+  - !DigitalSV
+    ID:        Melco_00A13F7
+    Name:      NsIR(NsOpt)+ImR Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000800
+
+  - !DigitalSV
+    ID:        Melco_00A13F8
+    Name:      Cs(IR) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00001000
+  - !DigitalSV
+    ID:        Melco_00A13F9
+    Name:      NsOpt(IR) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00002000
+  - !DigitalSV
+    ID:        Melco_00A13FA
+    Name:      NsOpt(IR)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00004000
+  - !DigitalSV
+    ID:        Melco_00A13FB
+    Name:      NsOpt(IR)+ImR(B) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00008000
+
+  - !DigitalSV
+    ID:        Melco_00A13FC
+    Name:      NsOpt(IR)+ImR(B)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000001
+  - !DigitalSV
+    ID:        Melco_00A13FD
+    Name:      NsOpt(IR)+ImR(R) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000002
+  - !DigitalSV
+    ID:        Melco_00A13FE
+    Name:      NsOpt(IR)+ImR(R)+ADC Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000004
+  - !DigitalSV
+    ID:        Melco_00A13FF
+    Name:      NsIR(IR) Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000008
+
+  - !DigitalSV
+    ID:        Melco_00A1400
+    Name:      NsIR(IR)+ImR Selected
+    Gen2Alias: TSCV.FOCUSINFO!M00000010
+
+  - !DigitalSV
+    ID:        Melco_00A1407
+    Name:      NsIR(IR)+AO Selected
+    Gen2Alias: TSCV.FOCUSINFO2!M00000001
+  - !DigitalSV
+    ID:        Melco_00A1408
+    Name:      NsIR(CsOpt)+AO Selected
+    Gen2Alias: TSCV.FOCUSINFO2!M00000002
+  - !DigitalSV
+    ID:        Melco_00A1409
+    Name:      NsIR(NsOpt)+AO Selected
+    Gen2Alias: TSCV.FOCUSINFO2!M00000004
+  - !DigitalSV
+    ID:        Melco_00A140F
+    Name:      HSC Selected
+    Gen2Alias: TSCV.FOCUSINFO2!M00000008

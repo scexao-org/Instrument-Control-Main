@@ -3,7 +3,8 @@
 import os
 import sys
 import numpy as np
-from xaosim.scexao_shmlib import shm
+# from xaosim.scexao_shmlib import shm
+from pyMilk.interfacing.isio_shmlib import SHM as shm
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
@@ -84,7 +85,8 @@ def disp_2_DM(dispm, chn=3):
 print("(kx, ky) = (%.2f,%.2f) => (a, phi) = (%.2f, %.2f) => chn = %02d" % \
            (kx, ky, aa, phi, chn))
 
-dmc  = shm('/tmp/dm00disp%02d.im.shm' % (chn,), verbose=False) # DM channel
+# dmc  = shm('/tmp/dm00disp%02d.im.shm' % (chn,), verbose=False) # DM channel
+dmc  = shm('dm00disp%02d' % (chn,), verbose=False) # DM channel
 
 disp0 = dmc.get_data(False, True)
 disp  = DM_sine(aa, kx, ky, phi).astype('float32')

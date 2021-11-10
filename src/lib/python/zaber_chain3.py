@@ -61,8 +61,12 @@ class zaber:
         filep = open(filename, 'r')
         self.dev  = "/dev/serial/"
         self.dev += filep.read().rstrip('\n')
-        self.s = serial.Serial(self.dev, 9600, timeout=0.5)
-        dummy = self.s.readlines() # flush the port
+        try:
+            self.s = serial.Serial(self.dev, 9600, timeout=0.5)
+            dummy = self.s.readlines() # flush the port
+        except:
+            print("Zaber chain %s not connected" %zaberchain)
+            sys.exit()
 
     def home(self, idn, devname):
         self.command(idn, 1, 0)

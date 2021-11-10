@@ -1,0 +1,356 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<meta name="Robots" content="NOINDEX,NOFOLLOW">
+
+<meta name="Keywords" content="gen2, help">
+
+<meta name="Author" content="Eric Jeschke">
+<meta name="Generator" content="emacs and human">
+
+<title>Gen2 Help</title>
+</head>
+
+<body>
+<h1>Gen2 Help</h1>
+<hr>
+<center>
+<strong>DRAFT DOCUMENT, UNDER FREQUENT REVISION</strong>
+<p>
+<strong>Last Revision</strong>: <br>
+2009.12.16 &nbsp;&nbsp; Eric Jeschke (eric@naoj.org)
+<p>
+<em>Please report any inaccuracies to the OCS support (ocs@naoj.org).</em>
+</center>
+
+<h2>Contents</h2>
+
+<a href="#normal_operation">
+<h3>Normal Operation</h3></a>
+<a href="#abnormal_operation">
+<h3>Abnormal Operation</h3></a>
+<a href="#troubleshooting">
+<h3>Troubleshooting</h3></a>
+
+<hr>
+
+<a name="operation">
+<h2>Normal Operation</h2></a>
+<p>
+Under normal conditions, the Gen2 web daemon should be running at all
+times.  You can access this web interface by starting a web browser and
+pointing it at the appropriate Gen2 cluster host at the default port of <tt>20000</tt>.
+Example:
+<pre class=code>
+http://g2ins1:20000/
+</pre>
+or
+<pre class=code>
+http://g2ins1.sum.subaru.nao.ac.jp:20000/
+</pre>
+If there is trouble accessing the page, please see
+<a href="#trouble_web">Restarting the web interface</a>. </p>
+
+<a name="op_attach">
+<h3>Attaching to the Gen2 session</h3></a>
+<p>
+Gen2 is designed to maintain a running session.  You simply disconnect the viewers
+to detach from the session, and reconnect the viewers to reattach to the session.</p>
+<p>
+To connect the viewers:
+<ol>
+<li> Log into any valid observation account (e.g. "ocs") on all three observation
+workstations (repeat at each site location for remote operation);
+<li> Start the Gen2 Display Server by right-clicking on the desktop and selecting
+"Gen2 Display Server" from the pop-up desktop menu.  If this menu item is not 
+available, please see 
+<a href="#trouble_g2disp">Starting the Gen2 Display server manually</a>.
+<li> Back on the main Gen2 control web page, under "What are you looking for?", click the
+<a target="new" href="/dspctl/view">Displays</a> link, or open it in a new page.
+<li> For the appropriate site, click the "Control" or "View" button.  "View" will allow
+the site to watch the observation, but disables mouse and keyboard input.
+</ol>
+The Gen2 displays should pop up on the observation screens.</p>
+<p>
+<blockquote>
+<strong>PLEASE NOTE</strong>: Two or more sites can control a Gen2 session.  In this case, the
+mouse and keyboard input
+for each individual screen is shared.  In this case we recommend that you coordinate on the
+polycom audibly as to who will have control.  Each screen is independent from all the others.
+<p>
+<strong>You can change a site from "Control" to "View" to "Close" at
+<em>any time</em> without affecting the session itself or anything running on it.</strong>
+</blockquote></p>
+
+<a name="op_session">
+<h3>Session configuration (proposal id, instrument, etc)</h3></a>
+<p>
+From the main Gen2 control page, under "What are you looking for?", click the
+<a target="new" href="/sessions">Session Manager</a> link, or open it in a new page.
+<p>
+To change the common attributes of the session (i.e. Proposal Id, Support Scientist,
+Operators or Observers) or to configure Gen2 from a TSR filed in OPAL, click on the 
+session link named "main" (left hand side).  To manually manage allocations, click on
+the allocations link for the session "main" (right hand side).</p>
+<p>
+<blockquote>
+<strong>PLEASE NOTE</strong>: In Gen2, session configuration is separated from IntegGUI
+startup or shutdown.  If IntegGUI is stopped, restarted, or crashes, <em>you do
+<strong>NOT</strong> lose your session, or its attributes!</em>.  
+The session attributes, including allocations,
+will persist until they are changed explicitly.<p>
+However, IntegGUI does start up
+differently depending on the session configuration (e.g. by providing different instrument
+launchers, etc).  Therefore, <em>whenever you change the instrument allocation(s)
+you should save your OPE file (if necessary) and then restart IntegGUI using the convenient
+link at the top of the Session Manager page.</em>
+</blockquote></p>
+
+<a name="op_tsc">
+<h3>Telescope Login and Control</h3></a>
+<p>
+From the main Gen2 control page, under "What are you looking for?", click the
+<a target="new" href="/tscctl/view">TSC Control</a> link, or open it in a new page.
+<p>
+To prepare the telescope for Gen2 use, click in this order:
+<ol>
+<li> Safety Lock <b>OFF</b>;
+<li> TSC <b>Login</b>;
+<li> <b>OBS</b> priority.
+</ol>
+<p>
+<blockquote>
+<strong>PLEASE NOTE</strong>: In Gen2, TSC login is separated from IntegGUI
+startup or shutdown.  If IntegGUI is stopped, restarted, or crashes, <em>you do
+<strong>NOT</strong> lose your telescope login</em>.  The login will persist until
+it is changed explicitly.
+</blockquote></p>
+
+<a name="op_ope">
+<h3>IntegGUI Operations</h3></a>
+
+<h4>BootQDAS and BootVGW</h4>
+From the IntegGUI <tt>TELESCOPE2</tt> launcher, click the "BootVGW" or "BootQDAS" buttons as 
+necessary for your observation.
+<blockquote>
+<strong>PLEASE NOTE</strong>: In Gen2, the QDAS windows can be shut down independently
+from IntegGUI without causing any problem.
+</blockquote></p>
+
+<h4>Loading your OPE file into IntegGUI</h4>
+At this point you can load your OPE file into IntegGUI.  If you need to copy it to Gen2
+from elsewhere, open a terminal <em>inside</em> the Gen2 session and:
+<pre class=code>
+$ cd $HOME/Procedure
+$ scp user@myhost:/path/to/ope/file .
+</pre></p>
+<p>
+
+<h4>Loading your OPE file into SkyMonitor</h4>
+You can load your OPE file into the old or new SkyMonitor, if desired.
+
+<a name="op_detach">
+<h3>Closing down observation</h3></a>
+When you are finished with the telescope for the night, visit the
+<a target="new" href="/tscctl/view">TSC Control page</a>, and click in this order:
+<ol>
+<li> <b>TSC</b> priority;
+<li> TSC <b>Logout</b>;
+<li> Safety Lock <b>ON</b>.
+</ol>
+This will prevent accidental TSC commands from being issued from the OCS.
+</p>
+<p>
+If you want to leave the rest of your observation running, taking darks, running calibrations,
+or simply waiting for the next night:
+<ol>
+<li> From the <a target="new" href="/dspctl/view">Displays page</a>, simply click 
+the "Close" button for each observation site you are using, with the Summit last.
+<li> Stop the Gen2 Display Server on each workstation by clicking the prominent "Quit"
+button.
+<li> Log out of the workstations.
+</ol>
+Your session will continue running.  You can reattach to it later as described above.</p> 
+<p>
+If you want to completely clean up the OCS desktop from most traces of observation:
+<ol>
+<li> From the <a target="new" href="/sessions">Session Manager page</a>, click on the 
+allocations for the session "main".  From the resulting page, click "Dealloc All".
+<li> Restart the GUIs by visiting the 
+<a href="/uptime">Boot Manager page</a> and clicking "Restart" on Level 10.
+<li> From the <a target="new" href="/dspctl/view">Displays page</a>, simply click 
+the "Close" button for each observation site you are using, with the Summit last.
+<li> Stop the Gen2 Display Server on each workstation by clicking the prominent "Quit"
+button.
+<li> Log out of the workstations.
+</ol>
+
+<hr>
+<a name="abnormal_operation">
+<h2>Abnormal Operation</h2></a>
+<p>
+
+<a name="complete_shutdown">
+<h3>Shutting down Gen2 completely</h3></a>
+Access the <a href="/uptime">web interface boot manager page</a>, and 
+click the "Shutdown" link at the top of the page.  After a short wait,
+all the entries in both "Levels" and "Services" tables should turn orange,
+and for every service in the "Service" table all Uptimes should be
+"N/A".  If that is the outcome, Gen2 is shut down completely.
+If this is not the case, please see the <a
+href="#troubleshooting">Troubleshooting</a> section.
+</p>
+<p>
+<blockquote>
+<strong>PLEASE NOTE: shutting down some services can have an adverse impact on observation!
+In particular, shutting down the status or TSC command interface services may cause TSC
+to have problems and need to be rebooted.  Please consult OCS support before performing
+a complete shutdown.</strong>
+</blockquote></p>
+
+<a name="complete_startup">
+<h3>Starting Gen2 from a complete shutdown</h3></a>
+<p>
+From the main page, under "What are you looking for?", click the
+<a target="new" href="/uptime">Boot Manager</a> link, or open it in a new page.
+If there is trouble accessing the page, please see
+<a href="#trouble_web">Restarting the web interface</a>. </p>
+<p>
+On the Boot Manager interface page, all the entries in both "Levels" and
+"Services" tables should be orange, and for every service in the
+"Service" table all Uptimes should be "N/A".  If this is not the case,
+click the "Shut Down" link at the top of the page.  If this still does
+not restore the system to a complete shutdown, please see the <a
+href="#troubleshooting">Troubleshooting</a> section.</p>
+<p>
+To start up Gen2, in the "Levels" table, click the "start" link on level
+0.  After a moment, the line should go grey or white and some service lines
+corresponding to that level in the "Services" table should turn grey or
+white also.  You should then be able to proceed in the same way with
+increasing levels 1, 2, 3, 4, etc.  Don't skip any fractional levels.
+<em>Do not click a new level "start" link until the previous (lower)
+level is started</em>.  Stop after starting level 15.
+If during this startup sequence you notice an earlier level "go orange",
+please see the <a href="#troubleshooting">Troubleshooting</a> section.</p>
+<p>
+Levels 0-7 are used for the "back ends" (services).  Levels 8-20 are used for the
+"front ends" (clients, GUIs).
+</p>
+
+<hr>
+
+<a name="troubleshooting">
+<h2>Troubleshooting</h2></a>
+
+<a name="trouble_web">
+<h3>Restarting the web interface</h3></a>
+<blockquote>
+<em>NOTE: before you restart the web interface, double-check that your web access is OK
+on the client side</em>.  Make sure that you have a working network connection, and that
+you can access other web sites.  On some hosts you may need to fully qualify the summit
+hostname (i.e. xxxx.sum.subaru.nao.ac.jp).
+</blockquote>
+<p>
+The Gen2 web interface runs as a daemon on any one of the Gen2 cluster
+hosts.  It can start up and shut down the complete Gen2 software stack,
+using the BootManager page.  The web interface is designed so that it
+should rarely need to be restarted, unless there has been a significant
+software revision.  Occasionally, it may be necessary to start, stop or
+restart the daemon.</p>
+<p>
+To restart the web interface, log into the Gen2 operational account
+(e.g. <tt>gen2</tt>) on the host that is listed in the URL of the web
+interface.  For example, if the URL is supposed to be
+<pre class=code>
+http://g2ins1:20000/
+</pre>
+then login to <tt>gen2@g2ins1</tt>.  Kill any existing instance of the daemon
+using the following commands:
+<pre class=code>
+$ cd $GEN2HOME
+$ web/bm_web.py --kill
+</pre>
+Then start the daemon again:
+<pre class=code>
+$ web/bm_web.py --config=gen2 --detach --log=$LOGHOME/bm_web.log
+</pre></p>
+<p>
+As shown in the restart command, the log will be stored in
+<tt>$LOGHOME/bm_web.log</tt></p>
+<p><em>HINT</em>: it is convenient to cut and paste the commands from this page to 
+avoid typos.</p>
+
+<a name="trouble_g2disp">
+<h3>Starting the Gen2 Display Server manually</h3></a>
+Start a terminal window on each observation workstation.  In each one, cut and paste the
+following command:
+<pre class=code>
+$ /home/builder/bin/pywrap.sh /home/builder/bin/g2disp_gui.py
+</pre>
+If this fails to start the display server, please call OCS support.
+
+<a name="trouble_uptime">
+<h3>Checking service uptime</h3></a>
+<p>
+Access the <a target="new" href="/uptime">web interface boot manager page</a>.</p>
+<p>
+There are three main tables: "Levels", "Services" and "Hosts".  We recommend to
+use the Levels and Services table instead of the Hosts table whenever possible.
+All three tables provide basic Start, Stop and Restart controls.
+
+<h4>Levels</h4>
+Basically, the levels define the start order and dependency graph for Gen2: all
+services at level 0 should be be available (running and responding)
+before level 1 services, level 1 up before level 2, and so on.  There can also be
+fractional levels (e.g. 4.2).</p>
+<p>
+The tables use a color scheme to identify abnormal operation
+conditions.  In the Levels table, if any given level is supposed to be
+running, all levels below that (down to 0) should also be running.  If
+this is not the case, the incomplete levels will be indicated with an
+orange warning background, indicating that one or more services at that
+level are not running.
+<blockquote>
+<strong>PLEASE NOTE:</strong> <em>It may be normal for some entries to be orange</em>.
+OCS support can advise you regarding this. <p>
+[2009-12-17] It is normal for levels 0.1 and 8 to be orange.  It is also normal for some levels
+above 10 to be orange. 
+</blockquote>
+</p>
+<h4>Services</h4>
+From the "Services" table, you can visually inspect that certain services are
+running.  There are several columns: "Count" indicates how many instances of the service
+should be running, "Hosts" indicates which hosts the service can run on, and "Uptime" shows 
+how long the service has been running.
+
+<h4>Hosts</h4>
+The "Hosts" table shows a more detailed view of where services are running. 
+<blockquote>
+<em>Although Gen2 allows services to run on any node, not all services can be safely
+started on a different node using this interface</em>.  The OCS team can advise you
+regarding this.  In general, please use the Services or Levels table to restart services.
+</blockquote>
+
+<a name="op_svc_restart">
+<h3>Restarting individual services</h3></a>
+<p>
+Access the <a href="/uptime">web interface boot manager page</a> and
+click the "Refresh" link at the top left of the page.  To understand the
+meaning of the "Levels" and "Services" tables, please see <a
+href="#trouble_uptime">Checking service uptime</a> before proceeding
+with this section.</p> 
+<p>
+To restart an individual service, go into the "Services" table and look
+for the service name in the left-hand column.  To start, stop or restart that service, 
+click the appropriate links for "Start", "Stop" or "Restart".
+<blockquote>
+<strong>PLEASE NOTE:</strong> <em>Since some services depend on others, services can
+not necessarily be restarted in arbitrary orders</em>.  You are advised to call OCS support
+if you have questions about this. <p>
+<em>In general, it is safe to restart anything at level 10 or above.</em>
+</blockquote>
+
+</body>
+</html>

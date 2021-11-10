@@ -189,8 +189,8 @@ int status_display()
   
   while( !kbdhit() )
     {
-      usleep(500000); // in us
-      clear();
+      usleep(100000); // in us
+      erase();
       
       print_header(" NETWORK POWER SWTICHES ", '-');
       // NPS1
@@ -362,8 +362,8 @@ int status_display()
       printw(" (f: %6.2f mm )\n", SCExAO_status[0].chuck_pup_fcs);
       // BUFFYCAM Pickoff
       printw("BUFFYCAM Pickoff: ");
-      print_status(SCExAO_status[0].buffycam_pickoff_st, SCExAO_status[0].buffycam_pickoff_co);
-      printw(" (x: %6.2f mm )\n", SCExAO_status[0].buffycam_pickoff);
+      print_status(SCExAO_status[0].buffy_pickoff_st, SCExAO_status[0].buffy_pickoff_co);
+      printw(" (x: %6.2f mm )\n", SCExAO_status[0].buffy_pickoff);
       // BUFFYCAM Pupil
       printw("BUFFYCAM Pupil  : ");
       print_status(SCExAO_status[0].buffy_pup, SCExAO_status[0].buffy_pup_co);
@@ -383,6 +383,10 @@ int status_display()
       //printw("Polarizer       : ");
       //print_status(SCExAO_status[0].polarizer, SCExAO_status[0].polarizer_co);
       //printw(" (t: %6.2f deg )\n", SCExAO_status[0].polarizer_theta);
+      // IR Cams QWPs
+      printw("IR Cam QWP      : ");
+      print_status(SCExAO_status[0].ircam_qwp, SCExAO_status[0].ircam_qwp_co);
+      printw("\n");
       // Field stop
       printw("Field Stop      : ");
       print_status(SCExAO_status[0].field_stop_st, SCExAO_status[0].field_stop_co);
@@ -395,10 +399,6 @@ int status_display()
       printw("IR Cam FLC      : ");
       print_status(SCExAO_status[0].ircam_flc_st, SCExAO_status[0].ircam_flc_co);
       printw(" (t: %6.2f deg)\n", SCExAO_status[0].ircam_flc);
-      // IR Cams QWPs
-      //printw("IR Cam QWPs     : ");
-      //print_status(SCExAO_status[0].ircam_qwp, SCExAO_status[0].ircam_qwp_co);
-      //printw("\n");
       // IR Cams HWP
       printw("IR Cam HWP      : ");
       print_status(SCExAO_status[0].ircam_hwp, SCExAO_status[0].ircam_hwp_co);
@@ -1063,6 +1063,11 @@ int main(int argc, char **argv)
 	  SCExAO_status[0].ircam_fcs_f2 = atof(argv[3]);
 	}
       // Polarization
+      if( strcmp(argv[2], "ircam_qwp") == 0)
+	{
+	  strncpy(SCExAO_status[0].ircam_qwp, argv[3], 15);
+	  SCExAO_status[0].ircam_qwp_co = atoi(argv[4]);
+	}
       if( strcmp(argv[2], "field_stop_st") == 0)
 	{
 	  strncpy(SCExAO_status[0].field_stop_st, argv[3], 15);
@@ -1162,14 +1167,14 @@ int main(int argc, char **argv)
 	  SCExAO_status[0].reach_fib_theta = atof(argv[3]);
 	}
       // buffy/chuck
-      if( strcmp(argv[2], "buffycam_pickoff_st") == 0)
+      if( strcmp(argv[2], "buffy_pickoff_st") == 0)
 	{
-	  strncpy(SCExAO_status[0].buffycam_pickoff_st, argv[3], 15);
-	  SCExAO_status[0].buffycam_pickoff_co = atoi(argv[4]);
+	  strncpy(SCExAO_status[0].buffy_pickoff_st, argv[3], 15);
+	  SCExAO_status[0].buffy_pickoff_co = atoi(argv[4]);
 	}
-      if( strcmp(argv[2], "buffycam_pickoff") == 0)
+      if( strcmp(argv[2], "buffy_pickoff") == 0)
 	{
-	  SCExAO_status[0].buffycam_pickoff = atof(argv[3]);
+	  SCExAO_status[0].buffy_pickoff = atof(argv[3]);
 	}
       if( strcmp(argv[2], "chuck_pup") == 0)
 	{

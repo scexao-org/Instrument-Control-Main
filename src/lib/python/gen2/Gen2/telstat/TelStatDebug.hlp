@@ -1,0 +1,24 @@
+The Debug menu has various buttons to control operation of the
+window for assistance during debugging.  Selecting the dashed
+line "tears off" a copy of the menu, leaving it continuously
+displayed until closed.
+
+Toggling Refresh off freezes everything but the time, allowing
+close inspection of an instantaneous state.  When Refresh is off,
+Single step activates a single refresh.  When Refresh is on, its
+rate may be controlled by selecting the desired delay, either
+with one of the buttons under the Options menu or, for shorter
+delays that may interfere with display appearance, using one of
+the "Set refresh delay" buttons under the Debug menu.
+
+Turning Data Logging on/off controls whether or not acquired data
+is logged to a file.  If logging is turned on, then a file of
+the form "TelStat_ReplayData_<project ID>_<date/time stamp>.log"
+will be produced, containing time-stamped data blocks in the
+format produced by OSSC_screenPrint.
+
+Other functions may be added later, as needed.
+
+--------------
+
+Last update:  2004-05-20

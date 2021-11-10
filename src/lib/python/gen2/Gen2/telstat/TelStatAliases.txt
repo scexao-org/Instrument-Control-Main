@@ -1,0 +1,2050 @@
+TelStatAliases.txt -- 2008-09-11
+
+NOTE: Recent changes that require code changes are noted by ">" in the
+      first column of each line.  Important deletions are noted by
+      ">>" in the first two columns of each line.  (All of these marks 
+      will disappear once the changes have been reviewed.)
+
+This document is intended to specify all alias names used in the TelStat
+window and to define how their alias values are to be interpreted and
+displayed.  This is a companion document to TelStatAlertsLogging.txt,
+which describes the audible alerts and error log messages issued by
+TelStat.  
+
+Where references are given for particular aliases, the following abbreviations
+are used:
+
+    Status Alias Ref.
+        Subaru Telescope Observation Control System, Operator's Manual,
+        SOSS-18-01-5(E)*, version 5.0, March 2001, Part 6 Status,
+        Section 2. Status Alias Reference List
+    Status Corr. Tbl.
+        Subaru Telescope Observation Control System, Operator's Manual,
+        SOSS-18-01-5(E)*, version 5.0, March 2001, Part 6 Status,
+        Section 3. Status Correspondence Table (Observation Support: Display)
+
+* There is a later version of SOSS-18-01-5, designated SOSS-18-03-9,
+  version 9.0, August 2003, but the English edition has not been
+  provided to us yet.
+
+The organization will be by the pane (within the TelStat window), and
+within each pane, the aliases will be listed roughly according to where
+in the pane they are used, from top to bottom, and then from left to
+right.
+
+Notation examples:
+    0x01 = "Link" means that the alias value must be exactly 0x01
+                to correspond to the quoted string
+    &(0x50) = "Free" means that the alias value AND'ed with 0x50 must
+                be non-zero to correspond to the quoted string
+
+
+===================================================
+Audible Alerts, Error Logging and Color Conventions
+===================================================
+
+Audible alerts and error logging is described in a separate document,
+TelStatAlertsLogging.txt.  The conditions under which audible alerts
+are issued are listed below, in the sections describing the panes that
+issue them.
+
+In addition to audible alerts, the background color of graphical 
+objects, labels and strip charts are changed to yellow or red to
+indicate anomalies.  Yellow indicates a warning condition, which may
+require operator action eventually but not immediately; e.g. elevation
+will reach one of its limits within 30 minutes.  Red indicates an alarm
+condition, which may require urgent and immediate action by the
+operator; e.g. elevation is at its upper limit.  Red is also used to
+indicate errors in data acquisition or undefined status values, either
+of which mean that TelStat cannot assertain the state of the relevant
+equipment.  The conditions under which the background colors are
+changed to yellow or red are described below, in the sections describing 
+the panes that contain the items whose colors are changed.
+
+
+=============
+Global States
+=============
+
+TelStat contains a module whose responsibility is to compute a number
+of derived values, each of which is used in at least 2 panes of the 
+TelStat window.  This module uses status alias variables, as described
+below, and produces new variables (TELSTAT.*) in the same global dictionary 
+used for regular status alias variables.  The refresh method of this module 
+is called before any of the refresh methods of the panes; therefore, these
+values may be used by any pane and will represent the latest acquired data.
+
+Note that four of these derived variables (TELSTAT.SLEWING, TELSTAT.M1_CLOSED,  
+TELSTAT.DOME_CLOSED and TELSTAT.EL_STOWED) are designed to be used for
+suppression of audio alerts when they are not appropriate.  These variables
+may take on any of 3 values:  None, False and True.  None is assigned
+when any of the data source status alias variables used in determining
+the value is unavailable for any reason.  Generally, this means that the
+SOSS status system (i.e. OSSC_screenPrint) returned an error when the
+value was requested, or that the value returned was not recognized
+(e.g. because the bit pattern was none of the defined values).  False is
+assigned if any of the conditions necessary for the state to be True are
+not met.  True is assigned only if all such conditions are met.  Hence, 
+use of these variables for alert suppression is conservative -- an alert
+will be suppressed only if we are as sure as we can be that it should
+be suppressed.
+
+TELSTAT.TELDRIVE:
+-----------------
+
+Data sources:
+    STATL.TELDRIVE   current telescope guiding status
+Interpretation:
+    A text string
+Algorithm:
+    TELSTAT.TELDRIVE Value      String Value
+    ----------------------      ------------
+    None                        None (i.e. unavailable for any reason)
+    UNDEF                       not one of the defined values
+    UNDEF                       "Unknown"
+    TELDRIVE_POINT              "Pointing"
+    TELDRIVE_TRACK              "Tracking"
+    TELDRIVE_TRACK_NS           "Tracking(Non-Sidereal)"
+    TELDRIVE_SLEW               "Slewing"
+    TELDRIVE_GUIDE_AG           "Guiding(AG)"
+    TELDRIVE_GUIDE_AGPIR        "Guiding(AGPIR)"
+    TELDRIVE_GUIDE_AGFMOS       "Guiding(AGFMOS)"
+    TELDRIVE_GUIDE_AG1          "Guiding(AG1)"
+    TELDRIVE_GUIDE_AG2          "Guiding(AG2)"
+    TELDRIVE_GUIDE_SV           "Guiding(SV)"
+    TELDRIVE_GUIDE_SV1          "Guiding(SV1)"
+    TELDRIVE_GUIDE_SV2          "Guiding(SV2)"
+
+TELSTAT.SLEWING:
+----------------
+
+Data source:
+   TELSTAT.TELDRIVE  current telescope guiding status
+Algorithm:
+   None     if data source is None (i.e. unavailable for any reason)
+   True     if TELSTAT.TELDRIVE == TELDRIVE_SLEW
+   False    otherwise
+
+TELSTAT.EL_STOWED:
+------------------
+
+Data source:
+   TSCS.EL            telescope elevation (degrees)
+Interpretation:
+   This value is encoded in a text string representing a decimal number
+   in the form DD.dddddd.
+Algorithm:
+   None         if the data source is None (i.e. unavailable for any reason)
+   False        if TSCS.EL <  89.5 degrees
+   True if TSCS.EL >= 89.5 degrees
+
+TELSTAT.DOME_CLOSED:
+--------------------
+
+Data source:
+   TSCV.DomeShutter                                     Status Corr. Tbl. p. 1
+Interpretation:
+   TSCV.DomeShutter is a 2-character string, representing 1 byte of binary
+   data as a hexadecimal string.  It has been masked by 0x50 and the first 
+   nibble (i.e. 4 bits, 1 character, 1 hex digit) represents 2 of the status 
+   bits produced by TSC:  0x40 is the Opt_Shutter_Full_Open bit and 0x10 is
+   the IR_Shutter_Full_Open bit.  0x80 and 0x20 would represent the  
+   Opt_Shutter_Full_Close bit and the IR_Shutter_Full_Close bit, respectively,  
+   but these bits have been masked off, so we cannot verify the 
+   Full_Close state.  A further complication is that the Opt_Shutter_Full_Open
+   bit may  turn off some time after the dome shutter has been opened, even
+   though the physical shutter remains open.  Because TELSTAT.DOME_CLOSED
+   is intended to be used for suppression of audio alerts, it will only be
+   True when we are most confident that the dome shutter is really closed,
+   i.e. when both Full_Open bits are zero.
+Algorithm:
+   None         if the data source is None (i.e. unavailable for any reason)
+   False        if TSCV.DomeShutter & 0x50 == 00
+   True         if TSCV.DomeShutter & 0x50 != 00
+
+TELSTAT.M1_CLOSED:
+------------------
+
+Data sources:
+   TSCV.M1CoverOnway                            Status Corr. Tbl. p. 2
+   TSCV.M1Cover                                 Status Corr. Tbl. p. 2
+Interpretation:
+  TSCV.M1CoverOnway
+       0x01 = Open-OnWay                => "M1 Cover OnWay-Open"
+       0x02 = Close-OnWay               => "M1 Cover OnWay-Closed"
+  TSCV.M1Cover
+   As shown in http://www1.naoj.org/~letawsky/images/MoniCont.cover.htm ,
+   the M1 Cover is comprised of 8 segments (labeled U-1A, U-1B, U-2A, U-2B,
+   U3A, U3B, U3C, U3D), each of which has 1 or 2 windows (or window pairs).
+   The windows are designated with the segment label plus a suffix 
+   (e.g. U-1A-I-A, U-1A-I-B, etc.).
+
+   TSCV.M1Cover is a 22-character string, representing 11 bytes of binary
+   data as a hexadecimal string.  Thus each 2 characters represent 1 byte
+   in the status data.  Each nibble (1/2 byte), represented by a single
+   character, designates the status of a single window or cover segment.
+   Thus, in the table below, the "nibble index" ranges from 0 to 21, even
+   indices representing most significant nibbles of a byte, and odd indices
+   representing least significant nibbles of a byte:
+
+         Nibble Index
+       (=string index)    Segment/Window ID
+       ---------------    -----------------
+
+              0                 U-1B
+              1                 U-1A
+              2                 U-2B
+              3                 U-2A
+              4                 U-3B
+              5                 U-3A
+              6                 U-3D
+              7                 U-3C
+              8                 L-B
+              9                 L-A
+             10                 L-D
+             11                 L-C
+             12                 U-1B-I
+             13                 U-1A-I
+             14                 U-2A-I-B
+             15                 U-2A-I-A
+             16                 U-2B-I-B
+             17                 U-2B-I-A
+             18                 U-3B-I
+             19                 U-3A-I
+             20                 U-3D-I
+             21                 U-3C-I
+
+   During normal operation, all the cover segments are opened in order, and
+   then all of the windows are opened, but sometimes one or more of these may
+   stick or fail.  The windows (*-I*) and lower covers (L-*) are only
+   important for ventilation, except for U-1A-I which must be open for the
+   Nasmyth IR light path, and U-1B-I which must be open for the Nasmyth optical
+   light path.  
+
+   Because TELSTAT.M1_CLOSED is intended to be used for suppression of 
+   audio alerts, it will only be True when we are most confident that the 
+   M1 shutter is really closed, i.e. when all of the window and cover
+   status bits indicate a closed condition, and TSCV.M1CoverOnway does
+   NOT indicate that an open or close operation is underway.  These
+   conditions are represented by:
+
+     TSCV.M1CoverOnway & 0x03 == 0
+     TSCV.M1Cover & 0x5555555555555555555555 == 0x4444444444444444444444
+
+Algorithm:
+   None         if either data source is None (i.e. unavailable for any reason)
+   True         if TSCV.M1CoverOnway & 0x03 == 0 AND
+                   TSCV.M1Cover & 0x5555555555555555555555 == 
+                                                0x4444444444444444444444
+   False        otherwise
+
+TELSTAT.FOCUS, TELSTAT.M2, TELSTAT.ROTATOR, TELSTAT.ADC, TELSTAT.AO:
+--------------------------------------------------------------------
+
+Data sources:
+   TSCV.FOCUSINFO
+   TSCV.FOCUSINFO2
+   TSCV.FOCUSALARM
+   TSCV.ADCInOut
+
+TSCV.FOCUSINFO and TSCV.FOCUSINFO2 interpretation:
+   TSCV.FOCUSINFO is an 8-character string, representing 4 bytes of binary
+   data as a hexadecimal string.  TSCV.FOCUSINFO2 is a 2-character string, 
+   representing 1 byte of binary data as a hexadecimal string.  
+
+Exactly one bit within both values should be set, as
+   follows:
+
+      TSCV.FOCUSINFO   Focus             M2     Rotator/ADC/AO
+
+         01000000      Prime Optical   SPCAM
+         02000000      Prime IR        FMOS
+         04000000      Cassegrain Opt  Cs_Opt
+         08000000      Cassegrain Opt  Cs_Opt   ADC
+         10000000      Nasmyth Opt     Cs_Opt
+         20000000      Nasmyth Opt     Cs_Opt   ADC
+         40000000      Nasmyth Opt     Cs_Opt   ImR(B)
+         80000000      Nasmyth Opt     Cs_Opt   ImR(B)+ADC
+
+         00010000      Nasmyth Opt     Cs_Opt   ImR(R)
+         00020000      Nasmyth Opt     Cs_Opt   ImR(R)+ADC
+         00040000      Nasmyth IR      Cs_Opt
+         00080000      Nasmyth IR      Cs_Opt   ImR
+         00100000      Nasmyth Opt     Ns_Opt
+         00200000      Nasmyth Opt     Ns_Opt   ADC
+         00400000      Nasmyth Opt     Ns_Opt   ImR(B)
+         00800000      Nasmyth Opt     Ns_Opt   ImR(B)+ADC
+
+         00000100      Nasmyth Opt     Ns_Opt   ImR(R)
+         00000200      Nasmyth Opt     Ns_Opt   ImR(R)+ADC
+         00000400      Nasmyth IR      Ns_Opt
+         00000800      Nasmyth IR      Ns_Opt   ImR
+         00001000      Cassegrain IR   IR
+         00002000      Nasmyth Opt     IR
+         00004000      Nasmyth Opt     IR       ADC
+         00008000      Nasmyth Opt     IR       ImR(B)
+
+         00000001      Nasmyth Opt     IR       ImR(B)+ADC
+         00000002      Nasmyth Opt     IR       ImR(R)
+         00000004      Nasmyth Opt     IR       ImR(R)+ADC
+         00000008      Nasmyth IR      IR
+         00000010      Nasmyth IR      IR       ImR
+
+>     TSCV.FOCUSINFO2  Focus             M2     Rotator/ADC/AO
+>
+>        01            Nasmyth IR      IR       AO
+>        02            Nasmyth IR      Cs_Opt   AO
+>        04            Nasmyth IR      Ns_Opt   AO
+
+   Indication of ADC or rotator in TSCV.FOCUSINFO means that it is
+   inserted into the light path, not necessarily that it is turned on.
+
+   Rotators are not indicated as inserted or not for prime and Cassegrain
+   foci, because they do not insert any optic into the light path and
+   are always present.
+
+   ADC is not indicated as inserted or not for prime optical focus,
+   because it cannot be retracted -- i.e. it is always in the light path.
+
+   If any of the bits in TSCV.FOCUSINFO2 is on, then AO is in use.
+
+TSCV.FOCUSALARM interpretation:
+   TSCV.FOCUSALARM is a 2-character string, representing 1 bytes of binary
+   data as a hexadecimal string:
+       &(0x40) == 0x40  => "TSC Focus Pattern Alarm"
+                            Focus is in transition.
+       &(0x80) == 0x80  => "TSC Rotator ADC Selected Alarm"
+                            Selected focus is different from selected
+                            ADC or rotator.
+
+TSCV.ADCInOut interpretation:                           Status Corr. Tbl. p. 5
+    0x08 = In
+    0x10 = Out
+
+TELSTAT.FOCUS Algorithm:
+>  None            if either TSCV.FOCUSINFO or TSCV.FOCUSINFO2 is None 
+>                     (i.e. unavailable for any reason)
+>  UNDEF           if TSCV.FOCUSINFO or TSCV.FOCUSINFO2 is not one of 
+>                     the defined values
+   FOCUS_CHANGING  if TSCV.FOCUSALARM &(0x40) == 0x40
+   FOCUS_PF_OPT    if TSCV.FOCUSINFO == 01000000
+   FOCUS_PF_IR     if TSCV.FOCUSINFO == 02000000
+   FOCUS_CS_OPT    if TSCV.FOCUSINFO is one of the Cassegrain optical values
+   FOCUS_CS_IR     if TSCV.FOCUSINFO is one of the Cassegrain IR values
+   FOCUS_NS_OPT    if TSCV.FOCUSINFO is one of the Nasmyth Opt values
+   FOCUS_NS_IR     if TSCV.FOCUSINFO is one of the Nasmyth IR values; or
+>                      if TSCV.FOCUSINFO2 has any bit turned on
+
+TELSTAT.M2 Algorithm:
+>  None            if either TSCV.FOCUSINFO or TSCV.FOCUSINFO2 is None 
+>                     (i.e. unavailable for any reason)
+   UNDEF           if TSCV.FOCUSINFO is not one of the defined values, or
+                       if TSCV.FOCUSALARM is None or
+                       if TSCV.FOCUSALARM &(0xC0) != 0
+   M2_PF_OPT       if TSCV.FOCUSINFO == 01000000
+   M2_PF_IR        if TSCV.FOCUSINFO == 02000000
+   M2_CS_OPT       if TSCV.FOCUSINFO selects the Cs_Opt M2 mirror; or
+>                      if TSCV.FOCUSINFO2 == 02
+   M2_NS_OPT       if TSCV.FOCUSINFO selects the Ns_Opt M2 mirror; or
+>                      if TSCV.FOCUSINFO2 == 04
+   M2_IR           if TSCV.FOCUSINFO selects the IR     M2 mirror; or
+>                      if TSCV.FOCUSINFO2 == 01
+
+TELSTAT.ROTATOR Algorithm:
+   This status value indicates whether or not a rotator is inserted into the
+   light path (ROT_IMR, ROT_IMRB, ROT_IMRR), or potentially active (ROT_INSR).
+   If Cs Opt or Pf Opt are selected by TSCV.FOCUSINFO, then the rotator is 
+   always potentially active; therefore, TELSTAT.ROTATOR will never be 
+   ROT_OUT for Cs Opt or Pf Opt.
+   
+>  None            if either TSCV.FOCUSINFO or TSCV.FOCUSINFO2 is None 
+>                     (i.e. unavailable for any reason)
+>  UNDEF           if TSCV.FOCUSINFO or TSCV.FOCUSINFO2 is not one of the 
+>                       defined values or
+                        if TSCV.FOCUSALARM == None or
+                        if TSCV.FOCUSALARM &(0xC0) != 0
+   ROT_OUT         if TSCV.FOCUSINFO is legal and selects an Ns focus but 
+                        no rotator; or if TSCV.FOCUSINFO selects Pf IR; or
+>                       if TSCV.FOCUSINFO2 != 0
+   ROT_INSR        if TSCV.FOCUSINFO selects Cs Opt or Cs IR or Pf Opt
+   ROT_IMR         if TSCV.FOCUSINFO selects the ImR    rotator
+   ROT_IMRB        if TSCV.FOCUSINFO selects the ImR(B) rotator
+   ROT_IMRR        if TSCV.FOCUSINFO selects the ImR(R) rotator
+
+TELSTAT.ADC Algorithm:
+   This status value indicates whether or not an ADC is inserted into the
+   light path.  For IR focus selections, it will always be ADC_OUT, because
+   there is no ADC for IR instruments.  For Pf Opt, it will always be 
+   ADC_IN, because the Pf ADC is always in the optical light path.
+   If the TSCV.FOCUSINFO ADC selection is inconsistent with TSCV.ADCInOut, 
+   then an error will be logged for developer analysis.
+
+   None            if TSCV.FOCUSINFO is None (i.e. unavailable for any reason)
+                        or, if TSCV.FOCUSINFO indicates Ns Opt or Cs Opt 
+                        with ADC and TSCV.ADCInOut is None
+   UNDEF           if TSCV.FOCUSALARM is None or TSCV.FOCUSALARM &(0x80) or 
+                        TSCV.FOCUSINFO is not one of the defined values; 
+                        if TSCV.FOCUSINFO selects Ns Opt ADC or Cs Opt ADC 
+                        and TSCV.ADCInOut is not In; if TSCV.FOCUSINFO 
+                        selects Ns Opt no-ADC or Cs Opt no-ADC and 
+                        TSCV.ADCInOut is In
+   ADC_IN          if TSCV.FOCUSINFO selects ADC and TSCV.ADCInOut is In;
+                        or if TSCV.FOCUSINFO selects Pf Opt
+   ADC_OUT         otherwise
+
+>TELSTAT.AO Algorithm:
+>  This status value indicates whether or not AO is in use.
+>
+>  None         if either TSCV.FOCUSINFO or TSCV.FOCUSINFO2 is None 
+>                  (i.e. unavailable for any reason)
+>  UNDEF        if TSCV.FOCUSINFO2 is not one of the defined values or 
+>                  that both TSCV.FOCUSINFO and TSCV.FOCUSINFO2 are 0
+>  AO_IN        if TSCV.FOCUSINFO2 != 0
+>  AO_OUT       if TSCV.FOCUSINFO2 == 0
+
+
+TELSTAT.ROT_POS:
+----------------
+
+Data sources:
+ TELSTAT.FOCUS          focus selector
+ TSCS.INSROTPOS_PF      current value for prime focus rotator
+ TSCS.INSROTPOS         current value for Cassegrain rotator
+ TSCS.ImgRotPos         current value for Nasmyth rotators
+Alias used depends on focus:
+   FOCUS_PF_OPT, FOCUS_PF_IR:
+        TSCS.INSROTPOS_PF
+   FOCUS_CS_OPT, FOCUS_CS_IR:
+        TSCS.INSROTPOS
+   FOCUS_NS_OPT, FOCUS_NS_IR:
+        TSCS.ImgRotPos
+Interpretation:
+   Alias value format for all rotator values is xDDD.ddddddddd: 
+        x = - for negative, null for positive; DDD.ddddddddd=degrees (%14.9f)
+Algorithm:
+   None if the TELSTAT.FOCUS is None or UNDEF or FOCUS_CHANGING, or if the 
+   data source is None (i.e. unavailable for any reason).
+   Otherwise, simply copy from the source selected by the focus.
+
+TELSTAT.ROT_CMD:
+----------------
+
+Data sources:
+ TELSTAT.FOCUS          focus selector
+ TSCS.INSROTCMD_PF      commanded value for prime focus rotator
+ TSCS.INSROTCMD         commanded value for Cassegrain rotator
+ TSCS.IMGROTCMD         commanded value for Nasmyth rotators
+Alias used depends on focus:
+   FOCUS_PF_OPT, FOCUS_PF_IR:
+        TSCS.INSROTCMD_PF
+   FOCUS_CS_OPT, FOCUS_CS_IR:
+        TSCS.INSROTCMD
+   FOCUS_NS_OPT, FOCUS_NS_IR:
+        TSCS.IMGROTCMD
+Interpretation:
+   Alias value format for all rotator values is xDDD.ddddddddd: 
+        x = - for negative, null for positive; DDD.ddddddddd=degrees (%14.9f)
+Algorithm:
+   None if the TELSTAT.FOCUS is None or UNDEF or FOCUS_CHANGING, or if the 
+   data source is None (i.e. unavailable for any reason).
+   Otherwise, simply copy from the source selected by the focus.
+
+=========
+Menu Pane
+=========
+
+The Menu Pane generates the menu bar at the top of the TelStat window.
+It uses no status alias variables.
+
+
+=============
+Pointing Pane
+=============
+
+The Pointing Pane displays telescope pointing information.  It is the width
+of the TelStat window and is located immediately below the Menu Pane.
+
+Equinox:
+--------
+
+Data source:
+   STATS.EQUINOX
+Interpretation:
+   Text value format is YYYY.yyyy, e.g. 2000.0000, 1970.0000
+Display the trimmed string in parentheses after the RA and DEC labels.
+
+Right Ascension (RA):
+---------------------
+
+Data sources:
+   TSCS.ALPHA           current value
+   TSCS.ALPHA_C         commanded value
+Interpretation:
+   Text value format is HHMMSSssss: HH=hours, MM=minutes, SS.ssss = seconds
+Display as HH:MM:SS.sss
+
+Declination (DEC):
+------------------
+
+Data sources:
+   TSCS.DELTA           current value
+   TSCS.DELTA_C         commanded value
+Interpretation:
+   Text value format is xDDDMMSSss: x = 8 for negative, 0 for positive;
+                                  DDD=degrees; MM=minutes; SS.ss = seconds,
+Display as [+/-]DD:MM:SS.ss 
+
+Azimuth (Az):
+-------------
+
+Data sources:
+   TSCS.AZ              current value
+   TSCS.AZ_CMD          commanded value
+Interpretation:
+   Text value format is xDDD.ddddddddd: x = - for negative, null for positive; 
+        DDD.dddddddd=degrees  (%13f)
+Display as [+/-]DDD.dd
+
+Elevation (El):
+---------------
+
+Data sources:
+   TSCS.EL              current value
+   TSCS.EL_CMD          commanded value
+Interpretation:
+   Text value format is DD.ddddddddd=degrees (%11f)
+Display as [+/-]DD.dd
+
+Rotator angle (Rot):
+--------------------
+
+Data sources:
+   TELSTAT.ROT_POS      current   value for current rotator
+   TELSTAT.ROT_CMD      commanded value for current rotator
+Interpretation:
+   Alias type for rotator values is floating point angle.
+   Display as [+/-]DDD.dd
+
+=============
+Tracking Pane
+=============
+
+The Tracking Pane displays AutoGuider information, including a plot of
+AG/SV errors, as well as strip chart graphs of brightness and seeing.
+It fills most of the left column of the TelStat window.
+
+Note:
+   - AGPIR  is called `AG1' in FMOS and `AG for SH' by Mitsubishi.
+   - AGFMOS is called `AG2' in FMOS and `FIbre AG'  by Mitsubishi.
+
+AutoGuider Status:
+------------------
+
+Data sources:
+   TELSTAT.FOCUS      Which focus is in use -- FOCUS_PF_IR indicates FMOS
+   TELSTAT.TELDRIVE   current telescope guiding status (see Global States)
+   STATL.TELDRIVE     current telescope guiding status string(see Global States)
+   TELSTAT.SLEWING    True if telescope is slewing (see Global States)
+   STATL.AGRERR       difference between the reference point and the AG star
+                           position (mas = milliarcsec)
+                        Note: STATL.AGRERR is computed within SOSS in
+                           OSSL_StatL.d/OSSL_StatLexec.c, which selects source
+                           aliases appropriate to FMOS or other AG modes.
+   TSCL.AG1Intensity  current autoguider target intensity
+   STATL.SVRERR       difference between the reference point and the SV star
+                           position (mas = milliarcsec)
+   TSCL.SV1Intensity  current autoguider target intensity
+   STATL.SV_CALC_MODE slit calculation mode string, to be appended to 
+                           "Guiding(SV)" -- expected values are:
+                           "CTR", "BSECT", "PK" and "SLIT"
+   TSCV.AGPIRCCalc      0x04 indicates that FMOS AG1 is active (AG for SH)
+   TSCL.AGPIRIntensity  FMOS AG1 autoguider target intensity
+   TSCV.AGFMOSCCalc     0x04 indicates that FMOS AG2 is active (Fibre AG)
+   TSCL.AGFMOSIntensity FMOS AG2 autoguider target intensity
+
+Interpretation:
+   STATL.TELDRIVE is a string value which will be used for the status
+   label.  TELSTAT.TELDRIVE is an enumerated value derived from
+   STATL.TELDRIVE, as shown earlier.
+   For AG guide star intensity, use TSCL.AGPIRIntensity if FMOS AG1 is
+   active; TSCL.AGFMOSIntensity if FMOS AG2 is active; else TSCL.AG1Intensity.
+
+Display:
+   Status label box displays the following main part:
+
+        "Pointing" on a green background when pointing
+
+        "Tracking" or "Tracking(Non-Sidereal)" on a green background 
+                      when tracking
+
+        "Slewing" on a yellow background when tracking and TELSTAT.SLEWING==True
+
+        "Guiding(AG)"     on a green background when autoguiding, non-FMOS
+        "Guiding(AGPIR)"  on a green background when autoguiding, FMOS AG1
+        "Guiding(AGFMOS)" on a green background when autoguiding, FMOS AG2
+        "Guiding(AG...)"  changes to a red background when guide star lock 
+                          cannot be maintained (AG1Intensity or AGPIRIntensity 
+                          or AGFMOSIntensity < 1.0) -- an audible alert is also 
+                          sounded -- see TelStatAlertsLogging.txt
+        "Guiding(AG...)"  changes to a yellow background when autoguider is 
+                          losing track of the guide star (AGRERR > 500)
+        "Guiding(AG...)"  changes to a red background when autoguider is 
+                          losing track of the guide star (AGRERR > 1000)
+
+        "Guiding(SV)"  on a green background when slit viewer is guiding
+        "Guiding(SV)"  on a red background when guide star lock cannot be
+                       maintained (SV1Intensity < 1.0) -- an audible alert 
+                       is also sounded -- see TelStatAlertsLogging.txt
+        "Guiding(SV)"  on a yellow background when autoguider is losing 
+                       track of the guide star (SVRERR > 500)
+        "Guiding(SV)"  on a red background when autoguider is losing 
+                       track of the guide star (SVRERR > 1000)
+
+        "Unknown" on a red background for other values
+
+   If TELSTAT.TELDRIVE is in any of the SV modes, then the text contained in
+   STATL.SV_CALC_MODE, with parentheses around it, will be appended to the 
+   main status part; e.g. " (BSECT)".
+
+AG/SV Error Scatter Plot
+------------------------
+
+Data sources for AG non-FMOS:
+   TSCL.AG1dX           current AG deviation from target on x axis except FMOS
+   TSCL.AG1dY           current AG deviation from target on y axis except FMOS
+                           (units of mas = milliarcsec)
+   TSCV.AGExpTime       Autoguider camera exposure time except FMOS
+Data sources for AG FMOS:
+   TSCS.EL              telescope elevation (degrees)
+   TSCV.AGPIRCCalc      0x04 indicates that FMOS AG1 is active (AG for SH)
+   TSCV.AGFMOSCCalc     0x04 indicates that FMOS AG2 is active (Fibre AG)
+   TSCL.AGPIRdX         current AG deviation from target on x axis for FMOS AG1
+   TSCL.AGPIRdY         current AG deviation from target on y axis for FMOS AG1
+                           (dX and dY both use units of mas = milliarcsec)
+   TSCV.AGPIRExpTime    Autoguider camera exposure time for FMOS AG1
+   TSCL.AGFMOSdAZ       current AG deviation from target on AZ axis for FMOS AG2
+   TSCL.AGFMOSdEL       current AG deviation from target on EL axis for FMOS AG2
+                           (dAZ and dEL both use units of arcsec)
+   TSCV.AGFMOSExpTime   Autoguider camera exposure time for FMOS AG2
+Data sources for SV:
+   TSCL.SV1DX           current SV deviation from target on x axis
+   TSCL.SV1DY           current SV deviation from target on y axis
+                           (dX and dY both use units of mas = milliarcsec)
+   TSCV.SVExpTime       Slit viewer camera exposure time
+Interpretation:
+   TSCS.EL      Text value format is DD.ddddddddd=degrees (%11f)
+   dx, dy       Numeric string formatted as s999.99999, where s = + or -.  
+                Plotted display of dx, dy is in units of arcsec.
+   For FMOS AG2, (dx,dy) are derived from (TSCL.AGFMOSdAZ,TSCL.AGFMOSdEL) 
+   as follows:
+        dx = TSCL.AGFMOSdAZ * cos(TSCS.EL)      arcsec
+        dy = TSCL.AGFMOSdEL                     arcsec
+   ExpTime      Numeric string formatted as integer.  Units are milliseconds.
+Display:
+   Display error as a plotted point at (dx, dy) in the grid window for each 
+   exposure.  E.g. if the current exposure time is twice as long as the 
+   TelStat update period, only display a new point for every second update 
+   cycle.  Display the 256 most recent error points.  Units of the plot are 
+   arcsec.  If any of the displayable points would fall outside of the
+   current plot boundaries, the coordinates of that point are forced within
+   the plot boundaries and the point is displayed as a red dot.  (Even better
+   would be a red arrowhead pointing out from the boundary position.)
+   The initial radius of the outer circle in the plot is 0.5 arsec, and the
+   radius may be increased by double-left-clicking on the plot, or decreased
+   by double-right-clicking.  The minimum and maximum radii of the outer
+   circle are 0.25 and 2.00 arsec, respectively.  The plot is cleared 
+   whenever the telescope leaves AG/SV Guiding mode.
+
+Guide Star Brightness Chart
+---------------------------
+
+Limits:
+   alarm limits         < 0 or > 999999         red chart background
+   warning              == 0                    yellow chart background
+Data source for AG non-FMOS:
+   TSCL.AG1Intensity    current autoguider target intensity
+Data sources for AG FMOS:
+   TSCV.AGPIRCCalc      0x04 indicates that FMOS AG1 is active (AG for SH)
+   TSCL.AGPIRIntensity  current autoguider target intensity for FMOS AG1
+   TSCV.AGFMOSCCalc     0x04 indicates that FMOS AG2 is active (Fibre AG)
+   TSCL.AGFMOSIntensity current autoguider target intensity for MOS AG2
+Data source for SV:
+   TSCL.SV1Intensity    current slit viewer target intensity
+Interpretation:
+   Unsigned numeric string formatted as integer.  Units are ADU.
+Display:
+   Point plotted in strip chart and displayed in %6d field.
+   If the current value is outside of its valid range, the graph
+   is displayed against a red background.  If the current value is 
+   zero, the graph is displayed against a yellow background.
+
+Seeing Conditions Chart
+-----------------------
+
+Limits:
+   alarm limits         < 0                     red chart background
+
+> Data source for determining fmos ag selection:
+>   TSCV.AGPIRCCalc      0x04 indicates that FMOS AG1 is active (AG for SH)
+>   TSCV.AGFMOSCCalc     0x04 indicates that FMOS AG2 is active (Fibre AG)
+> (or these, must figure it out -sam)
+>   TSCL.AG1StarSize        standard AG (should we use this instead of VGWD.FWHM.AG ??)
+>   TSCL.AGPIRStarSize      AGPIR  (aka AG1) AG -- AG for Sh
+>   TSCL.AGFMOSStarSize     AGFMOS (aka AG2) AG -- FIbre AG
+>
+>units for these are 
+>---------
+>In the specification document from Mitsubishi in Japanese, the
+> `note' column says the unit of the 32-bit binary value with
+> status ID 003B037 is `0.01 marcsec'.
+>.00001 arcsec
+>----------
+
+Data source for AG:
+   VGWD.FWHM.AG         AG target FWHM analysis output
+Data source for SV:
+   VGWD.FWHM.SV         SV target FWHM analysis output
+Interpretation:
+   Numeric string formatted as float.  Units are arcseconds.
+Display:
+   Point plotted in strip chart and displayed in %3.1f field.
+   If the current value is negative (invalid), the graph
+   is displayed against a red background.
+
+Camera Exposure Time
+--------------------
+
+Limits:
+   alarm limits         < 0                     red chart background
+Data sources:
+   TSCV.AGExpTime       Autoguider camera exposure time
+   TSCV.SVExpTime       Slit viewer camera exposure time
+Data sources for AG FMOS:
+   TSCV.AGPIRCCalc      0x04 indicates that FMOS AG1 is active (AG for SH)
+   TSCV.AGFMOSCCalc     0x04 indicates that FMOS AG2 is active (Fibre AG)
+   TSCV.AGPIRExpTime    Autoguider camera exposure time for FMOS AG1
+   TSCV.AGFMOSExpTime   Autoguider camera exposure time for FMOS AG2
+Interpretation:
+   Numeric string formatted as integer.  Units are milliseconds.
+Display:
+   Data displayed in %9d fields.
+
+AG Probe Position
+-----------------
+
+Data sources:
+   TELSTAT.FOCUS        Which focus is in use
+Interpretation:
+  Data sources for FOCUS_PF_OPT:
+   TSCL.AGPF_X          Real autoguider probe X position
+   TSCL.AGPF_Y          Real autoguider probe Y position
+   TSCL.AGPF_X_CMD      Commanded autoguider probe X position
+   TSCL.AGPF_Y_CMD      Commanded autoguider probe Y position
+  Data sources for FOCUS_PF_IR (FMOS):
+   TSCV.AGPIRCCalc      0x04 indicates that FMOS AG1 is active (AG for SH)
+   TSCV.AGFMOSCCalc     0x04 indicates that FMOS AG2 is active (Fibre AG)
+   TSCL.AGPIR_X         Real autoguider probe radius position for FMOS AG1 (mm)
+   TSCL.AGPIR_X_CMD     Commanded autoguider probe radius position for FMOS AG1
+   (there is no angle movement for FMOS AG1)
+   (there is no movement for FMOS AG2, so no data source)
+  Data sources for non-FMOS, non-FOCUS_PF_OPT:
+   TSCV.AGR             Real autoguider probe radius
+   TSCV.AGTheta         Real autoguider probe angle
+   STATL.AG_R_CMD       Commanded autoguider probe radius
+   STATL.AG_THETA_CMD   Commanded autoguider probe angle
+Interpretation:
+   All values are numeric strings formatted as floats.  Radius
+   and X,Y values are given in millimetres and angles are given in 
+   degrees.
+Valid ranges:
+    TSCL.AGPF_X, TSCL.AGPF_X_CMD            0 to  170 mm
+    TSCL.AGPF_Y, TSCL.AGPF_Y_CMD          -20 to  +20 mm
+    TSCL.AGPIR_X, TSCL.AGPIR_X_CMD        -10 to +240 mm (not checked)
+    TSCV.AGR, STATL.AG_R_CMD            -1000 to +1000
+    TSCV.AGTheta, STATL.AG_THETA_CMD     -270 to  +270
+Display:
+   Radius and X,Y values displayed in %8.1f fields.  Angles are displayed
+   as %8s fields.  If any value goes outside of its valid range, the most 
+   recent valid set of values is displayed against a red background.
+   (Except that AGPIR may be valid when not in the range above, so the
+   check is disabled -- i.e. all values within +-1000 are considered valid.)
+  
+   If the active probe position or radius value differs by more than 1 mm
+   from its commanded value, or the active probe angle differs by more
+   than 1 degree from its commanded value, then assume that the AG Probe
+   is moving to a new commanded location and change the font color from
+   black to purple.  When/if a text blinking facility becomes available
+   in TelStat, also make the AG Probe text blink during motion.
+
+
+AG/SV Camera Threshold
+----------------------
+
+Data sources for non-FMOS AG:
+   STATL.AG1_I_BOTTOM   AG1 camera low detection threshold
+   STATL.AG1_I_CEIL     AG1 camera high detection threshold
+Data sources for AG FMOS:
+   TSCV.AGPIRCCalc      0x04 indicates that FMOS AG1 is active (AG for SH)
+   TSCV.AGFMOSCCalc     0x04 indicates that FMOS AG2 is active (Fibre AG)
+   TSCV.AGPIR_I_BOTTOM  AG camera low detection threshold for FMOS AG1
+   TSCV.AGPIR_I_CEIL    AG camera high detection threshold for FMOS AG1
+   (display nothing for FMOS AG2, which doesn't use thresholds)
+Data sources for SV:
+   STATL.SV1_I_BOTTOM   SV1 camera low detection threshold
+   STATL.SV1_I_CEIL     SV1 camera high detection threshold
+Interpretation:
+   Numeric string formatted as integer.  Units are unknown.
+Display:
+   Data displayed in %5d fields.
+   Values are only displayed if AG or SV guiding is active.
+   If either value is less than zero (invalid), the most recent 
+   valid set of values is displayed against a red background.
+
+
+==============
+Telescope Pane
+==============
+
+The Telescope Pane provides a graphical depiction of key telescope
+states, including the focus in use and the current status of covers,
+screens, dome shutter, rotators and ADCs.  It is located in the middle
+column of the TelStat window, just below the Pointing Pane.
+
+Notes on colors and on the representation of normal, warning and
+alarm conditions:  The background of the pane is a pale cream color,
+to fit with the SOSS convention and to allow good contrast.  Static
+graphical elements are displayed as black lines/curves or boxes filled
+in with dark brown.  Most of the graphical elements on this display are
+simple labeled boxes, positioned roughly in geometric locations that
+identify them as associated with a particular focus relative to the
+telescope.  The Top Screen and Wind Screen are drawn with greater 
+geometric fidelity, as is the prototype telescope ray.
+The text labels and the outlines of all boxes are
+always displayed in black.  When an element (e.g. a rotator, the wind
+screen) is in a Normal condition, the box representing it is
+transparent, so that its background color is the same as that of the
+pane (pale cream).  When an element is in a Warning condition, the
+box is filled with a yellow color as is the background of the text
+label.  When an element is in an Alarm condition, the box is filled
+with a red color as is the background of the text label.  
+
+If the status for an item displayed on the Telescope Pane cannot be
+determined (because OSSC_screenPrint returned an error for one or
+more relevant status alias values), or if one or more of the status
+alias values needed have bit patterns that are undefined, then the
+Telescope pane will display "<No Data>" or "XXX Undefined (value)"
+against a red background.  In these cases, no audible alert will
+be issued.
+
+
+Dome Shutter:
+-------------
+
+Data source: TSCV.DomeShutter                           Status Corr. Tbl. p. 1
+Old Interpretation:
+    AND value with 0x10=OPEN, 0x20=CLOSED, other = partial
+
+See TELSTAT.DOME_CLOSED under Global States, above, for a detailed
+discussion of the interpretation of TSCV.DomeShutter.
+
+Interpretation of TSCV.DomeShutter:
+       &(0x50) == 0     => "Dome Shutter Not Open"      green fill color
+       &(0x50) == 0x50  => "Dome Shutter Open"          pale cream fill color
+       &(0x50) == other => "Dome Shutter Partial"       green fill color
+Display as a horizontal bar graphic showing 3 states
+
+
+Top Screen:
+------------
+
+Data sources: TSCL.TSFPOS, TSCL.TSRPOS                  Status Alias Ref. p. 2
+        TSCV.TopScreen                                  Status Corr. Tbl. p. 2
+Interpretation:
+    floating point, meters -- zero point estimated at 13 m from rear of slit
+    TSCV.TopScreen
+        &(0x10) = "Free", &(0x0C) = "Link"
+        If neither bit is set, "TopScreen State Undefined (%x)", and red color
+Display as overlapping bars -- see notes
+    Also display "Front Link", "Rear Link" or "Free"
+Future feature:
+     If the left mouse button is held down in the vicinity of the Top Screen
+     graphic, a small window showing the numeric value in meters will pop up.
+
+
+Wind Screen:
+------------
+
+Data sources:
+        TSCV.WindScreen                         Status Corr. Tbl. p. 1
+        TSCV.WINDSDRV   drive power for the windscreen
+        TSCL.WINDSPOS   actual
+        TSCL.WINDSCMD   commanded
+Interpretation:
+    TSCV.WindScreen
+        0x01 = "Link", 0x02 = "Free", 
+Red, no alert:
+       other = "WindScreen Mode Undefined (%x)" with %x replaced by WindScreen
+Display as a horizontal bar graphic showing 3 states
+    TSCV.WINDSDRV
+        0x08 = off, 0x04 = on, other -- assume off
+    TSCL.WINDSPOS, TSCL.WINDSCMD
+        floating point meters
+Display as vertical bar showing actual position, label overlaid showing mode
+
+The windscreen color is displayed as green for normal, yellow for warning
+and red for an alarm condition.  The following conditions, tested in the
+order presented below, determine the color and whether or not an audible 
+alert is to be sounded:
+
+    Green, no alert:
+        - WINDSDRV is off (0x08) and WINDSPOS <= 5.0 meters
+    Red, audible alert:
+        - WINDSDRV is off (0x08) (or unknown) and WINDSPOS > 5.0 meters
+                "Alarm: Windscreen drive off and position is high"
+        - WINDSDRV is on (0x04) and WindScreen is "Free" (0x02)
+                "Alarm: Windscreen free and drive is on"
+    Green, no alert:
+        - WINDSDRV is on (0x04) and WindScreen is "Link" (0x01) and 
+          fabs(WINDSCMD-WINDSPOS) <= 1.0 meter
+    Yellow, no alert:
+        - WINDSDRV is on (0x04) and WindScreen is "Link" (0x01) and 
+          (WINDSCMD-WINDSPOS) > 1.0 meter
+    Red, audible alert:
+        - WINDSDRV is on (0x04) and WindScreen is "Link" (0x01) and 
+          (WINDSCMD-WINDSPOS) < -1.0 meter
+                "Alarm: Windscreen may obstruct telescope"
+    Red, no alert:
+     - none of above conditions (WindScreen is undefined,WINDSPOS is None, etc.)
+
+Any of the audible alerts will be suppressed after 10 minutes of repetition, 
+until the condition has cleared.  All audible alerts will be suppressed
+if any of the following conditions are true:
+        - TELSTAT.M1_CLOSED   == True (see Global States)
+        - TELSTAT.DOME_CLOSED == True (see Global States)
+        - TELSTAT.EL_STOWED   == True (see Global States)
+        - TELSTAT.SLEWING     == True (see Global States)
+
+Focus:
+------
+
+Data sources:
+        TELSTAT.FOCUS                           see Global States
+        TSCV.Focus                              Status Corr. Tbl. p. 3
+        TSCL.Z                                  Status Corr. Tbl. p. 2
+Interpretation:
+    TSCL.Z
+        floating point focus offset in mm
+    
+Display Focus Z as a labeled box just below the TopScreen graphic.
+    
+Display Focus ID as a labeled box wherever convenient, with the
+following labels depending on the value of TELSTAT.FOCUS:
+
+     FOCUS_CHANGING     "Focus Changing"
+     FOCUS_PF_OPT       "Prime Optical"
+     FOCUS_PF_IR        "Prime IR"
+     FOCUS_CS_OPT       "Cassegrain Optical"
+     FOCUS_CS_IR        "Cassegrain IR"
+     FOCUS_NS_OPT       "Nasmyth Optical"
+     FOCUS_NS_IR        "Nasmyth IR"
+  Red, no alert:
+     None               "Focus Undefined"
+
+M2/SPCAM/FMOS:
+--------------
+
+Data source:    TELSTAT.M2
+Interpretation/Display:
+      M2_IR       M2_CS_OPT   M2_NS_OPT   M2_PF_OPT   M2_PF_IR
+      "IR M2"    "Cs Opt M2"   "Ns M2"     "SPCAM"     "FMOS"
+    UNDEF = "M2 Undefined" Red, no alert
+    None  = "No Data" Red, no alert
+
+If TELSTAT.M2 is M2_IR, then the following addition is made to the M2 string:
+
+Data sources:
+        TSCV.TT_Mode
+        TSCV.TT_Drive
+        TSCV.TT_DataAvail
+        TSCV.TT_ChopStat
+Interpretation:
+    TSCV.TT_Mode
+        Bit
+         0    Tip-Tilt Chopping Mode
+         1    Tip-Tilt Tip-Tilt Mode
+         2    Tip-Tilt Position Mode
+         7    Tip-Tilt Maintenance Mode
+    TSCV.TT_Drive
+        Bit
+         0    Tip-Tilt Drive On
+         1    Tip-Tilt Drive Off
+         2    Tip-Tilt Drive On RDY <- testing showed this bit ALWAYS on
+    TSCV.TT_DataAvail
+        Bit
+         0    Tip-Tilt Data Available
+    TSCV.TT_ChopStat
+        Bit
+         0    Chopping Start
+         1    Chopping Stop
+         2    Tip-Tilt Chopping Start Ready
+
+If TELSTAT.M2 is NOT M2_IR, or if any of the 4 status values is None
+(unavailable), or if TSCV.TT_Mode does not indicate Chopping or Tip-Tilt
+or Position mode, or if TSCV.TT_Drive indicates Drive Off, or if 
+TSCV.TT_Drive does NOT indicate Drive On, then display no M2 suffix.
+
+If TSCV.TT_Mode indicates Position mode, then display no M2 suffix.
+
+If TSCV.TT_Mode indicates Tip-Tilt mode, and TSCV.TT_DataAvail indicates 
+data available, then display an M2 suffix of "(Tip/Tilt)" with a normal
+background.
+
+If TSCV.TT_Mode indicates Tip-Tilt mode, and TSCV.TT_DataAvail does NOT
+indicate data available, then display an M2 suffix of "(Tip/Tilt)"
+with a yellow (warning) background.
+
+If TSCV.TT_Mode indicates Chopping mode, and TSCV.TT_ChopStat indicates
+Chopping Start AND Tip-Tilt Chopping Start Ready, and TSCV.TT_ChopStat
+does NOT indicate Chopping Stop, then display an M2 suffix of
+"(Chopping)" with a normal background.
+
+If TSCV.TT_Mode indicates Chopping mode, and TSCV.TT_ChopStat indicates 
+Chopping Stop or does NOT indicate Chopping Start or does NOT indicate
+Tip-Tilt Chopping Start Ready, then display an M2 suffix of "(Chopping)"
+with a yellow (warning) background.
+
+An audible warning will be issued if the Tip-Tilt unit transitions 
+from operational mode (any of the suffixes above are displayed or the
+unit is in Position mode) and non-operational mode.  Non-operational 
+mode is identified by any of the following:
+    - TELSTAT.M2 is NOT M2_IR
+    - any of the 4 status values is None (unavailable)
+    - TSCV.TT_Mode does NOT indicate Chopping, Tip-Tilt or Position mode
+    - TSCV.TT_Drive indicates Drive Off
+    - TSCV.TT_Drive does NOT indicate Drive On
+If such a transition occurs, a warning will be sounded 5 times, 
+about 10 seconds apart.
+
+
+ADC (Atmospheric Dispersion Corrector):
+---------------------------------------
+
+Aliases used depend on focus as determined by TELSTAT.FOCUS (see Global States):
+    FOCUS_PF_OPT
+            TELSTAT.ADC         ADC in or out (see Global States)
+            TSCV.ADCONOFF_PF    On, Off
+            TSCV.ADCMODE_PF     Link, Free
+    FOCUS_CS_OPT, FOCUS_NS_OPT
+            TELSTAT.ADC         ADC in or out (see Global States)
+            TSCV.ADCOnOff       On, Off
+            TSCV.ADCMode        Link, Free
+
+Labels to display
+    P_IR        <no ADC display>
+    Ns_IR       <no ADC display>
+    Cs_IR       <no ADC display>
+
+    P_Opt, Ns_Opt, Cs_Opt:
+        On/Off  Mode            Display         Warning
+        ------  ----            -------         -------
+       (TELSTAT.ADC=ADC_OUT)    "No ADC"          no
+         Off     ~              "ADC Free"        yes
+          On    Free            "ADC Free"        yes  
+          On    Link            "ADC Link"        no
+
+TSCV.ADCONOFF_PF interpretation:                        Status Corr. Tbl. p. 5
+      0x01 = On
+      0x02 = Off
+  Red, no alert:
+   other = "ADC Undefined (%x,%x)" 
+                        with %x,%x replaced by ADCONOFF_PF,ADCMODE_PF
+
+TSCV.ADCMODE_PF interpretation:                         Status Corr. Tbl. p. 5
+    0x40 = Link
+    0x80 = Free
+  Red, no alert:
+   other = "ADC Undefined (%x,%x)" 
+                        with %x,%x replaced by ADCONOFF_PF,ADCMODE_PF
+
+TSCV.ADCOnOff interpretation (used if ADCInOut==In):    Status Corr. Tbl. p. 5
+    0x01 = On
+    0x02 = Off
+  Red, no alert:
+   other = "ADC Undefined (%x,%x,%x)" 
+                        with %x,%x,%x replaced by ADCInOut,ADCOnOff,ADCMode
+
+TSCV.ADCMode interpretation (used if ADCInOut==In, ADCOnOff==On):
+    0x04 = Link
+    0x08 = Free
+  Red, no alert:
+   other = "ADC Undefined (%x,%x,%x)" 
+                        with %x,%x,%x replaced by ADCInOut,ADCOnOff,ADCMode
+
+Display ADC box near selected focus, as in proposal drawing.
+Display "ADC Link" in green, "ADC Free" in red, "No ADC" in green.
+
+During observation, an audible alert is sounded if the ADC is in "Free" mode.
+It doesn't make sense to sound this alert when the telescope is inactive,
+so the audible alert is suppressed if any of the following are true:
+        - TELSTAT.M1_CLOSED   == True (see Global States)
+        - TELSTAT.DOME_CLOSED == True (see Global States)
+        - TELSTAT.EL_STOWED   == True (see Global States)
+        - TELSTAT.SLEWING     == True (see Global States)
+
+
+Instrument Rotators:
+--------------------
+
+Location and aliases used depend on TELSTAT.FOCUS (see Global States):
+
+Data sources:
+   TELSTAT.FOCUS           identifies focus currently in use (see Global States)
+   TELSTAT.ROTATOR         identifies rotator type (or OUT)  (see Global States)
+   TSCV.INSROTROTATION_PF
+   TSCV.InsRotRotation
+   TSCV.ImgRotRotation
+   TSCV.INSROTMODE_PF
+   TSCV.InsRotMode
+   TSCV.ImgRotMode
+   TSCV.ImgRotType
+   TELSTAT.ROT_POS         current   value for current rotator
+   TELSTAT.ROT_CMD         commanded value for current rotator
+>  TELSTAT.AO
+
+Focus-dependent data sources:
+              Prime focus             Cassegrain focus     Nasmyth focus
+  drive on    TSCV.INSROTROTATION_PF  TSCV.InsRotRotation  TSCV.ImgRotRotation
+  mode        TSCV.INSROTMODE_PF      TSCV.InsRotMode      TSCV.ImgRotMode
+  type (Ns_Opt only):                                      TSCV.ImgRotType
+> AO (Ns_IR only):                                         TELSTAT.AO
+
+TELSTAT.ROTATOR Interpretation:
+   None         "No Rot Data" and don't interpret other data sources
+   UNDEF        "Rotator Undefined" and don't interpret other data sources
+   ROT_OUT      "InsRot Out" or "ImgRot Out", don't interpret other data sources
+   ROT_INSR     Display "InsRot Link" or "InsRot Free" at Pf or Cs, see below
+   ROT_IMR, ROT_IMRB, ROT_IMRR
+                Display "ImgRot Link" or "ImgRot Zenith" or "ImgRot Free" 
+                at Ns, see below.
+                Error log message if not consistent with TSCV.ImgRotType
+
+TSCV.INSROTROTATION_PF interpretation (for prime focus):
+    0x01 = ON     => see TSCV.INSROTMODE_PF
+    0x02 = OFF    => "InsRot Free"
+      other = "InsRot Undefined (%x,%y)" 
+                    with %x,%y replaced by INSROTROTATION_PF, INSROTMODE_PF
+
+TSCV.InsRotRotation interpretation (for Cs focus):
+    0x01 = ON     => see TSCV.InsRotMode
+    0x02 = OFF    => "InsRot Free"
+      other = "InsRot Undefined (%x,%y)" 
+                    with %x,%y replaced by InsRotRotation, InsRotMode
+
+TSCV.ImgRotRotation interpretation (for Ns foci):
+    0x01 = ON     => see TSCV.ImgRotMode
+    0x02 = OFF    => "ImgRot Free"
+      other = "ImgRot Undefined (%x,%y,%z)" 
+             with %x,%y,%z replaced by ImgRotRotation, ImgRotMode, ImgRotType
+
+TSCV.INSROTMODE_PF Interpretation:                      Status Corr. Tbl. p. 3
+    0x10 = "InsRot Link", 0x20 = "InsRot Free", None = "No Rot Data"
+  Background Red, no alert:
+      other = "InsRot Undefined (%x,%y)" 
+                    with %x,%y replaced by INSROTROTATION_PF, INSROTMODE_PF
+
+TSCV.InsRotMode Interpretation:                         Status Corr. Tbl. p. 3
+    0x01 = "InsRot Link", 0x02 = "InsRot Free", None = "No Rot Data"
+  Background Red, no alert:
+      other = "InsRot Undefined (%x,%y)" 
+                    with %x,%y replaced by InsRotRotation, InsRotMode
+
+TSCV.ImgRotMode Interpretation:                         Status Corr. Tbl. p. 4
+    0x01 = "ImgRot Link",   0x02 = "ImgRot Free", 
+    0x40 = "ImgRot Zenith", None = "No Rot Data"
+  Background Red, no alert:
+      other (Ns Opt) = "ImgRot Undefined (%x,%y,%z)" 
+             with %x,%y,%z replaced by ImgRotRotation, ImgRotMode, ImgRotType
+      other (Ns IR)  = "ImgRot Undefined (%x,%y)" 
+             with %x,%y replaced by ImgRotRotation, ImgRotMode
+
+TSCV.ImgRotType Interpretation:                         Status Corr. Tbl. p. 4
+    0x12 = "(Blue)", 0x0C = "(Red)", 0x10 = "(OnWay-Blue)", 
+    0x04 = "(OnWay-Red)", 0x14 = "(none)"
+  Background Red, no alert:
+      other = "ImgRot Undefined (%x,%y,%z)" 
+             with %x,%y,%z replaced by ImgRotRotation, ImgRotMode, ImgRotType
+    This is ONLY displayed if the focus is Ns_Opt.
+    If TSCV.ImgRotType is inconsistent with TELSTAT.ROTATOR, then
+    an error will be logged for developer analysis, the Type name will
+    use the TSCV.ImgRotType-specified name but with a "?" added to the end, 
+    and the background color will be changed to yellow.
+
+TELSTAT.ROT_POS, TELSTAT.ROT_CMD interpretation:
+    Alias type for rotator position values is floating point angle.
+    Derived ROTDIF = fabs(TELSTAT.ROT_CMD - TELSTAT.ROT_POS)
+    "No Rot Pos Data" if either position is None
+
+>TELSTAT.AO interpretation (used in NsIR rotator slot):
+>  None         nothing -- this indicates that FOCUS is unavailable!
+>  UNDEF        nothing -- this indicates that FOCUS is undefined!
+>  AO_OUT       "AO Out"
+>  AO_IN        "AO In"
+
+Display Rot box near selected focus, as in proposal drawing.
+
+The rotator graphic fill color and the text label background are displayed 
+as clear for normal, yellow for warning and red for an alarm condition.  
+The following conditions determine the color:
+
+Prime focus:
+    Red fill:
+        - mode == "Link" and ROTDIF >= 0.1 degrees
+        - mode == "Link" and fabs(ROT_POS) >= 249.5 degrees
+    Yellow fill:
+        - mode != "Link"
+        - mode == "Link" and fabs(ROT_POS) >= 240 degrees
+    Normal -- background fill (pale cream):
+        - mode == "Link" and fabs(ROT_POS) <  240 degrees
+
+Nasmyth focus:
+    Red fill:
+        - mode == "Link" and ROTDIF >= 0.1 degrees
+        - mode == "Link" and fabs(ROT_POS) >= 179.5 degrees
+    Yellow fill:
+        - mode != "Link" or "Zenith"
+        - mode == "Link" and fabs(ROT_POS) >= 175 degrees
+    Normal -- background fill (pale cream):
+        - mode == "Link" and fabs(ROT_POS) <  175 degrees
+
+Cassegrain focus:
+    Red fill:
+        - mode == "Link" and ROTDIF >= 0.1 degrees
+        - mode == "Link" and fabs(ROT_POS) >= 269.5 degrees
+    Yellow fill:
+        - mode != "Link"
+        - mode == "Link" and fabs(ROT_POS) >= 260 degrees
+    Normal -- background fill (pale cream):
+        - mode == "Link" and fabs(ROT_POS) <  260 degrees
+
+No audible alerts are sounded by this pane for rotator limits (see 
+Limits Pane for rotator limits alerts, and Target Pane for time-to-limit 
+and position-angle-not-achieved alerts).
+NOTE: the rotator limits used in the Telescope Pane and the Limits Pane
+should be kept consistent.
+
+M1 Cover:
+---------
+
+Data source:    TSCV.M1Cover,TSCV.M1CoverOnway          Status Corr. Tbl. p. 2
+
+See TELSTAT.M1_CLOSED under Global States, above, for a detailed
+discussion of the interpretation of TSCV.M1Cover.  In summary, the M1
+cover is made up of a number of windows and covers, the status of each 
+of which is represented by a hex digit in TSCV.M1Cover.  TelStat will 
+display "Open" for all of these open, "Closed" for all closed, "Partial" 
+for some open and some closed, and "Open-OnWay" or "Close-OnWay" when 
+in transition.  If Partial is displayed, the operator must use the TSC 
+Moni&Cont Cover window to figure out exactly which windows and segments 
+are open and which are closed, and to correct the problem.
+
+TSCV.M1CoverOnway Interpretation:
+    0x01 = Open-OnWay           => "M1 Cover OnWay-Open"    green fill color
+    0x02 = Close-OnWay          => "M1 Cover OnWay-Closed"  green fill color
+    other = not on the way, use M1Cover
+TSCV.M1Cover Interpretation:
+    &(0x5555555555555555555555) == 0x1111111111111111111111 => "M1 Cover Open"
+                                                        pale cream fill color
+    &(0x5555555555555555555555) == 0x4444444444444444444444 => "M1 Cover Close
+                                                        green fill color
+If not OnWay and neither Open nor Close => "M1 Cover Partial (%x)"
+                                                        green fill color
+
+
+
+Display as shown in hand-written notes.
+
+
+Cell Cover:
+-----------
+
+Not in proposal drawing.  Display as a new box in front of (i.e. above) the 
+Cs ADC location in the drawing.
+
+Data source: TSCV.CellCover                             Status Corr. Tbl. p. 2
+Interpretation:
+    0x04 = "Cell Cover Closed"          green fill
+    0x00 = "Cell Cover OnWay"           green fill
+    0x01 = "Cell Cover Open"            pale cream fill
+Red, no alert:
+    other = "Cell Cover Undefined (%x)" with %x replaced by CellCover value
+Display as a horizontal bar graphic showing 3 states
+
+
+AO and Polarizer Status:
+------------------------
+
+Not in proposal drawing.  Display as a new 2-section box below the Cs InsRot
+location.  Left shows AO on/off, right shows polarizer on/off.
+
+    There is no status currently available for these, so there is
+    nothing to display.  Kosugi-san will provide the data sources for 
+    these when it becomes available.                                    <====
+
+
+
+===========
+Limits Pane
+===========
+
+The Limits Pane displays two or three limit widgets, representing the
+current and commanded values of azimuth, rotator angle and, for Cassegrain
+and Nasmyth foci, the AG probe angle.  It is in the center column
+of the TelStat window and is located immediately below the Telescope Pane.
+
+Each limits widget displays a scale ranging from a minimum limit to
+a maximum limit, with a yellow-orange region near the limits that is
+a warning zone.  The current value of the limit variable is shown as the 
+position of a downward-pointed large arrowhead on top of the scale, and 
+the commanded value is show as the position of an upward-pointed smaller 
+arrowhead below the scale.  When either arrowhead goes within the warning
+zone near the limit, the arrowhead changes color from green to red, the
+background of the widget changes to yellow, and an audible warning is
+issued (see TelStatAlertsLogging.txt).  When it reaches within 0.5 degree
+of the limit, an audible alarm  message is issued.  All audible alerts will 
+be suppressed whenever any of the following conditions are true:
+        - TELSTAT.M1_CLOSED   == True (see Global States)
+        - TELSTAT.DOME_CLOSED == True (see Global States)
+        - TELSTAT.EL_STOWED   == True (see Global States)
+Azimuth limits warning alerts will be suppressed if the azimuth 
+time-to-limit value is infinite or exceeds 30 minutes:
+        - TSCL.LIMIT_AZ       > 30
+Rotator limits warning alerts will be suppressed if the rotator 
+time-to-limit value is infinite or exceeds 30 minutes:
+        - TSCL.LIMIT_ROT      > 30
+Rotator limits warning and alarm alerts will be suppressed while slewing:
+        - TELSTAT.SLEWING     == True (see Global States)
+
+TSCL.LIMIT_FLAG Interpretation:
+    This is a 2-character string, representing 1 byte of binary
+    data as a hexadecimal string.  If the bit flag is zero, then
+    the corresponding time-to-limit value is undefined/infinite.
+       0x01 = elevation low  limit
+       0x02 = elevation high limit
+       0x04 = azimuth limit
+       0x08 = rotator limit
+       0x10 = rotator time-to-limit is finite but over 720 minutes,
+              0x08 bit and TSCL.LIMIT_ROT are undefined
+       None = all bits are undefined, assume that TSCL.LIMIT_*
+              do NOT have meaningful values, alerts will not be sounded
+    See additional note under Target Pane description.
+
+Azimuth limits widget:
+----------------------
+
+Limits:
+   scale range:         +/- 270   degrees
+   alarm limits:        +/- 269.5 degrees
+   warning limits:      +/- 260   degrees
+Data sources:
+   TSCL.LIMIT_FLAG      identifies valid/finite time-to-limit values
+   TSCL.LIMIT_AZ        azimuth time-to-limit in minutes
+   TSCS.AZ              current value
+   TSCS.AZ_CMD          commanded value
+Interpretation:
+   Text value format is xDDD.ddddddddd: x = - for negative, null for positive; 
+        DDD.dddddddd=degrees  (%13f)
+
+Rotator limits widget:
+----------------------
+
+Limits:             Prime focus        Nasmyth focus   Cassegrain focus
+    scale range:     +/- 250           +/- 180         +/- 270   degrees
+    alarm limits:    +/- 249.5         +/- 179.5       +/- 269.5 degrees
+    warning limits:  +/- 240           +/- 175         +/- 260   degrees
+  NOTE: the rotator limits used in the Telescope Pane and the Limits Pane
+  should be kept consistent.
+Data sources:
+   TSCL.LIMIT_FLAG      identifies valid/finite time-to-limit values
+   TSCL.LIMIT_ROT       rotator time-to-limit in minutes
+    TELSTAT.FOCUS       identifies focus currently in use (see Global States)
+    TELSTAT.ROT_POS     current   value for current rotator
+    TELSTAT.ROT_CMD     commanded value for current rotator
+Interpretation:
+    Alias type for rotator values is floating point angle.
+    If TELSTAT.FOCUS == None (see Global States), do not display Rotator widget
+        
+AG position limits widget:
+--------------------------
+
+If TELSTAT.FOCUS == None, FOCUS_PF_OPT or FOCUS_PF_IR (see Global States), 
+this widget is NOT displayed.
+
+Limits:             Nasmyth focus       Cassegrain focus
+   scale range:      +/- 270            +/- 185   degrees
+   alarm limits:     +/- 269.5          +/- 184.5 degrees
+   warning limits:   +/- 260            +/- 175   degrees
+Data sources:
+   TSCV.AGTheta
+   STATL.AG_THETA_CMD
+Interpretation:
+   Text value format is xDDD.ddddddddd: x = - for negative, null for positive; 
+        DDD.dddddddd=degrees  (%13f)
+
+Current limit values are from feedback from G. Kosugi on 2004-02-18/20.
+
+
+===========
+Target Pane
+===========
+
+The Target Pane displays information related to the current
+observation target.  There are 5 fields displayed in the pane and they
+are described in more detail below.
+
+Proposal ID
+-----------
+
+This field displays the proposal id for which the current observations
+are being made.
+
+Data source:
+    FITS.SBR.MAINOBCP   name of OBCP being used for observation
+    FITS.IRC.PROP_ID    proposal ID for IRCS    (OBCP01)
+    FITS.AOS.PROP_ID    proposal ID for AO      (OBCP02)
+    FITS.CIA.PROP_ID    proposal ID for CIAO    (OBCP03)
+    FITS.OHS.PROP_ID    proposal ID for OHS     (OBCP04)
+    FITS.FCS.PROP_ID    proposal ID for FOCAS   (OBCP05)
+    FITS.HDS.PROP_ID    proposal ID for HDS     (OBCP06)
+    FITS.COM.PROP_ID    proposal ID for COMICS  (OBCP07)
+    FITS.SUP.PROP_ID    proposal ID for SPCAM   (OBCP08)
+    FITS.SUK.PROP_ID    proposal ID for SUKA    (OBCP09)
+    FITS.MIR.PROP_ID    proposal ID for MIRTOS  (OBCP10)
+    FITS.VTO.PROP_ID    proposal ID for VTOS    (OBCP11)
+    FITS.CAC.PROP_ID    proposal ID for CAC     (OBCP12)
+    FITS.SKY.PROP_ID    proposal ID for SKYMON  (OBCP13)
+    FITS.PI1.PROP_ID    proposal ID for PI1     (OBCP14)
+    FITS.K3D.PROP_ID    proposal ID for K3D     (OBCP15)
+    FITS.O16.PROP_ID    proposal ID for OTHER16 (OBCP16)
+    FITS.MCS.PROP_ID    proposal ID for MOIRCS  (OBCP17)
+    FITS.FMS.PROP_ID    proposal ID for FMOS    (OBCP18)
+    FITS.FLD.PROP_ID    proposal ID for FLDMON  (OBCP19)
+    FITS.AON.PROP_ID    proposal ID for AO188   (OBCP20)
+    FITS.HIC.PROP_ID    proposal ID for HICIAO  (OBCP21)
+    FITS.WAV.PROP_ID    proposal ID for WAVEPLAT(OBCP22)
+    FITS.LGS.PROP_ID    proposal ID for LGS     (OBCP23)
+    FITS.O24.PROP_ID    proposal ID for OTHER24 (OBCP24)
+    FITS.O25.PROP_ID    proposal ID for OTHER25 (OBCP25)
+    FITS.O26.PROP_ID    proposal ID for OTHER26 (OBCP26)
+    FITS.O27.PROP_ID    proposal ID for OTHER27 (OBCP27)
+    FITS.O28.PROP_ID    proposal ID for OTHER28 (OBCP28)
+    FITS.O29.PROP_ID    proposal ID for OTHER29 (OBCP29)
+    FITS.O30.PROP_ID    proposal ID for OTHER30 (OBCP30)
+    FITS.O31.PROP_ID    proposal ID for OTHER31 (OBCP31)
+    FITS.O32.PROP_ID    proposal ID for OTHER32 (OBCP32)
+    FITS.VGW.PROP_ID    proposal ID for VGW (OBCP33)
+
+Interpretation:
+   Text strings.
+
+Display:
+    Text given in the PROP_ID value is displayed in a %9s field.  If 
+    FITS.SBR.MAINOBCP is empty (starts with "#") or unavailable, the current 
+    group of the user executing TelStat is displayed.
+   
+Object ID
+---------
+
+This field displays the name of the current observational target.
+
+Data sources:
+    FITS.SBR.MAINOBCP    name of OBCP being used for observation
+    FITS.IRC.OBJECT     name of object targeted by IRCS     (OBCP01)
+    FITS.AOS.OBJECT     name of object targeted by AO       (OBCP02)
+    FITS.CIA.OBJECT     name of object targeted by CIAO     (OBCP03)
+    FITS.OHS.OBJECT     name of object targeted by OHS      (OBCP04)
+    FITS.FCS.OBJECT     name of object targeted by FOCAS    (OBCP05)
+    FITS.HDS.OBJECT     name of object targeted by HDS      (OBCP06)
+    FITS.COM.OBJECT     name of object targeted by COMICS   (OBCP07)
+    FITS.SUP.OBJECT     name of object targeted by SPCAM    (OBCP08)
+    FITS.SUK.OBJECT     name of object targeted by SUKA     (OBCP09)
+    FITS.MIR.OBJECT     name of object targeted by MIRTOS   (OBCP10)
+    FITS.VTO.OBJECT     name of object targeted by VTOS     (OBCP11)
+    FITS.CAC.OBJECT     name of object targeted by CAC      (OBCP12)
+    FITS.SKY.OBJECT     name of object targeted by SKYMON   (OBCP13)
+    FITS.PI1.OBJECT     name of object targeted by PI1      (OBCP14)
+    FITS.K3D.OBJECT     name of object targeted by K3D      (OBCP15)
+    FITS.O16.OBJECT     name of object targeted by OTHER16  (OBCP16)
+    FITS.MCS.OBJECT     name of object targeted by MOIRCS   (OBCP17)
+    FITS.FMS.OBJECT     name of object targeted by FMOS     (OBCP18)
+    FITS.FLD.OBJECT     name of object targeted by FLDMON   (OBCP19)
+    FITS.AON.OBJECT     name of object targeted by AO188    (OBCP20)
+    FITS.HIC.OBJECT     name of object targeted by HICIAO   (OBCP21)
+    FITS.WAV.OBJECT     name of object targeted by WAVEPLAT (OBCP22)
+    FITS.LGS.OBJECT     name of object targeted by LGS      (OBCP23)
+    FITS.O24.OBJECT     name of object targeted by OTHER24  (OBCP24)
+    FITS.O25.OBJECT     name of object targeted by OTHER25  (OBCP25)
+    FITS.O26.OBJECT     name of object targeted by OTHER26  (OBCP26)
+    FITS.O27.OBJECT     name of object targeted by OTHER27  (OBCP27)
+    FITS.O28.OBJECT     name of object targeted by OTHER28  (OBCP28)
+    FITS.O29.OBJECT     name of object targeted by OTHER29  (OBCP29)
+    FITS.O30.OBJECT     name of object targeted by OTHER30  (OBCP30)
+    FITS.O31.OBJECT     name of object targeted by OTHER31  (OBCP31)
+    FITS.O32.OBJECT     name of object targeted by OTHER32  (OBCP32)
+    FITS.VGW.OBJECT     name of object targeted by VGW      (OBCP33)
+
+
+Interpretation:
+   Text strings
+
+Display:
+   The OBCP name for the current instrument is retrieved and its
+   abbreviation is obtained from a lookup table in TelStat_cfg.  A
+   text string is constructed to retrieve the corresponding object
+   symbol.  The resulting text is displayed in the field.
+
+   If FITS.SBR.MAINOBCP is empty (starts with "#") or unavailable, the string
+   "<Unknown>" will be displayed.  If the object symbol have no data,
+   the string "xxx unknown", where xxx is the OBCP abbreviation, is
+   displayed. 
+
+Airmass
+-------
+
+This field displays the mass of air through which the observation is
+being made.
+
+Data source:
+   TSCS.EL              current telescope elevation
+
+Interpretation:
+   Same as Pointing Pane.
+
+Display:
+   The result of a calculation based on the current elevation is
+   displayed in a %.2f field.
+
+    The formula used to calculate the air mass is:
+
+    Let x =            1.0
+            ------------------------
+            cos ((90 - EL)/180 * pi)
+
+    where EL is the current elevation of the telescope in degrees.
+
+    air mass = x - 0.00018167(x - 1) - 0.002875(x-1)^2 - 0.0008083(x -1)^3
+
+
+Time to Limit
+-------------
+
+Target Pane uses values provided by TSC to determine the time-to-limit
+to display and to decide on alerts to sound and display:
+
+Data sources:
+    TELSTAT.FOCUS        identifies focus currently in use (see Global States)
+    TSCV.PROBE_LINK
+    TSCL.LIMIT_FLAG      identifies valid/finite time-to-limit values
+    TSCL.LIMIT_EL_LOW    time to  low-elevation limit in minutes
+    TSCL.LIMIT_EL_HIGH   time to high-elevation limit in minutes
+    TSCL.LIMIT_AZ        azimuth   time-to-limit in minutes
+    TSCL.LIMIT_ROT       rotator   time-to-limit in minutes
+    TELSTAT.TELDRIVE     current telescope guiding status
+
+TSCV.PROBE_LINK Interpretation:
+    This is a 2-character string, representing 1 byte of binary
+    data as a hexadecimal string.
+     &0x01 == 0x01 ==> Probe if focus is not Prime Focus, else Rotator
+
+TSCL.LIMIT_FLAG Interpretation:
+    This is a 2-character string, representing 1 byte of binary
+    data as a hexadecimal string.
+       0x01 = elevation low  limit
+       0x02 = elevation high limit
+       0x04 = azimuth limit
+       0x08 = rotator limit
+       0x10 = rotator time-to-limit is finite but over 720 minutes,
+              0x08 bit and TSCL.LIMIT_ROT are undefined
+       None = all bits are undefined, assume that TSCL.LIMIT_*
+              do NOT have meaningful values
+    
+NOTE:  From conversation and E-mail with Tomono-san 2005-12-15, 
+including information he received from Sugahara-san:
+  (1) if bit 4 is set, then ignore bit 3 (rotator limit) and set
+  the local rotator time-to-limit to 721 (TSC has calculated a
+  value > 720 but does not report it in status);
+  (2) a clear bit in bits 0, 1, 2, or 3 means that the value in 
+  the corresponding LIMIT variable is not defined AND that the 
+  corresponding time-to-limit is not a concern (i.e. is very 
+  large or infinite); 
+  (3) more than one of bits 0,1,2,3 may be set at once. 
+
+TSCL.LIMIT_X Interpretation:
+    This is a variable-length character string, representing floating
+    point decimal minutes, the time estimate until a limit is reached.
+
+Display:
+    Target Pane uses TSCL.LIMIT_FLAG to select the shortest of these 
+    times and displays it as hours and minutes, with a symbol specifying 
+    which of the four limits is shortest: "EL Low", "EL High", "AZ", or 
+    one of "Rotator" or "Probe" if TSCL.LIMIT_FLAG value is 0x08.
+    In the latter case, the symbol will be "Rotator" unless
+    the following is true, in which case it will be "Probe":
+ 
+         TSCV.PROBE_LINK && 0x01 == 0x01  AND
+         TSCV.Focus is one of 0x04, 0x08, 0x10, 0x20 or 0x40
+ 
+    If TSCL.LIMIT_FLAG indicates more than one "shortest" time-to-limit,
+    display actual shortest time-to-limit (should be 0) and all relevant 
+    symbols (may truncate) with symbol for shortest first.
+ 
+    If TSCL.LIMIT_FLAG is undefined or TSCL.LIMIT_FLAG & 0x08 is set, or if 
+    the smallest time-to-limit value is 720 or more, then display "--h --m".  
+ 
+    If the time-to-limit value is 1.0 or less, then display the background
+    of the value and symbol in red, append " <= 1m" to the value field,
+    and sound an alarm audio alert; if greater than 1.0 but less than or 
+    equal to 30.0, then display the background of the value and symbol in 
+    yellow, append " <= 30m" to the value field, and sound a warning audible
+    alert; otherwise, display normal colors (black on a light blue background).
+ 
+    If any of the following are true, disable Time-to-limit audible 
+    alerts (but still display the colors, as above):
+         - TELSTAT.M1_CLOSED    == True (see Global States)
+         - TELSTAT.DOME_CLOSED  == True (see Global States)
+         - TELSTAT.EL_STOWED    == True (see Global States)
+         - TELSTAT.SLEWING      == True (see Global States)
+         - TELSTAT.TELDRIVE     == TELDRIVE_POINT (see Global States)
+
+
+PA
+--
+Data sources:
+   TELSTAT.FOCUS        identifies focus currently in use (see Global States)
+   TELSTAT.ROTATOR      identifies rotator type (or OUT)  (see Global States)
+   TSCL.INSROTPA_PF     prime focus commanded position angle
+   TSCL.InsRotPA        Cassegrain commanded position angle
+   TSCL.ImgRotPA        Nasmyth commanded position angle (same as TSCL.InsRotPA)
+   STATS.ROTDIF_PF      commanded/achieved difference for prime focus
+   STATS.ROTDIF         commanded/achieved difference for non-prime focus
+
+Aliases used depend on focus:
+     FOCUS_PF_OPT
+            TSCL.INSROTPA_PF
+            STATS.ROTDIF_PF
+     FOCUS_CS
+            TSCL.InsRotPA
+            STATS.ROTDIF
+     FOCUS_NS_OPT, FOCUS_NS_IR
+            TSCL.ImgRotPA
+            STATS.ROTDIF
+
+Interpretation:
+    TSCL.INSROTPA_PF, TSCL.InsRotPA, TSCL.ImgRotPA
+        floating point numbers representing commanded position angles in degrees
+    STATS.ROTDIF_PF, STATS.ROTDIF
+        floating point numbers representing the difference between
+        commanded and achieved pointing angles in degrees
+
+Computation of PA for display:
+     PA = ((<selected alias PA value> + 540.0) % 360.0) - 180.0)
+
+Limits:
+   rotator cmd-not-achieved warning limit:     ROTDIF >= 0.1 degrees
+
+   The focus-selected pointing angle is displayed in degrees.
+   If PA is out of range, background color is red; no audio
+   alert is issued; else if ROTDIF value is 0.1 degrees or more,
+   background color is yellow, "diff=%f>0.1" (where %f is replaced by
+   the value of ROTDIF) is appended to the value field, and a cmd-not-
+   achieved warning audio alert is issued (unless suppressed, see 
+   following notes).
+
+Note: As with Time-to-Limit, it doesn't make sense to sound alerts when
+the telescope is inactive (see conditions below), so the audible alert
+for commanded-value-not-achieved is suppressed.  In addition, when the 
+telescope is slewing from one target object to another, as detected by
+TELSTAT.SLEWING (see Global States), it is normal for 
+the commanded position angle to not achieve its commanded value.  If the 
+telescope is slewing, the audible alerts for commanded position angle 
+commanded value not achieved is suppressed.  **However**, if the ROTDIF 
+value exceeds 0.1 degrees before the slewing condition is detected,
+as often seems to be the case at the start of a slew, the PA-not-achieved 
+alert will sound.
+
+Audible alerts will be suppressed if any of the following conditions are true:
+        - TELSTAT.ROTATOR     == ROT_OUT (see Global States)
+        - TELSTAT.M1_CLOSED   == True (see Global States)
+        - TELSTAT.DOME_CLOSED == True (see Global States)
+        - TELSTAT.EL_STOWED   == True (see Global States)
+        - TELSTAT.SLEWING     == True (see Global States)
+The color change to yellow will also be suppressed.
+
+2004-08-04:  Sounding of the warning has resulted in complaints that the
+warnings occur during the time when the commanded position angle has been
+changed and the achieved hasn't had time to catch up.  Unfortunately,
+there are no status variables to give us the commanded position angle!
+
+Analysis of data from an overnight run 7/22-23 showed that the delay for
+ROT_DIF to return to zero after a deflection is dependent on the 
+magnitude of the deflection (not surprisingly).  Noumaru-san looked up
+and determined that the theoretical speed of all rotators is 1.5 degrees/sec,
+or 0.6667 sec/degree.  This is consistent with the observed speeds
+from several nights' observations (e.g. measured values for the 7/22-23 
+run at Nasmyth focus ranged from 0.635 to 0.772.)  In order to take this 
+into account without suppressing alarms that should be sounded, the audible 
+alarm for PA not achieved will be delayed N seconds following the first 
+detection of ROT_DIF > 0.1 degrees.  N will be calculated from a formula 
+similar to the following:
+
+       (6 + STATS.ROTDIF * SecPerDegree) seconds
+
+where SecPerDegree is a configuration constant that is dependent of the
+current focus, and .  Until more data is known, all SecPerDegree values 
+will be set to the theoretical value of 0.6667.
+While any of the TELSTAT.* suppression conditions hole, this time
+suppression will not be in effect.  On the first cycle following a
+period of TELSTAT.* suppression, the STATS.ROTDIF value will be inspected
+and the formula above will be used for a time-delayed alarm, if needed.
+
+=========
+Dome Pane
+=========
+
+The Dome Pane displays two light status widgets.  These widgets give
+a visual indication of the activity of the two sets of dome flat field
+lamps.
+
+10W Lamp
+--------
+
+Indicate the status of the 10W flat field lamp.
+
+Data source:
+   TSCV.DomeFF_A        Dome flat field lamp A indicator
+Interpretation:
+   TSCV.DomeFF_A == 0x02        lamp is off
+   TSCV.DomeFF_A == 0x01        lamp is on
+   TSCV.DomeFF_A == other       error if occurs more than once in a row
+Display:
+   Widget is filled with red to indicate bad data if the data source is
+   missing or has an invalid value for 2 or more consecutive updates
+   cycles.
+   Widget is filled with the pane background color when off and the
+   indicator foreground color when on.
+
+600W Lamp
+---------
+
+Indicate the status of the 600W flat field lamps.
+
+Data sources:
+   TSCV.DomeFF_1B       Dome flat field lamp 1B indicator
+   TSCV.DomeFF_2B       Dome flat field lamp 2B indicator
+   TSCV.DomeFF_3B       Dome flat field lamp 3B indicator
+   TSCV.DomeFF_4B       Dome flat field lamp 4B indicator
+Interpretation:
+   TSCV.DomeFF_1B == 0x08       lamp 1B off
+   TSCV.DomeFF_1B == 0x04       lamp 1B on
+   TSCV.DomeFF_2B == 0x20       lamp 2B off
+   TSCV.DomeFF_2B == 0x10       lamp 2B on
+   TSCV.DomeFF_3B == 0x02       lamp 3B off
+   TSCV.DomeFF_3B == 0x01       lamp 3B on
+   TSCV.DomeFF_4B == 0x08       lamp 4B off
+   TSCV.DomeFF_4B == 0x04       lamp 4B on
+   TSCV.DomeFF_*B == other      error if occurs more than once in a row
+Display:
+   Widget is filled with red to indicate bad data if any data source is
+   missing or has an invalid value for 2 or more consecutive updates cycles.
+   Widget is filled with the pane background color if all of the
+   data sources indicate off, and with the indicator foreground color 
+   if exactly one of the data sources indicates on.  It is filled with yellow 
+   if 2 or more data sources indicate on at the same time.                    <
+
+
+================
+Calibration Pane
+================
+
+The Calibration Pane displays the status of the six calibration lights
+on the telescope.  Each light is represented by a light status
+widget.  In addition, the position of the calibration probe and the
+current flow through the lamp are reported.
+
+It is assumed that only one calibration light will be operational at a
+time.
+
+Calibration Probe
+-----------------
+
+Display the current position of the calibration probe.
+
+Data source:
+   TSCL.CAL_POS         distance the calibration probe has been
+                        extended
+Interpretation:
+   Numeric text formatted as a string.  Units are millimetres.
+Display:
+   Value is written under the indicator lights using a %-3.3f format.
+
+HCT Lamp 1 (Fe-Ar)
+------------------
+
+Display the status and current flow through HCT Lamp 1.
+   
+Data sources:
+   TSCL.CAL_HCT1_AMP    current flow reading
+   TSCV.CAL_HCT_LAMP1   lamp status
+Interpretation:
+   TSCV.CAL_HCT_LAMP1 == Oxaa   all lamps off
+   TSCV.CAL_HCT_LAMP1 == Ox01   Cs H.C1 lamp on
+   TSCV.CAL_HCT_LAMP1 == Ox04   NsOpt H.C1 lamp on
+   TSCV.CAL_HCT_LAMP1 == Ox10   P1(Rear) H.C1 lamp on
+   TSCV.CAL_HCT_LAMP1 == Ox40   P2(Front) H.C1 lamp on
+   TSCL.CAL_HCT1_AMP is a numeric string.  Units are milliAmps.
+Display:
+   Widget is filled with pane background color when all lamps are off and 
+   indicator foreground color when exactly one is on.  It is filled with 
+   yellow if 2 or more data sources from all those in this pane indicate 
+   on at the same time.
+   If the widget is on, amp text will appear to the right of the widget 
+   cluster.
+
+HCT Lamp 2 (Th-Ar)
+------------------
+
+Display the status and current flow through HCT Lamp 2.
+   
+Data sources:
+   TSCL.CAL_HCT2_AMP    current flow reading
+   TSCV.CAL_HCT_LAMP2   lamp status
+Interpretation:
+   TSCV.CAL_HCT_LAMP2 == Ox0a   both lamps off
+   TSCV.CAL_HCT_LAMP2 == Ox01   Cs H.C2 lamp on
+   TSCV.CAL_HCT_LAMP2 == Ox04   NsOpt H.C2 lamp on
+   TSCL.CAL_HCT2_AMP is a numeric string.  Units are milliAmps.
+Display:
+   Widget is filled with pane background color when all lamps are off and 
+   indicator foreground color when exactly one is on.  It is filled with 
+   yellow if 2 or more data sources from all those in this pane indicate 
+   on at the same time.
+   If the widget is on, amp text will appear to the right of the widget 
+   cluster.
+
+HAL Lamp 1
+----------
+
+Display the status and current flow through HAL Lamp 1.
+   
+Data sources:
+   TSCL.CAL_HAL1_AMP    current flow reading
+   TSCV.CAL_HAL_LAMP1   lamp status
+Interpretation:
+   TSCV.CAL_HAL_LAMP1 == Ox2a   all lamps off
+   TSCV.CAL_HAL_LAMP1 == Ox01   Cs Halogen1 lamp on
+   TSCV.CAL_HAL_LAMP1 == Ox04   NsOpt Halogen1 lamp on
+   TSCV.CAL_HAL_LAMP1 == Ox10   NsIr  Halogen1 lamp on
+   TSCL.CAL_HAL1_AMP is a numeric string.  Units are milliAmps.
+Display:
+   Widget is filled with pane background color when all lamps are off and 
+   indicator foreground color when exactly one is on.  It is filled with 
+   yellow if 2 or more data sources from all those in this pane indicate 
+   on at the same time.
+   If the widget is on, amp text will appear to the right of the widget 
+   cluster.
+
+HAL Lamp 2
+----------
+
+Display the status and current flow through HAL Lamp 2.
+   
+Data sources:
+   TSCL.CAL_HAL2_AMP    current flow reading
+   TSCV.CAL_HAL_LAMP2   lamp status
+Interpretation:
+   TSCV.CAL_HAL_LAMP2 == Ox2a   all lamps off
+   TSCV.CAL_HAL_LAMP2 == Ox01   Cs Halogen2 lamp on
+   TSCV.CAL_HAL_LAMP2 == Ox04   NsOpt Halogen2 lamp on
+   TSCV.CAL_HAL_LAMP2 == Ox10   NsIr  Halogen2 lamp on
+   TSCL.CAL_HAL2_AMP is a numeric string.  Units are milliAmps.
+Display:
+   Widget is filled with pane background color when all lamps are off and 
+   indicator foreground color when exactly one is on.  It is filled with 
+   yellow if 2 or more data sources from all those in this pane indicate 
+   on at the same time.
+   If the widget is on, amp text will appear to the right of the widget 
+   cluster.
+
+RGL Lamp 1 (Ne)
+---------------
+
+Display the status and current flow through RGL Lamp 1.
+   
+Data sources:
+   TSCV.CAL_RGL_LAMP1   lamp status
+Interpretation:
+   TSCV.CAL_RGL_LAMP1 == Ox22   both lamps off
+   TSCV.CAL_RGL_LAMP1 == Ox01   Cs Rare Gas1 lamp on
+   TSCV.CAL_RGL_LAMP1 == Ox10   NsIr Rare Gas1 lamp on
+Display:
+   Widget is filled with pane background color when all lamps are off and 
+   indicator foreground color when exactly one is on.  It is filled with 
+   yellow if 2 or more data sources from all those in this pane indicate 
+   on at the same time.
+
+RGL Lamp 2 (Ar)
+---------------
+
+Display the status and current flow through RGL Lamp 2.
+   
+Data sources:
+   TSCV.CAL_RGL_LAMP2   lamp status
+Interpretation:
+   TSCV.CAL_RGL_LAMP2 == Ox22   both lamps off
+   TSCV.CAL_RGL_LAMP2 == Ox01   Cs Rare Gas2 lamp on
+   TSCV.CAL_RGL_LAMP2 == Ox10   NsIr Rare Gas2 lamp on
+Display:
+   Widget is filled with pane background color when all lamps are off and 
+   indicator foreground color when exactly one is on.  It is filled with 
+   yellow if 2 or more data sources from all those in this pane indicate 
+   on at the same time.
+
+
+================
+Environment Pane
+================
+
+The Environment Pane displays 3 strip charts that record environmental
+conditions, such as temperature, relative humidity and wind speed, at
+the summit and inside the telescope dome.
+
+Each strip chart widget is an X-Y plot where the x-axis records the
+time the observation was made and the y-axis records the measured
+value.  A strip chart can record up to 3600 observations, or 1 hour of
+data when sampled at 1 Hz.
+
+Audible warnings and alarms will be sounded if the dome is open and
+temperature, humidity or wind speed go out of the desired range --
+see "Limits" under each chart description below.
+
+An audible alert will be sounded when environmental conditions have been
+in the acceptable range (external humidity < 80% and external wind 
+speed < 20) range for 15 minutes:
+
+   "Alert: environmental conditions now in range"
+
+Another audible alert will be sounded when environmental conditions have 
+been in the acceptable range (external humidity < 80% and external wind 
+speed < 20) range for 30 minutes:
+
+   "Alert: environmental conditions have been in range for 30 minutes"
+
+The sound for all of these alerts will be suppressed if 
+TELSTAT.DOME_CLOSED == True (see Global States), but the conditions
+for alerts are monitored regardless.  Thus the "in range" messages
+are issued when environmental conditions have been acceptable for
+15/30 minutes, even if they came into range while the dome shutter
+was closed.
+
+Temperature Chart
+-----------------
+
+Displays the trend for external and dome temperatures.
+
+Limits:
+   Warning              <= -10
+
+Data source:
+   TSCL.TEMP_O          external temperature
+   TSCL.TEMP_I          dome temperature
+
+Interpretation:
+   Both are reported as signed numeric strings formatted as floats.
+   Units are degrees Celsius.
+
+Display:
+   Temperature values are displayed as a text string next to the
+   apropriate label in the widget and as a point in the graph.
+
+Humidity Chart
+--------------
+
+Displays the trend for external and dome relative humidity.
+
+Limits:
+   Alarm                >= 80%
+   Warning              70 <= h < 80
+
+Data source:
+   TSCL.HUMI_O          external humidity
+   TSCL.HUMI_I          dome humidity
+
+Interpretation:
+   Both are reported as signed numeric strings formatted as floats.
+   Units are percent.
+
+Display:
+   Humidity values are displayed as a text string next to the
+   apropriate label in the widget and as a point in the graph.
+
+Wind Speed Chart
+--------------
+
+Displays the trend for external and dome relative humidity.
+
+Limits:
+   Alarm                >= 20
+   Warning              15 <= ws < 20
+
+Data source:
+   TSCL.WINDS_O         average external wind speed
+   TSCL.WINDS_I         average dome wind speed
+
+Interpretation:
+   Both are reported as signed numeric strings formatted as floats.
+   Units are metre/second.
+
+Display:
+   Wind speed values are displayed as a text string next to the
+   apropriate label in the widget and as a point in the graph.
+
+=========
+Time Pane
+=========
+
+Displays current Hawaiian Standard Time(HST), Universal Time(UT),
+Local Sidereal Time(LST) and Hour Angle(HA).
+
+Data source:
+   TSCS.ALPHA           Right Ascension for current observation target.
+   TELSTAT.UNIXTIME     machine Unix time when data was retrieved from SOSS
+
+Interpretation:
+   TSCS.ALPHA is interpreted the same way as in the Pointing Pane.
+   TELSTAT.UNIXTIME value is seconds since midnight 1970-01-01.
+
+Display:
+   HST and UT are displayed as a string hh:mm:ss (MM/DD).
+   LST is calculated from TELSTAT.UNIXTIME and displayed as hh:mm:ss
+   using algorithm copied from liboss_cal/OSScal_LST.c.
+   HA is calculated as LST - RA, using TSCS.ALPHA for RA, and
+   displayed as hh:mm.  HA is forced into the range -12 hours - 12 hours
+   by adding or subtracting 24 hours when needed.
+
+
+=========================
+Plans for Future Releases
+=========================
+
+- Pop-ups on the right mouse button that give information about the
+        item under the mouse pointer:  value if item is an analog item 
+        such as Top Screen position; reason for alarm/warning condition
+        if the item is red or yellow, etc.
+- Possible color change for Telescope Pane:
+    In the cases of the Dome Shutter, M1 Cover and Cell Cover, the
+    graphic is displayed with a yellow background if the cover is 
+    closed or partially open), except that the Cell Cover is displayed 
+    in green if the Cassegrain focus is not in use.
+  - Blinking text for alerts and other cases requiring operator attention
+  - Other changes documented in issues in the OCSI database.
+
+  - See also deferred items in OCSI!

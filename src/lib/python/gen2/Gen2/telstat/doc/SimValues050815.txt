@@ -1,0 +1,30 @@
+*** NEW SET OF FOCUSINFO VALUES AGSV_THRESHOLDS: ***
+
+Ndx   FOCUSINFO  STATL.TELDRIVE     AG1Intensity   AGRERR   SV1Intensity   SVRERR   |  Threshold
+
+1-5     None        None                                                                <none>
+6-10  00000100      xzyc                                                                <none>
+11-12 00000200      Pointing                                                            <none>
+13-17 00000400      Tracking                                                            <none>
+18-20 00000800      Tracking_NS                                                         <none>
+
+21-25 00000010      Slewing                                                             <none>
+26-30 00001000      Guiding(AG1)       10           300                                 3750/8192
+31-32 00002000      Guiding(AG2)       20           250                                 9600/16535
+33-37 00004000      Guiding(SV1)                                10          200         16656/32768
+38-40 00008000      Guiding(SV2)                                15          150         32768/65535
+
+Ndx   FOCUSINFO  STATL.TELDRIVE     AG1Intensity   AGRERR   SV1Intensity   SVRERR   |  Threshold
+
+41-45 00000020      Guiding(AG1)     5000           125                                 <none>
+46-50 00000001      Guiding(AG2)        0           750                                 <none>
+51-52 00000002      Guiding(SV1)                              3000          175         <none>
+53-57 00000004      Guiding(SV2)                                 0         1200         <none>
+58-60 00000008      
+
+61-65 00000040      
+66-70 00000010      
+71-72 00000020      
+73-77 00000040      
+78-80 00000080      
+

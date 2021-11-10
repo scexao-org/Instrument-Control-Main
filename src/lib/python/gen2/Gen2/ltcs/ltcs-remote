@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+
+LTCSAUTH=joe:bob2bob ; export LTCSAUTH
+
+exec ltcs-remote.py --loglevel=20 --detach \
+--log=$HOME/logs/ltcs-remote.log \
+--pidfile=$HOME/logs/ltcs-remote.pid \
+--cert=$HOME/cert/server.pem --roport=8111 \
+--port=8011 \
+--dst=$HOME/ltcs/ltcs.html $*
+
+#END
+

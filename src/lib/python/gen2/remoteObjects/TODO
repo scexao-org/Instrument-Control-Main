@@ -1,0 +1,11 @@
+TODO
+====
+
+- Needs timeout capability for remote object calls.
+
+- Need feedback mechanism between remoteObjectNameSvc and
+  remoteObjectManagerSvc so that the manager service is informed of
+  services that should be restarted.
+
+- Need to think about security and verification of callers
+

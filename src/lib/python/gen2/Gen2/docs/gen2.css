@@ -1,0 +1,11 @@
+.header {border-width: 1; border: solid; background-color: #AAAAAA}
+.header2 {background-color: #AAAAAA}
+.even {border-width: 1; border: solid; background-color: #99FF66}
+.odd  {border-width: 1; border: solid; background-color: #99CC66}
+.warn  {border-width: 1; border: solid; background-color: #FF9966}
+.down  {border-width: 1; border: solid; background-color: #DDDDDD}
+.periodic  {border-width: 1; border: solid; background-color: #99CCFF}
+.btn  {border-width: 0; background-color: #CCFF99;
+       text-decoration: none; color: black; padding: 2px 4px; }
+.btn2 {border-width: 1px; border: groove; background-color: #CCFF99;
+       text-decoration: none; color: black; padding: 2px 4px; }

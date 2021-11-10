@@ -1,0 +1,284 @@
+#
+# dome_alarm_cfg.yml - This configuration file has status variables
+#                      and alarms for dome-related items, e.g., interior
+#                      temperatures/windspeed, windscreen, and shutter.
+#
+#[ Russell Kackley (rkackley@naoj.org) --
+#  Last edit: Thu Feb 21 17:33:10 HST 2013
+#]
+#
+
+Dome:
+  Environment:
+
+  # High humidity alarm
+    - !AnalogSV
+      ID:        Melco_002A0CC
+      Name:      TLSCP Room HMD Data
+      Gen2Alias: TSCL.HUMI_I
+      Units:     RH %
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold: 70
+          MinNotifyInterval: 300
+          Visible:  No
+        CriticalHi: !AnalogAlarm
+          Threshold: 80
+          MinNotifyInterval: 15
+          Visible:  No
+
+  # High windspeed alarm
+    - !AnalogSV
+      ID:        Melco_002A0F0
+      Name:      Front V WVEL Data
+      Gen2Alias: TSCL.WINDS_I
+      Units:     mph
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold: 15
+          MinNotifyInterval: 300
+          Visible:  No
+        CriticalHi: !AnalogAlarm
+          Threshold: 20
+          MinNotifyInterval: 15
+          Visible:  No
+
+  # High windspeed at Top Ring (Rear)
+    - !AnalogSV
+      Name:      Top Ring(R) WVEL Data
+      ID:        Melco_002C174
+      Gen2Alias: TSCL.TOPRING_WINDS_R
+      Units:  m/s
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold:   2
+          MinNotifyInterval: 300
+          Visible:  No
+
+  # High windspeed at Top Ring (Front)
+    - !AnalogSV
+      Name:      Top Ring(F) WVEL Data
+      ID:        Melco_002C180
+      Gen2Alias: TSCL.TOPRING_WINDS_F
+      Units:  m/s
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold:   2
+          MinNotifyInterval: 300
+          Visible:  No
+
+  # High windspeed at top ring audio alarm - depends on top ring front
+  # and rear windspeed
+    - !AnalogSV
+      ID:     HighWindspeedTopRing
+      Name:   High windspeed top ring
+      Module: Windspeed
+      Units:  m/s
+      Alarm: 
+        WarningHi: !DerivedAlarm
+          Method:   warnWindspeedTopRing
+          Audio:    ogg/en/WarnHighWindspeedTopRing.ogg
+          MinNotifyInterval: 300
+
+  # High windspeed at center section (Front) X-direction
+    - !AnalogSV
+      Name:      CSCT(F) WVEL(X) Data
+      ID:        Melco_002C1A4
+      Gen2Alias: TSCL.CSCT_WINDS_F.X
+      Units:  m/s
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold:   2
+          MinNotifyInterval: 300
+          Visible:  No
+        WarningLo: !AnalogAlarm
+          Threshold:  -2
+          MinNotifyInterval: 300
+          Visible:  No
+
+  # High windspeed at center section (Front) Y-direction
+    - !AnalogSV
+      Name:      CSCT(F) WVEL(Y) Data
+      ID:        Melco_002C1B0
+      Gen2Alias: TSCL.CSCT_WINDS_F.Y
+      Units:  m/s
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold:   2
+          MinNotifyInterval: 300
+          Visible:  No
+        WarningLo: !AnalogAlarm
+          Threshold:  -2
+          MinNotifyInterval: 300
+          Visible:  No
+
+  # High windspeed at center section (Front) Z-direction
+  # Note: this wind sensor is currently (19 February 2013)
+  # producing noisy data, so ignore alarms on this sensor.
+    - !AnalogSV
+      Name:      CSCT(F) WVEL(Z) Data
+      ID:        Melco_002C1BC
+      Gen2Alias: TSCL.CSCT_WINDS_F.Z
+      Units:  m/s
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold:   2
+          Ignore:    Yes
+          MinNotifyInterval: 300
+          Visible:  No
+        WarningLo: !AnalogAlarm
+          Threshold:  -2
+          Ignore:    Yes
+          MinNotifyInterval: 300
+          Visible:  No
+
+  # High windspeed at center section (Rear) X-direction
+    - !AnalogSV
+      Name:      CSCT(F) WVEL(X) Data
+      ID:        Melco_002C1C8
+      Gen2Alias: TSCL.CSCT_WINDS_R.X
+      Units:  m/s
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold:   2
+          MinNotifyInterval: 300
+          Visible:  No
+        WarningLo: !AnalogAlarm
+          Threshold:  -2
+          MinNotifyInterval: 300
+          Visible:  No
+
+  # High windspeed at center section (Rear) Y-direction
+    - !AnalogSV
+      Name:      CSCT(F) WVEL(Y) Data
+      ID:        Melco_002C1D4
+      Gen2Alias: TSCL.CSCT_WINDS_R.Y
+      Units:  m/s
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold:   2
+          MinNotifyInterval: 300
+          Visible:  No
+        WarningLo: !AnalogAlarm
+          Threshold:  -2
+          MinNotifyInterval: 300
+          Visible:  No
+
+  # High windspeed at center section (Rear) Z-direction
+    - !AnalogSV
+      Name:      CSCT(F) WVEL(Z) Data
+      ID:        Melco_002C1E0
+      Gen2Alias: TSCL.CSCT_WINDS_R.Z
+      Units:  m/s
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold:   2
+          MinNotifyInterval: 300
+          Visible:  No
+        WarningLo: !AnalogAlarm
+          Threshold:  -2
+          MinNotifyInterval: 300
+          Visible:  No
+
+  # High windspeed at center section audio alarm - depends on all of
+  # the center section windspeed sensors
+    - !AnalogSV
+      ID:     HighWindspeedCSCT
+      Name:   High windspeed center section
+      Module: Windspeed
+      Units:  m/s
+      Alarm: 
+        WarningHi: !DerivedAlarm
+          Method:   warnWindspeedCenterSection
+          Audio:    ogg/en/WarnHighWindspeedCenterSection.ogg
+          MinNotifyInterval: 300
+
+  Windscreen:
+    # Status variables so we can determine if windscreen drives are on
+    # or off
+    - !DigitalSV
+      ID:        Melco_0030046
+      Name:      Wind Screen Drive On
+      Gen2Alias: TSCV.WINDSDRV!M04
+    - !DigitalSV
+      ID:        Melco_0030047
+      Name:      Wind Screen Drive Off
+      Gen2Alias: TSCV.WINDSDRV!M08
+
+    # Status variables so we can determine if windscreen commanded and
+    # real position
+    - !AnalogSV
+      ID:        Melco_00A1349
+      Name:      Wind Screen CMD Position
+      Gen2Alias: TSCL.WINDSCMD
+    - !AnalogSV
+      ID:        Melco_0030001
+      Name:      Wind Screen Real Position
+      Gen2Alias: TSCL.WINDSPOS
+
+    # Status variables so we can determine if windscreen is synched to
+    # the telescope elevation drive or not
+    - !DigitalSV
+      ID:        Melco_00A1167
+      Name:      Wind Screen - EL SYNC Mode
+      Gen2Alias: TSCV.WindScreen!M01
+    - !DigitalSV
+      ID:        Melco_00A1168
+      Name:      Wind Screen-EL ASYNC Mode
+      Gen2Alias: TSCV.WindScreen!M02
+
+    # Alarm when windscreen drives are off and the position is high
+    - !DigitalSV
+      ID:     WSDriveOffPosHigh
+      Name:   Windscreen drives off/position high
+      Module: Windscreen
+      Alarm:
+        Critical: !DerivedAlarm
+          Audio:  AlarmWindscreenHighH50Vf.au
+          Method: driveOffAndPosHigh
+          MinNotifyInterval:  60
+          NotifyTimeout:     600
+
+    # Alarm when windscreen drives are on and the position is not
+    # synched to the telescope elevation
+    - !DigitalSV
+      ID:     WSModeFreeDriveOn
+      Name:   Windscreen mode free/drives on
+      Module: Windscreen
+      Alarm:
+        Critical: !DerivedAlarm
+          Audio:  AlarmWindscreenFreeH75Vf.au
+          Method: modeFreeAndDriveOn
+          MinNotifyInterval:  60
+          NotifyTimeout:     600
+ 
+    # Alarm when windscreen is in a state where it might obstruct the
+    # telescope
+    - !AnalogSV
+      ID:     WSObstruct
+      Name:   Windscreen may obstruct telescope
+      Module: Windscreen
+      Alarm:
+        Warning: !DerivedAlarm
+          Method: obstructWarn
+        Critical: !DerivedAlarm
+          Audio:  AlarmWindscreenObstructH50Vf.au
+          Method: obstructCrit
+          MinNotifyInterval:  60
+          NotifyTimeout:     600
+
+  Shutter:
+    # Status variables so we can determine shutter open/closed
+    # states
+    - !DigitalSV
+      ID:        Melco_003002C
+      Name:      IR Shutter Full Open
+      Gen2Alias: TSCV.DomeShutter!M10
+    - !DigitalSV
+      ID:        Melco_003002E
+      Name:      Opt Shutter Full Open
+      Gen2Alias: TSCV.DomeShutter!M40
+    - !DigitalSV
+      ID:     DomeShutter
+      Name:   Dummy SV to determine dome shutter state
+      Module: DomeShutter

@@ -1,0 +1,243 @@
+TelStatAlertsLogging.txt -- 2007-12-27
+
+This document is intended to describe the audible alerts and
+error logging performed by TelStat.  This is a companion document
+to TelStatAliases.txt, which describes the sources and interpretation
+of data used by TelStat.  
+
+TelStat code is comprised of the main program (TelStat), a
+configuration module containing various constants and global variables
+(TelStat_cfg.py), a set of service modules (Alert.py, AudioPlayer.py,
+DispType.py, OSSC_screenPrintConversions.py, OSSC_screenPrintData.py,
+StatIO.py, StatusDictionary.py, TelStatLog.py, Util.py,
+validation.py), and a set of modules which display panes (rectangular
+regions that are logically cohesive) in the overall display.  There
+are also some "widget" modules, which are used by panes to display
+areas within them; e.g. the Environment Pane has 3 widgets, for
+temperature, humidity and wind speed.
+
+When we refer to a pane, we may mean either the displayed region or 
+the software module that displays it, including any widget modules.
+
+
+==============
+Audible alerts
+==============
+
+TelStat issues 3 classes of audible alerts:  warnings, alarms and
+information alerts. In all cases, the alert is used to notify the
+operator of some condition that requires his attention.  A warning is
+intended to alert the operator to a condition that he should monitor,
+but which may not require immediate action.  An alarm is intended to
+alert the operator to an urgent condition requiring prompt operator
+action.  The only information alerts are issued by the Environment
+Pane to tell the operator that environmental conditions are suitable
+for observing.
+
+Note that alerts are suppressed under some circumstances, when normal
+operations result in a condition that would otherwise sound an alert;
+e.g. when the telescope is inactive, as detected by an elevation > 89.5
+degrees, a number of the status alias values may be beyond the 
+thresholds that cause alerts to be sounded, but this is normal and
+requires no operator action, so the alerts are suppressed.  See
+TelStatAliases.txt for specific details about when any particular
+alert is suppressed.
+
+Tracking Pane Audio Alerts
+--------------------------
+
+No warnings are issued.  The following alarm is issued:
+
+                                                Repeat interval (until cleared)
+"Alarm: guide star lost"                                30 seconds
+
+
+Telescope Pane Audio Alerts
+---------------------------
+                                                Repeat interval (until cleared)
+"Warning: Prime ADC is in Free Mode"                    10 minutes
+"Warning: Cassegrain ADC is in Free Mode"               10 minutes
+"Warning: Nasmyth ADC is in Free Mode"                  10 minutes
+
+"Warning: Tip/Tilt drive turned off"                10 seconds, repeat 5 times
+
+"Alarm: Windscreen drive off and position is high"       1 minutes
+"Alarm: Windscreen free and drive is on"                 1 minutes
+"Alarm: Windscreen may obstruct telescope"               1 minutes
+
+Limits Pane Audio Alerts
+------------------------
+Each limits widget displays a scale ranging from a minimum alarm limit to
+a maximum alarm limit, with a yellow-orange region near the limits that is
+a warning zone.  The current value of the limit variable is shown as the 
+position of a downward-pointed large arrowhead on top of the scale, and 
+the commanded value is show as the position of an upward-pointed smaller 
+arrowhead below the scale.  When either arrowhead goes within the warning
+zone near the limit, the arrowhead changes color from green to red, the
+background of the widget changes to yellow, and an audible alert is
+issued.
+                                                Repeat interval (until cleared)
+"Warning: close to azimuth limit"                       3 minutes
+"Alarm: azimuth at limit"                               1 minute
+"Warning: close to rotator limit"                       3 minutes
+"Alarm: rotator at limit"                               1 minute
+"Warning: close to AG probe limit"                      3 minutes
+"Alarm: AG probe at limit"                              1 minute
+
+Target Pane Audio Alerts:
+-------------------------
+                                                Repeat interval (until cleared)
+"Warning: short time to azimuth limit"                  1/3 of time to limit
+"Alarm: less than one minute to azimuth limit"          10 seconds
+"Warning: short time to elevation limit"                1/3 of time to limit
+"Alarm: less than one minute to elevation limit"        10 seconds
+"Warning: short time to rotator limit"                  1/3 of time to limit
+"Alarm: less than one minute to rotator limit"          10 seconds
+"Warning: commanded position angle not achieved"        5 minutes
+
+Environment Pane Audio Alerts:
+------------------------------
+                                                Repeat interval (until cleared)
+"Warning: low temperature"                             5 minutes
+"Warning: high humidity"                               5 minutes
+"Alarm: very high humidity"                            15 seconds
+"Warning: high wind speed"                             5 minutes
+"Alarm: very high wind speed"                          15 seconds
+
+"Alert: environmental conditions now in range"      once only, 15 min delay
+"Alert: environmental conditions have been 
+        in range for 30 minutes"                        once only
+
+
+=============
+Error Logging
+=============
+
+Error logging is used for post-run analysis of errors that likely arise
+from software, and do not represent telescope conditions which the
+operator should pay attention to or correct.  Whenever an anomaly is
+detected in the data used by TelStat, the detecting pane or module calls
+a function named TelStatLog with a message ID and a text message. 
+TelStatLog adds a time/date-tag and writes the message out to a
+diagnostic log file in the $OSS_PRGLOG directory.  The file name is
+constructed to include the username (i.e. proposal ID) and a date/time
+tag corresponding to the time at which TelStat was started; for example:
+
+    TelStat_o00096_2005_02_22_172053.log
+
+In order not to clutter the log with repetitious messages, TelStatLog
+suppresses messages that have been previously issued within the past 10
+minutes (this could change or be made controllable in the future).  The
+identification of messages, for the purpose of suppression, is made by
+the message ID, an internally defined constant for each message type. 
+There is also an optional flag, alwaysOutput, on the call to  TelStatLog
+that will force the message the be logged regardless.
+
+In addition to the diagnostic log file written by TelStatLog, TelStat
+traps all exceptions.  Any exception that is not handled at a lower
+level will record the current status alias data values, a function call
+traceback, and the name and type of the exception to a traceback log
+file in the $OSS_PRGLOG directory.  Like the normal diagnostic log, the
+file name is constructed to include the username (i.e. proposal ID) and
+a date/time tag, but in this case the date/time tag  corresponds to the
+time at which the exception occurred; for example:
+
+    TelStat_Traceback_o00096_2005_02_24_164653.log
+
+Below are listed some of the TelStatLog diagnostic messages, organized
+by the code module issuing the message:
+
+TelStat log messages
+--------------------
+
+"(TelStat:main): Starting TelStat GUI"
+"(TelStat:main): TelStat simulation mode"
+"(TelStat:main): TelStat data replay from `%s'"
+"(TelStat:EndProcCB): Terminating TelStat GUI, EXITCODE = %d."
+"ERROR (TelStat:main): replay requested without file specification."
+"WARNING (TelStat:main): both simulation and replay requested, will use replay."
+
+AudioPlayer.py log message
+--------------------------
+
+"ERROR (AudioPlayer:__playerThread):  Failed to open Sun audio device."
+
+OSSC_screenPrintConversions.py log messages
+-------------------------------------------
+
+"ERROR (OSSC_screenPrintConversions:OSPC_getValues_ScreenPrint):"+
+        " OSSC_screenPrint application not found."
+"ERROR (OSSC_screenPrintConversions:OSPC_getValues_ScreenPrint):"+
+        " OSSC_screenPrint msg = `%s'"
+"ERROR (OSSC_screenPrintConversions:OSPC_getValues_ScreenPrint):"+
+        " <unknown> OSSC_screenPrint msg = `%s'"
+"ERROR (OSSC_screenPrintConversions:OSPC_getValues_ScreenPrint):"+
+        " %s: key = %s, value-string = `%s'"
+"ERROR (OSSC_screenPrintConversions:OSPC_getValues_Replay): "+
+        "replay file '%s' open failed."
+"ERROR (OSSC_screenPrintConversions:OSPC_getValues_Replay): " +
+        "replay file '%s' read failed."
+"ERROR (OSSC_screenPrintConversions:OSPC_getValues_Replay):"+
+        " conversion failure: key = %s, value-string = `%s'"
+"WARNING (OSSC_screenPrintConversions:OSPC_getValues_Replay): "+
+        "key `%s' is not in StatusDictionary."
+"WARNING (OSSC_screenPrintConversions:OSPC_getValues_Replay): " +
+        "replay pattern match failure, LineBuf = `%s'."
+
+Tracking Pane (TrackingPane.py) log messages
+--------------------------------------------
+
+"ERROR (TrackingPane:state label) Unknown Tracking Status value = %d"
+"ERROR (TrackingPane:ag error plot) Invalid AG deltas values = %f %f"
+"ERROR (TrackingPane:brightness plot) Invalid AG Brightness value = %d"
+"ERROR (TrackingPane:seeing plot) Invalid Seeing value = %d"
+"ERROR (TrackingPane:exposure time) Invalid AG exposure time value = %d"
+"ERROR (TrackingPane:exposure time) Invalid SV exposure time value = %d"
+"ERROR (TrackingPane:AG probe) Invalid AG probe values = %f %s %f %s"
+"ERROR (TrackingPane:exposure time) Invalid exposure time values = %d %d"
+
+Telescope Pane (TelescopePane.py) log messages
+----------------------------------------------
+
+"ERROR (TelescopePane:refresh):  Undefined Focus = %x"
+"ERROR (TelescopePane:drawTopScreen):  Undefined TopScreen = %x"
+"ERROR (TelescopePane:drawWindScreen):  Undefined WindScreen = %x"
+"ERROR (TelescopePane:drawM2):  Undefined M2Drive = %x"
+"ERROR (TelescopePane:drawAdc 1):  Undefined ADC: ADCONOFF_PF = %x, " +
+        "ADCMODE_PF = %x"
+"ERROR (TelescopePane:drawAdc 2):  Undefined ADC: ADCONOFF_PF = %s, " +
+        "ADCMODE_PF = %s"
+"ERROR (TelescopePane:drawAdc 3):  Undefined ADC: ADCInOut = %s, " +
+        "ADCOnOff = %s, ADCMode = %s"
+"ERROR (TelescopePane:drawAdc 4):  Undefined ADC: ADCInOut = %s, " +
+        "ADCOnOff = %s, ADCMode = %s"
+"ERROR (TelescopePane:drawAdc 5):  Undefined ADC: ADCInOut = %s, " +
+        "ADCOnOff = %s, ADCMode = %s"
+"ERROR (TelescopePane:drawAdc 6):  Undefined ADC: ADCInOut = %s, " +
+        "ADCOnOff = %s, ADCMode = %s"
+"ERROR (TelescopePane:drawAdc 7):  Undefined ADC: ADCInOut = %s, " +
+        "ADCOnOff = %s, ADCMode = %s"
+"ERROR (TelescopePane:drawAdc 8):  Undefined ADCInOut = %s"
+"ERROR (TelescopePane:drawCellCover):  Undefined CellCover = %x"
+"ERROR (TelescopePane:drawRotator):  Undefined INSROTMODE_PF = %x"
+"ERROR (TelescopePane:drawRotator):  Undefined InsRotMode = %x"
+"ERROR (TelescopePane:drawRotator):  Undefined RotatorType = %x"
+"ERROR (TelescopePane:drawRotator):  Undefined ImgRotMode = %x"
+"ERROR (TelescopePane:drawRotator):  Undefined ImgRotType = %x"
+"WARNING (TelescopePane:drawM1Cover):  Partial M1Cover = %x, M1CoverOnway = %x"
+
+Target Pane (TargetPane.py) log messages
+----------------------------------------
+
+"TargetPane.update():  instrument %s not found."
+"TargetPane.update():  alias %s not found."
+
+Environment Pane (EnvPane.py) log messages
+------------------------------------------
+
+"ERROR (EnvPane:temp chart) Invalid exterior temperature value = %f"
+"ERROR (EnvPane:temp chart) Invalid dome temperature value = %f"
+"ERROR (EnvPane:humidity chart) Invalid exterior humidity value = %f"
+"ERROR (EnvPane:humidity chart) Invalid dome humidity value = %f"
+"ERROR (EnvPane:wind chart) Invalid exterior wind speed values = %f"
+"ERROR (EnvPane:wind chart) Invalid wind speed values = %f"

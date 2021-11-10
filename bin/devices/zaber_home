@@ -26,10 +26,10 @@ echo "Lyot mask x:"
 lyot x home
 echo "Lyot mask y:"
 lyot y home
-echo "inverse PIAA theta:"
-invpiaa theta home
-echo "inverse PIAA phi:"
-invpiaa phi home
+#echo "inverse PIAA theta:"
+#invpiaa theta home
+#echo "inverse PIAA phi:"
+#invpiaa phi home
 echo "IRCAM focus:"
 ircam_fcs f1 home
 echo "LOWFS focus:"
@@ -40,6 +40,12 @@ echo "Fiber Injection y:"
 fibinj_fib y home
 echo "Fiber Injection f:"
 fibinj_fib f home
+echo "REACH fiber x:"
+reach_fib x home
+echo "REACH fiber y:"
+reach_fib y home
+echo "REACH fiber f:"
+reach_fib f home
 echo "PyWFS col lens:"
 pywfs_col home
 echo "PyWFS focus:"

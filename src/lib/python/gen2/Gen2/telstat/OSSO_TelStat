@@ -1,0 +1,613 @@
+#!/usr/bin/env python
+# TelStat -- Bruce Bon -- 2008-08-26
+
+# Main program to put up the Telescope Status window
+
+######################################################################
+################   import needed modules   ###########################
+######################################################################
+
+import os
+import sys
+import signal
+import time
+import getpass
+import traceback
+
+import Tkinter
+from Tkconstants import *
+import Pmw
+
+import ssdlog
+
+import TelStat_cfg as TelStat_cfg 
+import TelStatLog as TelStatLog 
+import StatIO as StatIO 
+from MenuPane import *
+from GlobalStates import *
+from PointingPane import *
+from TrackingPane import *
+from TelescopePane import *
+from DummyPane import *
+from LimitsPane import *
+from DomePane import *
+from CalPane import *
+from EnvPane import *
+from TimePane import *
+from TargetPane import *
+from OSSC_screenPrintConversions import *
+import OSSC_screenPrintConversions
+import TelStatProcSize
+
+
+
+
+######################################################################
+################   Constants defining grid locations   ###############
+######################################################################
+
+# Map of panes onto grid:
+#               0                       1                       2
+# -1    <--------------------------- MenuPane   ---------------------------->
+#       NOTE: MenuPane forces itself to the top, so is not actually on grid
+
+#  0    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#  1    <-------------------------- PointingPane   ------------------------->
+#  2    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+#  3    ^^^^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^^
+#  4    <                   >   <                   >   <
+#  5    < Tracking Pane     >   < TelescopePane     >   <
+#  6    <                   >   <                   >   < TargetPane
+#  7    <                   >   <                   >   <
+#  8    <                   >   <                   >   <
+#  9    <                   >   <                   >   vvvvvvvvvvvvvvvvvvvvv
+# 10    <                   >   <                   >   ^^^^^^^^^^^^^^^^^^^^^
+# 11    <                   >   <                   >   < DomePane
+# 12    <                   >   <                   >   <
+# 13    <                   >   <                   >   vvvvvvvvvvvvvvvvvvvvv
+# 14    <                   >   <                   >   ^^^^^^^^^^^^^^^^^^^^^
+# 15    <                   >   <                   >   <
+# 16    <                   >   <                   >   <
+# 17    <                   >   <                   >   < CalPane
+# 18    <                   >   <                   >   <
+# 19    <                   >   <                   >   <
+# 20    <                   >   <                   >   vvvvvvvvvvvvvvvvvvvvv
+# 21    <                   >   <                   >   ^^^^^^^^^^^^^^^^^^^^^
+# 22    <                   >   <                   >   <
+# 23    <                   >   vvvvvvvvvvvvvvvvvvvvv   <
+# 24    <                   >   ^^^^^^^^^^^^^^^^^^^^^   <
+# 25    <                   >   <                   >   <
+# 26    <                   >   <                   >   <
+# 27    <                   >   <                   >   < EnvPane
+# 28    <                   >   <                   >   <
+# 29    <                   >   < LimitsPane        >   <
+# 30    <                   >   <                   >   <
+# 31    <                   >   <                   >   <
+# 32    vvvvvvvvvvvvvvvvvvvvv   vvvvvvvvvvvvvvvvvvvvv   vvvvvvvvvvvvvvvvvvvvv
+
+# 33    <---------------------- TimePane   --------------------------------->
+# 34    <---------------------- TimePane   --------------------------------->
+# 35    <---------------------- TimePane   --------------------------------->
+
+numRows         = 36
+numCols         = 3
+
+RowMenuPane             = 0
+ColMenuPane             = 0
+RowSpanMenuPane         = 1
+ColSpanMenuPane         = 3
+
+RowPointingPane         = 0
+ColPointingPane         = 0
+RowSpanPointingPane     = 3
+ColSpanPointingPane     = 3
+
+RowTrackingPane         = 3
+ColTrackingPane         = 0
+RowSpanTrackingPane     = 30
+ColSpanTrackingPane     = 1
+
+RowTelescopePane        = 3
+ColTelescopePane        = 1
+RowSpanTelescopePane    = 20
+ColSpanTelescopePane    = 1
+
+RowLimitsPane           = 23
+ColLimitsPane           = 1
+RowSpanLimitsPane       = 10
+ColSpanLimitsPane       = 1
+
+RowTargetPane           = 3
+ColTargetPane           = 2
+RowSpanTargetPane       = 7
+ColSpanTargetPane       = 1
+
+RowDomePane             = 10
+ColDomePane             = 2
+RowSpanDomePane         = 2
+ColSpanDomePane         = 1
+
+RowCalPane              = 12
+ColCalPane              = 2
+RowSpanCalPane          = 4
+ColSpanCalPane          = 1
+
+RowEnvPane              = 16
+ColEnvPane              = 2
+RowSpanEnvPane          = 17
+ColSpanEnvPane          = 1
+
+RowTimePane             = 33
+ColTimePane             = 0
+RowSpanTimePane         = 3
+ColSpanTimePane         = 3
+
+######################################################################
+################   assign needed globals   ###########################
+######################################################################
+
+EXITCODE        = 0
+#prevtime        = time.time()
+statRefresh     = True
+root            = None          # initialize
+geometry        = None
+rootRefreshDelay = 1000
+
+TSStartMessage      = TelStat_cfg.TSinfoBase
+TSSrcMessage        = TelStat_cfg.TSinfoBase + 1
+TSGen2Specified     = TelStat_cfg.TSinfoBase + 2
+TSSimSpecified      = TelStat_cfg.TSinfoBase + 3
+TSReplaySpecified   = TelStat_cfg.TSinfoBase + 4
+TSInitSkipSpecified = TelStat_cfg.TSinfoBase + 5
+TSLogCloseMessage   = TelStat_cfg.TSinfoBase + 6
+TSEndMessage        = TelStat_cfg.TSinfoBase + 7
+TSTracebackMessage  = TelStat_cfg.TSinfoBase + 8
+
+TSwarnSimAndReplaySpecified = TelStat_cfg.TSwarnBase
+
+TSerrReplayFileNotSpecified = TelStat_cfg.TSerrBase
+TSerrReplaySkipBadValue     = TelStat_cfg.TSerrBase + 1
+TSerrUncaughtException      = TelStat_cfg.TSerrBase + 2
+
+######################################################################
+################   root function definitions   #######################
+######################################################################
+
+def TracebackLogger():
+    global EXITCODE             # necessary, else assignment would be local!
+
+    tracebackLogPath = \
+            TelStat_cfg.TELSTAT_LOG_ROOT_DIR + '/TelStat_Traceback_' + \
+            getpass.getuser() + '_' + TelStat_cfg.timeString + '.log'
+    TelStatLog.TelStatLog( TSTracebackMessage, 
+            ('TelStat.TracebackLogger called for uncaught exception, ' + 
+              'see %s.') % tracebackLogPath, True )
+
+    tracebackLogPFile = open( tracebackLogPath, 'w' )
+    os.chmod( tracebackLogPath, 0644 )
+
+    timeTuple  = time.localtime()
+    timeString = time.strftime( '%Y-%m-%d %H:%M:%S', timeTuple )
+    tracebackLogPFile.write(
+        '\nOSSO_TelStat:TracebackLogger(): Uncaught Exception at %s\n' % \
+        timeString )
+
+    StatIO.StatIO_printDict( tracebackLogPFile )
+
+    tracebackLogPFile.write( 
+        '____________________________________________________________\n\n' )
+    exc_info = sys.exc_info()
+    traceback.print_exception( exc_info[0], exc_info[1], exc_info[2], 
+                               None, tracebackLogPFile )
+    tracebackLogPFile.write( '\n' )
+    tracebackLogPFile.close()
+    EXITCODE = -1
+    EndProcCB()
+
+
+
+def EndProcCB():
+    global logger
+    """Exit function."""
+    TelStatProcSize.procSize( 'TelStat:EndProcCB' )
+    if  TelStat_cfg.telStatDataLog_fd != None:
+        TelStat_cfg.telStatDataLog_fd.close()
+        logger.debug("TelStat:EndProcCB): Turned data logging off and closed log file" )
+    if  TelStat_cfg.audioPlayer:
+        TelStat_cfg.audioPlayer.terminate()
+    logger.info("TelStat:EndProcCB: Terminating TelStat GUI, EXITCODE = %d." %EXITCODE)
+    sys.exit( EXITCODE )
+
+def ToggleRefreshCB():
+    global statRefresh,logger
+    logger.debug('toggle refresh cb...')
+    if  statRefresh == True:
+        statRefresh = False
+    else:
+        statRefresh = True
+        RootRefresh()
+
+def StepCB():
+    if  statRefresh == False:
+        RootRefresh()
+
+def SizesCB():
+    global root
+    root.update_idletasks() # must be done to assure that geometry is up to date
+    print "Root geometry = ", root.geometry(), ", ", root.winfo_width()
+    print "   col1MinWidth = ", col1MinWidth
+    telPntPane.printGeom()
+    trackingPane.printGeom()
+    telescopePane.printGeom()
+    limitsPane.printGeom()
+    targetPane.printGeom()
+    domePane.printGeom()
+    calPane.printGeom()
+    envPane.printGeom()
+    timePane.printGeom()
+
+def SetDelayCB( refreshDelay ):
+    """Set refresh delay, a value in milliseconds."""
+    global rootRefreshDelay,logger
+    logger.debug('updating interval = %d' %refreshDelay)
+
+    rootRefreshDelay = refreshDelay
+    #? TelStatLog.TelStatLog( TelStat_cfg.TSinfoBase, 
+    #?          '***** rootRefreshDelay reset to %d' % rootRefreshDelay, True )
+
+def RootRefresh():
+    global dbgcnt, logger,root
+
+#?    print "** RootRefresh: statRefresh = ", statRefresh
+#   root.after( rootRefreshDelay, RootRefresh ) # best for accurate rate
+    try:
+        #curtime = time.time()
+        #deltatime = curtime - prevtime
+#?      print "TelStat.RootRefresh() called, time = %.6f, delta = %.6f" % \
+#?                                              (curtime, deltatime)
+        StatIO.StatIO_service(logger)
+#?      if  StatIO.StatIO_DataSource == StatIO.StatIO_ScreenPrintSim:
+#?          ProcSize.procSize( 
+#?           'RootRefresh iter %d' % OSSC_screenPrintConversions.OSPC_SimNdx )
+        #prevtime = curtime
+        # Refresh at end avoids possible frame overflow
+        if  statRefresh:
+            root.after( rootRefreshDelay, RootRefresh )
+    except Exception,e:                 # Catch any uncaught exceptions and log traceback
+        logger.error('ERROR (TelStat.RootRefresh): uncaught exception during refresh! %s' %str(e))
+        TracebackLogger()
+
+
+######################################################################
+################   root operations   #################################
+######################################################################
+
+
+def main(options, args):
+
+    global logger,root
+
+    # Create top level logger.
+    logger = ssdlog.make_logger('telstat', options)
+
+    def SigHandler(signum, frame):
+        """Signal handler for all unexpected conditions."""
+        global EXITCODE             # necessary, else assignment would be local!
+        #? TelStatLog.TelStatLog( TelStat_cfg.TSinfoBase, 
+        #?          "TelStat.SigHandler() called, signum = %d." % signum, True )
+        logger.debug('caught signal %s' %str(signum))
+        EXITCODE = signum
+
+        if options.gen2:
+            stop_monitor()
+        EndProcCB()
+
+    # Set signal handler for various signals
+    signal.signal( signal.SIGINT, SigHandler )
+    signal.signal( signal.SIGTERM, SigHandler )
+    signal.signal( signal.SIGUSR1, SigHandler )
+    signal.signal( signal.SIGUSR2, SigHandler )
+
+
+    
+    OSSC_screenPrintConversions.exitCB = EndProcCB  # kludge to provide callback
+    StatIOsource = StatIO.StatIO_ScreenPrint
+    TelStat_cfg.OSSC_screenPrintPath = OSSC_SCREENPRINTREALPATH
+    TelStat_cfg.telstatMode = 'SOSS'
+    rootTitle = 'Telescope Status Display (SOSS Mode)'
+
+    TelStatProcSize.procSize( 'TelStat:Main' )
+
+    if options.gen2:
+        rootTitle = 'Telescope Status Display (Gen2 Mode)'
+        TelStat_cfg.telstatMode = 'Gen 2'
+        StatIOsource = StatIO.StatIO_Gen2
+        logger.debug('(TelStat:main): TelStat Gen2 mode' )
+
+        def stop_monitor():
+            logger.debug('stopping mon...')
+            if server_started:
+                mymon.stop_server(wait=True)
+            mymon.stop(wait=True)
+  
+        ro.init()
+        myMonName = options.name
+        # monitor channels we are interested in
+        channels = options.channels.split(',')
+        # Create a local monitor
+        mymon = Monitor.Monitor(myMonName, logger, numthreads=20)
+
+        # Make our callback functions
+        m = Make_cb(logger=logger, monpath=options.monpath, history=options.history)
+ 
+        # Subscribe our callback functions to the local monitor
+        mymon.subscribe_cb(m.anon_arr, channels)
+        server_started = False
+
+        try:
+            # Startup monitor threadpool
+            mymon.start(wait=True)
+            # start_server is necessary if we are subscribing, but not if only
+            # publishing
+            mymon.start_server(wait=True, port=options.monport)
+            server_started = True
+            # subscribe our monitor to the central monitor hub
+            mymon.subscribe_remote(options.monitor, channels, ()) 
+        except Exception,e:
+            logger.error('failed to start telstat-mymon %s' %str(e))
+            stop_monitor()
+            
+    if options.cache:
+        rootTitle = 'Telescope Status Display (SossCache Mode)'
+        TelStat_cfg.telstatMode = 'Gen 2'
+        StatIOsource = StatIO.StatIO_SossCache
+        logger.debug('(TelStat:main): TelStat SossCache mode')
+
+    if options.replay:
+        rootTitle = 'Telescope Status Display (Replay Mode)'
+        TelStat_cfg.telstatMode = 'Replay'
+        StatIOsource = StatIO.StatIO_Replay
+        TelStat_cfg.replayFlag = True
+
+        TelStat_cfg.replayFileSpec = sys.argv[i]
+        
+        logger.error( "ERROR (TelStat:main): replay requested without file.")
+        EndProcCB()
+ 
+    if  StatIOsource != StatIO.StatIO_Replay:
+        statRefresh = True      # can't be false unless in debug mode        
+ 
+    if options.geometry:
+        geometry = options.geometry
+
+
+    try:
+        StatIO.StatIO_initialize( StatIOsource,logger )
+
+        #? print '\nTelStat: OSSC_screenPrintPath = ', TelStat_cfg.OSSC_screenPrintPath
+
+        # Instantiate a Pmw/Tk object and set its tk_strictMotif attribute 
+        #       for strict Motif compliance
+        root = Tkinter.Tk()
+        Pmw.initialise(root)
+        root.tk_strictMotif(1)
+
+        # By default, tkinter scales fonts based X's dpi, but this varies wildly
+        # amongst systems, and on vmware it changes constantly with window size.
+        # The following command locks the setting such that 1 point = 1 pixel regardless
+        root.tk.call('tk','scaling',1)
+
+        # 2008 transition note:  Don't know why, but the new Sun displays require
+        # about 35 pixels additional height in order to not truncate the TimePane.
+        # So I added 35 pixels to the height in root.geometry, and subtracted it
+        # below in rowMinHeight computation, which is used to establish the
+        # various pane heights.
+        heightFudge = 0
+        root.geometry('1270x955+0+0')
+        
+        root["bg"] = "black"
+        root.iconname( 'TelStat' )
+        root.title( rootTitle )
+        root.protocol( 'WM_DELETE_WINDOW', EndProcCB )
+
+        # Compute minimum heights and widths
+        root.update_idletasks() # must be done to assure that geometry != 1x1+0+0
+        rowMinHeight    = int((root.winfo_height()-heightFudge)/numRows)
+        colMinWidth     = 430
+        paneMinWidth    = colMinWidth - 2 * TelStat_cfg.paneBorderWidth
+        col1MinWidth = \
+              root.winfo_width() - 2 * colMinWidth - 2 * TelStat_cfg.paneBorderWidth
+        if geometry != None:
+            root.geometry(geometry)
+
+        # Create Global States knowledge expert
+        globalStates    = GlobalStates()
+
+
+        # Create panes
+        menuPane        = MenuPane( root, 
+                                    ToggleRefreshCB, StepCB, SetDelayCB, SizesCB, 
+                                    EndProcCB, myName='MenuPane' )
+        telPntPane      = PointingPane(root)
+        trackingPane    = TrackingPane(root, logger=logger)
+        telescopePane   = TelescopePane(root, widWidth=col1MinWidth )
+        limitsPane      = LimitsPane( root)
+        targetPane      = TargetPane(root)
+        domePane        = DomePane(root)
+        calPane         = CalPane(root)
+        envPane         = EnvPane(root)
+        timePane        = TimePane(root)
+
+        #telPntPane.grid_propagate( 0 )
+        trackingPane.grid_propagate( 0 )
+        telescopePane.grid_propagate( 0 )
+        limitsPane.grid_propagate( 0 )
+        targetPane.grid_propagate( 0 )
+        domePane.grid_propagate( 0 )
+        calPane.grid_propagate( 0 )
+        envPane.grid_propagate( 0 )
+        #timePane.grid_propagate( 0 )
+
+        # Put them on the grid
+        #menuPane.grid(  row=RowMenuPane, column=ColMenuPane, sticky=W+E+N+S,
+        #                rowspan=RowSpanMenuPane, columnspan=ColSpanMenuPane)
+        telPntPane.grid( row=RowPointingPane, column=ColPointingPane, sticky=N+S+W+E,
+                         rowspan=RowSpanPointingPane, columnspan=ColSpanPointingPane)
+        trackingPane.grid( row=RowTrackingPane, column=ColTrackingPane, sticky=W+E+N+S,
+                         rowspan=RowSpanTrackingPane, columnspan=ColSpanTrackingPane)
+        telescopePane.grid( row=RowTelescopePane,column=ColTelescopePane,sticky=W+E+N+S,
+                         rowspan=RowSpanTelescopePane, columnspan=ColSpanTelescopePane)
+        limitsPane.grid( row=RowLimitsPane, column=ColLimitsPane, sticky=W+E+N+S,
+                         rowspan=RowSpanLimitsPane, columnspan=ColSpanLimitsPane)
+        targetPane.grid( row=RowTargetPane, column=ColTargetPane, sticky=W+E+N+S,
+                         rowspan=RowSpanTargetPane, columnspan=ColSpanTargetPane)
+        targetPane.configure( width=28 )
+        domePane.grid(   row=RowDomePane, column=ColDomePane, sticky=W+E+N+S,
+                         rowspan=RowSpanDomePane, columnspan=ColSpanDomePane)
+        calPane.grid(    row=RowCalPane, column=ColCalPane, sticky=W+E+N+S,
+                         rowspan=RowSpanCalPane, columnspan=ColSpanCalPane)
+        envPane.grid(    row=RowEnvPane, column=ColEnvPane, sticky=W+E+N+S,
+                         rowspan=RowSpanEnvPane, columnspan=ColSpanEnvPane)
+        timePane.grid(   row=RowTimePane, column=ColTimePane, sticky=W+N+S+E,
+                         rowspan=RowSpanTimePane, columnspan=ColSpanTimePane)
+
+
+        # Set minimum heights and widths
+        #? TelStatLog.TelStatLog( TelStat_cfg.TSinfoBase, "min colWidth x rowHeight = %d x %d" % \
+        #?     (colMinWidth, rowMinHeight), True )
+        for  i in range(numRows):
+            root.rowconfigure( i, minsize=rowMinHeight )
+        root.columnconfigure( 0, minsize=colMinWidth-DOUBLE_BORDER_FUDGE_PIXELS )
+        root.columnconfigure( 1, minsize=col1MinWidth-DOUBLE_BORDER_FUDGE_PIXELS )
+        root.columnconfigure( 2, minsize=colMinWidth-DOUBLE_BORDER_FUDGE_PIXELS )
+
+
+        def paneResize( pane, row, col, rowSpan, colSpan ):
+            pane.update_idletasks() # must be done to assure that geometry is up to date
+            #? pane.printGeom()
+            bbox = root.grid_bbox( col, row, col + colSpan - 1, row + rowSpan - 1)
+            #? print 'paneResize: args = %d, %d, %d, %d' % (row, col, rowSpan, colSpan)
+            x = min( bbox[2], root.winfo_width() )
+            y = min( bbox[3], rowMinHeight * rowSpan )
+            #? print 'paneResize: bbox = %s, x= %d, y=%d' % (`bbox`,x,y)
+            pane.resize( x, y )
+            #? pane.printGeom()
+            #? print
+
+        paneResize( telPntPane, RowPointingPane, ColPointingPane, 
+                    RowSpanPointingPane, ColSpanPointingPane )
+        paneResize( telescopePane, RowTelescopePane, ColTelescopePane, 
+                    RowSpanTelescopePane, ColSpanTelescopePane )
+        paneResize( limitsPane, RowLimitsPane, ColLimitsPane, 
+                    RowSpanLimitsPane, ColSpanLimitsPane )
+
+        domePane.resize( colMinWidth - 2 * TelStat_cfg.paneBorderWidth - 
+                                                        DOUBLE_BORDER_FUDGE_PIXELS )
+        calPane.resize(  colMinWidth - 2 * TelStat_cfg.paneBorderWidth - 
+                                                        DOUBLE_BORDER_FUDGE_PIXELS )
+        envPane.resize(  colMinWidth - 2 * TelStat_cfg.paneBorderWidth - 
+                                                        DOUBLE_BORDER_FUDGE_PIXELS )
+
+        #prevtime = time.time()
+
+    except Exception,e:                 # Catch any uncaught exceptions and log traceback
+        logger.error('ERROR TelStat: uncaught exception during GUI initialization! %s' %str(e))
+        stop_monitor()
+        EndProcCB()   
+
+        #TracebackLogger()
+
+
+    # Initialize and get first status data
+    RootRefresh()           # This calls root.after to repeat itself
+
+    # Go
+    root.mainloop()
+
+
+if __name__=='__main__':
+    
+    # Parse command line options with nifty new optparse module
+    from optparse import OptionParser
+ 
+    usage = "usage: %prog [options] command [args]"
+    optprs = OptionParser(usage=usage, version=('%%prog'))
+    
+    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+                      help="Enter the pdb debugger on main()")
+
+    optprs.add_option("--display", dest="display", metavar="HOST:N",
+                      help="Use X display on HOST:N")
+    optprs.add_option("--profile", dest="profile", action="store_true",
+                      default=False,
+                      help="Run the profiler on main()")
+
+    optprs.add_option("--cache", dest="cache", action='store_true',
+                      default=False,
+                      metavar="CACHE",
+                      help="Specify telstat mode ")
+
+    optprs.add_option("--g2", dest="gen2", action='store_true',
+                      default=True,
+                      metavar="GEN2",
+                      help="Specify telstat mode")
+
+    optprs.add_option("-r", "--replay", dest="replay",
+                      default=None,
+                      metavar="REPLAY",
+                      help="Specify telstat mode")
+
+    optprs.add_option("-g","--geometry", dest="geometry",
+                      default=None,
+                      metavar="GEOMETRY",
+                      help="Specify geometry")
+
+
+    optprs.add_option("-m", "--monitor", dest="monitor", default='monitor',
+                      metavar="NAME",
+                      help="Subscribe to feeds from monitor service NAME")
+    optprs.add_option("-c", "--channels", dest="channels", default='status',
+                      metavar="LIST",
+                      help="Subscribe to the comma-separated LIST of channels")
+    optprs.add_option("-p", "--path", dest="monpath", default=None,
+                      metavar="PATH",
+                      help="Show values for PATH in monitor")
+    optprs.add_option("--monport", dest="monport", type="int", default=10030,
+                      help="Register using PORT", metavar="PORT")
+    optprs.add_option("-n", "--name", dest="name", default='telstat.mon',
+                      metavar="NAME",
+                      help="Use NAME as our subscriber name")
+    optprs.add_option("--history", dest="history", action="store_true",
+                      default=False,
+                      help="Fetch history on path instead of latest elements")
+    optprs.add_option("--interval", dest="interval", type='int', metavar="INTERVAL",                      
+                      default=5,
+                      help="Time to update EnviMon")
+
+    ssdlog.addlogopts(optprs)
+    
+    (options, args) = optprs.parse_args()
+
+    if len(args) != 0:
+        optprs.error("incorrect number of arguments")
+
+    if options.display:
+        os.environ['DISPLAY'] = options.display
+
+    # Are we debugging this?
+    if options.debug:
+        import pdb
+
+        pdb.run('main(options, args)')
+
+    # Are we profiling this?
+    elif options.profile:
+        import profile
+
+        print "%s profile:" % sys.argv[0]
+        profile.run('main(options, args)')
+
+    else:
+        main(options, args)
+

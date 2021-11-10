@@ -1,0 +1,382 @@
+This reference describes briefly both audible alerts and color
+changes (to yellow or red) that signify conditions requiring
+operator attention.  Audible alerts are identified by quoted strings.
+
+Contents
+   Universal Alerts
+   Tracking Pane Alerts
+   Telescope Pane Alerts
+   Target Pane Alerts
+   Dome Pane Alerts
+   Calibration Pane Alerts
+   Environment Pane Alerts
+   Conventions
+
+--------------
+
+Universal Alerts
+
+  - Invalid status value or bit pattern
+      Condition:        
+        A status value is out of range or is not one of the defined patterns
+      Audio:  None
+      Color change:
+        The background of the label or graph turns red; labels display
+        "Undefined Status.Name (%x)"
+
+  - No value available for needed status
+      Condition:        
+        Error occurred acquiring status value.
+      Audio:  None
+      Color change:
+        The background of the label or graph turns red; labels display
+        "<No Data>"
+
+--------------
+
+Tracking Pane Alerts
+
+  - "Alarm: guide star lost"
+      Condition:        
+        Telescope is in either AG Guiding or SV Guiding modes and
+        the AG or SV intensity falls to zero.
+      Audio repeat interval:  30 seconds
+      Color change:
+        The AG/SV Guiding label at the top of the Tracking Pane turns red.
+
+  - Large guiding error
+      Condition:        
+        Telescope is in either AG Guiding or SV Guiding modes and
+        the guiding error is greater than 500 milliarcsec.
+      Audio:  None
+      Color change:
+        The AG/SV Guiding label at the top of the Tracking Pane turns yellow
+        for 500-999 milliarcsec, red for > 999 milliarcsec.
+
+  - Tracking mode, but telescope is slewing
+      Condition:        
+        Tracking mode, but achieved pointing differs from commanded 
+        more than 0.25 degrees.
+      Audio:  None
+      Color change:
+        The Guiding label at the top of the Tracking Pane turns yellow
+        and displays "Slewing."
+
+  - Unknown tracking mode
+      Condition:        
+        TelStat cannot assertain the tracking mode.
+      Audio:  None
+      Color change:
+        The Guiding label at the top of the Tracking Pane turns red
+        and displays "Unknown."
+
+--------------
+
+Telescope Pane Alerts
+
+  - "Alarm: Windscreen drive off and position is high"
+      Condition:        
+        Drive off and position is > 5 meters.
+      Audio repeat interval:  1 minute, timeout after 10 minutes
+      Color change:
+        Windscreen and its label turn red.
+
+  - "Alarm: Windscreen free and drive is on"
+      Condition:        
+        Drive on and mode is free
+      Audio repeat interval:  1 minute, timeout after 10 minutes
+      Color change:
+        Windscreen and its label turn red.
+
+  - "Alarm: Windscreen may obstruct telescope"
+      Condition:        
+        Drive on, mode link, and actual position more than 1 meter above
+        commanded position.
+      Audio repeat interval:  1 minute, timeout after 10 minutes
+      Color change:
+        Windscreen and its label turn red.
+
+  - Commanded windscreen position not achieved
+      Condition:        
+        Drive on, mode link, and actual position more than 1 meter below
+        commanded position.
+      Audio:  None
+      Color change:
+        Windscreen and its label turn red.
+
+  - "Warning: Prime ADC is in Free Mode"        OR
+    "Warning: Cassegrain ADC is in Free Mode"   OR
+    "Warning: Nasmyth ADC is in Free Mode"
+      Condition:        
+        ADC is on and in free mode.
+      Audio repeat interval:  10 minutes
+      Color change:
+        Windscreen and its label turn red.
+
+  - Commanded rotator position not achieved
+      Condition:        
+        Actual position more than 0.1 degrees different from commanded position.
+      Audio:  None
+      Color change:
+        Rotator graphic and its label turn red.
+
+  - Rotator position nearing limit
+      Condition:        
+        Actual rotator position approaching its limit
+      Audio:  None
+      Color change:
+        Rotator graphic and its label turn yellow for position greater than
+        +/- 240 degrees (Prime focus), +/- 260 degrees (Cassegrain focus), 
+        +/- 175 degrees (Nasmyth focus); 
+        rotator graphic and its label turn red for position greater than
+        +/- 249 degrees (Prime focus), +/- 269 degrees (Cassegrain focus), 
+        +/- 179 degrees (Nasmyth focus). 
+
+--------------
+
+Limits Pane Alerts
+
+  - "Warning: close to azimuth limit
+    "Alarm: azimuth at limit"
+      Condition:        
+        Commanded or actual azimuth position approaching its limit
+      Audio repeat interval:
+        warning         3 minutes
+        alarm           1 minute
+      Color change:
+        The arrowhead indicating the azimuth position turns red when
+        the warning threshold is exceeded.
+
+  - "Warning: close to rotator limit"
+    "Alarm: rotator at limit"
+      Condition:        
+        Commanded or actual rotator position approaching its limit
+      Audio repeat interval:
+        warning         3 minutes
+        alarm           1 minute
+      Color change:
+        The arrowhead indicating the rotator position turns red when
+        the warning threshold is exceeded.
+
+  - "Warning: close to AG probe limit"
+    "Alarm: AG probe at limit"
+      Condition:        
+        Commanded or actual AG probe position approaching its limit
+      Audio repeat interval:
+        warning         3 minutes
+        alarm           1 minute
+      Color change:
+        The arrowhead indicating the AG probe position turns red when
+        the warning threshold is exceeded.
+
+--------------
+
+Target Pane Alerts
+
+  - "Warning: short time to azimuth limit"
+    "Alarm: less than one minute to azimuth limit"
+      Condition:        
+        Predicted time to azimuth limit is less than 30 minutes
+      Audio repeat interval:
+        warning         1/3 of time left to limit
+        alarm           10 seconds
+      Color change:
+        The background of the time-to-limit value turns yellow for the
+        warning condition (time < 30 minutes), red for the alarm
+        condition (time < 1 minute)
+
+  - "Warning: short time to elevation limit"
+    "Alarm: less than one minute to elevation limit"
+      Condition:        
+        Predicted time to elevation limit is less than 30 minutes
+      Audio repeat interval:
+        warning         1/3 of time left to limit
+        alarm           10 seconds
+      Color change:
+        The background of the time-to-limit value turns yellow for the
+        warning condition (time < 30 minutes), red for the alarm
+        condition (time < 1 minute)
+
+  - "Warning: short time to rotator limit"
+    "Alarm: less than one minute to rotator limit"
+      Condition:        
+        Predicted time to rotator limit is less than 30 minutes
+      Audio repeat interval:
+        warning         1/3 of time left to limit
+        alarm           10 seconds
+      Color change:
+        The background of the time-to-limit value turns yellow for the
+        warning condition (time < 30 minutes), red for the alarm
+        condition (time < 1 minute)
+
+  - Position Angle (PA) commanded position is out of achievable range
+      Condition:        
+        Commanded position is outside of +/- 249 degrees (Prime focus)
+        or +/- 269 degrees (other foci)
+      Audio:  None
+      Color change:
+        PA label background turns red.
+
+  - "Warning: commanded position angle not achieved"
+      Condition:        
+        Actual position more than 0.1 degrees different from commanded position.
+      Audio repeat interval:  5 minutes
+      Color change:
+        PA label background turns yellow.
+
+--------------
+
+Dome Lamps Pane Alerts
+
+  - No data available for any of the lamp status values
+      Condition:        
+        No lamp status value is available for one or more of the lamp
+        status aliases, for 2 or more consecutive refresh cycles.
+      Audio: None
+      Color change:
+        The background color of the lamp for which status is unavailable
+        changes to red, and the text label changes to "No Data".
+
+  - Invalid data for any of the lamp status values
+      Condition:        
+        Any lamp status value contains a pattern which is neither the "on"
+        pattern nor the "off" pattern, for 2 or more consecutive refresh 
+        cycles.
+      Audio: None
+      Color change:
+        The background color of the lamp for which status value is invalid
+        changes to red, and the text label changes to the last invalid 
+        hexadecimal value detected.
+
+  - More than one lamp is on
+      Condition:        
+        The lamp status value indicates "on" for 2 or more of all the 
+        lamps represented in the pane.
+      Audio: None
+      Color change:
+        The background color of the each non-off lamp turns yellow.
+
+--------------
+
+Calibration Lamps Pane Alerts
+
+  - No data available for any of the lamp status values
+      Condition:        
+        No lamp status value is available for one or more of the lamp
+        status aliases, for 2 or more consecutive refresh cycles.
+      Audio: None
+      Color change:
+        The background color of the lamp for which status is unavailable
+        changes to red, and the text label changes to "No Data".
+
+  - Invalid data for any of the lamp status values
+      Condition:        
+        Any lamp status value contains a pattern which is neither the "on"
+        pattern nor the "off" pattern, for 2 or more consecutive refresh 
+        cycles.
+      Audio: None
+      Color change:
+        The background color of the lamp for which status value is invalid
+        changes to red, and the text label changes to the last invalid 
+        hexadecimal value detected.
+
+  - More than one lamp is on
+      Condition:        
+        The lamp status value indicates "on" for 2 or more of all the 
+        lamps represented in the pane.
+      Audio: None
+      Color change:
+        The background color of the each non-off lamp turns yellow.
+
+--------------
+
+Environment Pane Alerts
+
+  - "Warning: low temperature"
+      Condition:        
+        Either dome or external temperature <= -10 degrees C
+      Audio repeat interval: 5 minutes
+      Color change:
+        The background color of the temperature graph turns yellow.
+
+  - "Warning: high humidity"
+    "Alarm: very high humidity"
+      Condition:        
+        warning         Either dome or external humidity >= 70%
+        alarm           Either dome or external humidity >= 80%
+      Audio repeat interval:
+        warning         5 minutes
+        alarm           15 seconds
+      Color change:
+        The background color of the humidity graph turns yellow for
+        warning, red for alarm.
+
+  - "Warning: high wind speed"
+    "Alarm: very high wind speed"
+      Condition:        
+        warning         Either dome or external wind speed >= 15
+        alarm           Either dome or external wind speed >= 20
+      Audio repeat interval:
+        warning         5 minutes
+        alarm           15 seconds
+      Color change:
+        The background color of the wind speed graph turns yellow for
+        warning, red for alarm.
+
+  - "Alert: environmental conditions now in range"
+      Condition:        
+        This alert is issued after either humidity or wind speed
+        entered an alarm condition (i.e. when you should close the dome),
+        and both humidity and wind speed have been in a non-alarm condition
+        for 15 minutes.
+      Audio repeat interval: none -- audio only sounds once
+      Color change:
+        None.  (Background color will have changed back from red to 
+        yellow or green 15 minutes ago.)
+
+      once only, 15 min delay
+  - "Alert: environmental conditions have been in range for 30 minutes"
+      Condition:        
+        This alert is issued after either humidity or wind speed
+        entered an alarm condition (i.e. when you should close the dome),
+        and both humidity and wind speed have been in a non-alarm condition
+        for 30 minutes.
+      Audio repeat interval: none -- audio only sounds once
+      Color change:
+        None.  (Background color will have changed back from red to 
+        yellow or green 30 minutes ago.)
+
+--------------
+
+Conventions
+
+   TelStat issues audible alerts and changes the color of graphical
+   objects or labels to call the operator's attention to conditions that 
+   may require action.
+
+   TelStat issues 3 classes of audible alerts:  warnings, alarms and
+   information alerts.  In all cases, the alert is used to notify the
+   operator of some condition that requires his attention.  A warning is
+   intended to alert the operator to a condition that he should monitor,
+   but which may not require immediate action.  An alarm is intended to
+   alert the operator to an urgent condition requiring prompt operator
+   action.  The only information alerts are issued by the Environment Pane
+   to tell the operator that environmental conditions are suitable for
+   observing.
+
+   In addition to audible alerts, the background color of graphical 
+   objects, labels and strip charts are changed to yellow or red to
+   indicate anomalies.  Yellow indicates a warning condition, which may
+   require operator action eventually but not immediately; e.g. elevation
+   will reach one of its limits within 30 minutes.  Red indicates an alarm
+   condition, which may require urgent and immediate action by the
+   operator; e.g. elevation is at its upper limit.  Red is also used to
+   indicate errors in data acquisition or undefined status values, either
+   of which mean that TelStat cannot assertain the state of the relevant
+   equipment.  In such cases, the operator may need to use other
+   information sources to determine, for example, whether or not the dome
+   shutter is really open or closed.
+
+--------------
+
+Last update:  2007-12-28

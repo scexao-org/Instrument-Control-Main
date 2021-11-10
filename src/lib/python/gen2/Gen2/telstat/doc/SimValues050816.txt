@@ -1,0 +1,20 @@
+*** NEW SET OF FOCUSINFO VALUES LIMITS_ALARMS: ***
+
+AZ values from TSCS.AZ, TSCS.AZ_CMD -- limits +/- 260, 269.5
+
+Rotator values from TELSTAT.ROT_POS, TELSTAT.ROT_CMD -- limits +/- 250, 249.5 for PF
+         For PF --> TSCS.INSROTPOS_PF, TSCS.INSROTCMD_PF
+
+AG values from TSCV.AGTheta, STATL.AG_THETA_CMD -- limits +/- 175, 184.5 for Cs
+
+Ndx   FOCUSINFO         AZ     AZ_CMD   INSROTPOS_PF   INSROTCMD_PF   AGTheta   AG_THETA_CMD  |  Alarm?
+
+1-5     None                                                                                     <none>
+6-10  01000000(PfOpt)  -265.00  -265.01                                                          <none>
+11-12 01000000         None     -269.6                                                           <none>
+13-17 01000000                            -3.293        -3.293                                   <none>
+18-20 01000000                           -30.293         None                                    <none>
+
+21-25 04000000(CsOpt)                                                  -60          -60          <none>
+26-30 04000000                                                         None          15          <none>
+

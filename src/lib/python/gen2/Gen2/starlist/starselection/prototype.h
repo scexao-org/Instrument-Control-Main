@@ -1,0 +1,12 @@
+void AG_MsgLog(char*, char*);
+double AG_ToolRAtoDeg(char*);
+double AG_ToolDECtoDeg(char*);
+double AG_ToolMintoDeg(char*);
+double AG_ToolChartoDbl(char*);
+int AG_ToolChartoInt(char*);
+static int AG_Func(struct AG_List*, struct AG_List*);
+void AG_CalcPreference(int);
+int AG_ReadCfgInt(char*, char*, int*);
+int AG_ReadCfgDbl(char*, char*, double*);
+int AG_ReadCfgVignet(char*, char*, double Vignet[][200]);
+int AG_ReadPFParam(char*, char*, struct AG_PFPRM*);

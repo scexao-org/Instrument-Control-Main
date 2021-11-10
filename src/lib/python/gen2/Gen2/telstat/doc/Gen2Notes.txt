@@ -1,0 +1,203 @@
+Gen2Notes.txt -- 2006-12-05
+
+Notes on converting TelStat to run under Gen2
+
+In the main program, OSSO_TelStat, an option '-g2' was added to set 
+StatIO_DataSource in StatIO.py to select Gen2 mode.  In StatIO.StatIO_service, 
+OSSC_screenPrintConversions.OSPC_getValues_Gen2() is called if Gen2 mode is 
+selected.
+
+In OSSC_screenPrintConversions.py, add new function, OSPC_getValues_Gen2(),
+to do the Gen2 data acquisition.
+
+Source files requiring changes:
+    OSSO_TelStat
+    StatIO.py
+    OSSC_screenPrintConversions.py
+
+IMPORTANT:
+----------
+
+For Gen2 mode to work, the following symbolic links must be in the
+...OSSO/OSSO_TelStat.d directory:
+
+    gen2lib -> /home/bon/proj/Gen2/svn/lib/trunk/python
+    gen2src -> /home/bon/proj/Gen2/svn/gen2/trunk/src
+
+This is nasty but, until we have decided the correct place to put
+TelStat and replaced the ssdenv mechanism for finding Python
+modules, at least it works!
+
+____________________________________________________________________________
+
+To test in Gen2 mode, with simulated data from TCSstatSim.py:
+-------------------------------------------------------------
+
+FIRST SHELL WINDOW:
+
+    Start a remote object name server
+
+      > cd /home/bon/proj/Gen2/svn/lib/trunk/python/remoteObjects
+      > remoteObjectNameSvc.py
+
+SECOND SHELL WINDOW:
+
+    Start the status module in another window
+
+      > cd /home/bon/proj/Gen2/svn/gen2/trunk/src
+      > status.py TSCS.ALPHA TSCS.DELTA TSCS.EQUINOX
+
+
+THIRD SHELL WINDOW:
+
+    Start the TCS status simulator in file mode:
+
+      > cd /home/bon/proj/Gen2/svn/lib/trunk/python/SOSS/STATint
+      > TCSstatSim.py -F -s 1.0 -l 1.0 -v 2.0 ssd19
+
+    May as well terminate the simulator after it has populated the
+    status server database, because all data is constant!
+
+  OR
+
+    Start the TCS status simulator to feed data from Summit:
+
+      > cd /home/bon/proj/Gen2/svn/lib/trunk/python/SOSS/STATint
+      > TCSstatSim.py -d newdef/StatusDecodeTab.def -H obs1 -s 0.5 -S 1.0 -l 1.0 -L 2.0 -v 1.0 -V 2.0 ssd19
+
+
+FOURTH SHELL WINDOW:
+
+    Start TelStat
+
+      > cd /home/bon/proj/soss/svn/TelStat/trunk/product/OSSO/OSSO_TelStat.d
+      > setenv PYTHONPATH OSSO_TelStatLib
+      > OSSO_TelStat -l -d -g2      # data logging, debug mode, Gen2 mode
+
+____________________________________________________________________________
+
+2006-11-30
+
+To-do list for Gen2 (this is a month old, subject to change):
+
+        - work through data issues --  see gen2anomalies.tmp
+            - DispType.py -- change all DisplayDataType's to store the 
+                OSPC_Convrt and key, as well as the value; add an
+                OSPC_convert() method to every DDT, which calls 
+                __OSPC_convert() (?); add method dataLogCvrt() to convert 
+                data into format for data log
+            - OSSC_screenPrintConversions.py -- move __OSPC_convert()
+                into DispType.py (?); for Gen 2 mode, call dataLogCvrt()
+                method to convert to data log output format
+            - StatusDictionary.py -- in value part of each dictionary
+                entry, delete [1] part and add key and OSPC_Convrt code
+                to constructor call for DDT
+        - display Gen2/SOSS mode in title bar
+        - convert logging to sLogging (but keep working under SOSS)
+        - add needed aliases to statusDerive.py
+        - make replay log consistent between Gen2 and SOSS
+        - get record and replay working for Gen 2 data
+
+
+Data types of concern:
+   Python -- integer, long, float, boolean, string
+   OSPC   -- always string, as furnished by OSSC_screenPrint
+   DDT    -- Display Data Type -- classes for storing status data internally,
+             includes key (status alias name), OSPCcode, methods for
+             string formatting, etc.
+   Gen2   -- a Python data type, but this may be different units from the
+             DDT fundamental type; in several cases, a string is used to
+             represent the a type whose DDT type is a number (long, RA, Dec).
+   data log type -- always string, has been the same as OSPC, but I will
+             change this to a string version of the DDT fundamental type/units.
+
+
+Current DDT methods:
+    setValue( value )
+        value is whatever units and Python type is native to this DDT:
+              DDT        Python type       units
+            BoolDDT      boolean           none
+            IntDDT       integer or long   none
+            FloatDDT     float             none
+            StrDDT       string            none
+            AngleDDT     float             arc seconds
+            TimeDDT      float             seconds of time
+            UnixTimeDDT  float             seconds since Epoch (1970)
+    value()
+        returns the value in the fundamental type and units
+    format()
+        returns the value formatted into a string
+    myDDT()
+        returns this DDT's DDT code (bool=1,int=2,float=3,... unixTime=7)
+
+    Other methods are provided that are special for particular DDT's, in 
+    particular, value methods to return different units and format methods 
+    for different formats.
+
+    setValue() methods often have optional arguments for providing values
+    as different units, but the first argument is always in the fundamental
+    units of the DDT.
+
+New DDT methods:
+    fromOSPC( strVal )
+        Using the DDT's OSPCcode, convert strVal and assign the DDT's value.
+    fromGen2( g2Val )
+        Using the DDT's OSPCcode, convert g2Val and assign the DDT's value.
+    fromLogFmt( strVal )
+        Convert strVal into fundamental type and assign the DDT's value.
+    formatForLog()
+        Return a OSPC-formatted string representing the DDT's fundamental value.
+
+?? Why is fromGen2() needed?  Shouldn't the Gen2 value be in the DDT's 
+   fundamental units? ??
+Answer:
+  __OSPC_G2convert() performs the following:
+    - For long values, status.py returns a string (XMLRPC limitation).
+      converts this string into a Python long.
+    - If OSPC type is Int or Hex, but Python type is float,
+      converts it into a Python long.
+    - If OSPC type is DegAng, converts degrees to arcsec.
+    - If OSPC type is RA, converts string HHMMSSssss to arcsec.
+    - If OSPC type is Dec, converts string +DDDMMSSss to arcsec.
+    - If OSPC type is MinTime, converts float minutes to seconds of time.
+    - For everything else, no conversion.
+
+Major design change is to replace tuple in StatusDictionary with a single
+DDT type, and to incorporate OSPCcode and active flag into the DDT type.
+DDT type also has alias name, to allow log messages to be more useful.
+
+See also commit notes on SVN revision 3503, TelStat version 2.1.0.
+
+____________________________________________________________________________
+
+2006-12-05
+
+14:20
+Anomalies between current version running in Gen2 mode and version 2.0.2
+running in SOSS mode, both with Summit data:
+
+  Pointing pane
+    Gen2 shows AG Probe and (Command) red <No Data>, while SOSS has valid data
+        TSCV.AGR, TSCV.AGTheta should be available; 
+*       STATL.AG_R_CMD, STATL.AG_THETA_CMD need derivations;
+        TrackingPane.py shows NoData if any of the above are undefined!
+  Telescope pane
+    Gen2 shows M1 Cover Partial (40000000004), while SOSS shows Closed
+    Gen2 AGProbe Cassegrain current matches, but Commanded shows <No Data>
+*       STATL.AG_THETA_CMD needs derivation
+
+  Everything else matches.
+
+Anomalies when comparing dictionary dump from today vs Nov. 30:
+
+    VGWD.FWHM.AG in None today in dictionary dump, +0.27169 in screenDump, 1.06 on Nov. 30
+    All other values that were defined Nov. 30 are defined today.
+
+Good enough to do a commit, after a SOSS vs old SOSS test!
+
+
+2006-12-06
+    M1 Cover was a decoding error in STATdecode.py, now fixed.
+
+
+

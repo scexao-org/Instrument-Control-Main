@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo "IR cams Wollaston:"
+ircam_wollaston
+sleep 0.1
+echo "CHARIS Wollaston:"
+charis_wollaston
+sleep 0.1
+echo "IR cams QWPs:"
+ircam_qwp
+sleep 0.1
+echo "Polarizer:"
+polarizer
+sleep 0.1

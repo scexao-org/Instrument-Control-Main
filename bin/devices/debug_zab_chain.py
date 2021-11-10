@@ -31,9 +31,10 @@ By commenting out the one you don't want to control
 #zabdev += "by-path/pci-0000:00:1d.0-usb-0:1.2.1:1.0-port0" # front chain
 #zabdev += "by-path/pci-0000:00:1d.0-usb-0:1.8.4.4.4.4:1.0-port0" # back chain
 #zabdev += "by-id/usb-FTDI_USB_Serial_Converter_FTG4YOPA-if00-port0" # vis chain
-zabdev += "by-path/pci-0000:00:1a.0-usb-0:1.4.1:1.0-port0"#temp chain
+#zabdev += "by-path/pci-0000:00:1a.0-usb-0:1.4.1:1.0-port0"#temp chain
 # ------------------------------------------------------------
 zab = zaber.zaber()
+zab.open("irback")
 
 '''
 At this point, you have an instance of zaber chain object.

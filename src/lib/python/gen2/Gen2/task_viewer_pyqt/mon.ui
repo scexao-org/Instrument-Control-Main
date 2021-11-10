@@ -1,0 +1,115 @@
+<ui version="4.0" >
+ <class>Form</class>
+ <widget class="QWidget" name="Form" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>702</width>
+    <height>549</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>Task Monitor</string>
+  </property>
+  <widget class="QTreeWidget" name="treeWidget" >
+   <property name="geometry" >
+    <rect>
+     <x>40</x>
+     <y>20</y>
+     <width>611</width>
+     <height>451</height>
+    </rect>
+   </property>
+   <property name="font" >
+    <font>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
+   <property name="frameShape" >
+    <enum>QFrame::VLine</enum>
+   </property>
+   <column>
+    <property name="text" >
+     <string>task</string>
+    </property>
+   </column>
+   <column>
+    <property name="text" >
+     <string>status</string>
+    </property>
+   </column>
+   <column>
+    <property name="text" >
+     <string>start time</string>
+    </property>
+   </column>
+   <column>
+    <property name="text" >
+     <string>end time</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QPushButton" name="pushButtonClose" >
+   <property name="geometry" >
+    <rect>
+     <x>570</x>
+     <y>500</y>
+     <width>80</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="text" >
+    <string>close</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButtonClear" >
+   <property name="geometry" >
+    <rect>
+     <x>450</x>
+     <y>500</y>
+     <width>80</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="text" >
+    <string>clear all</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButtonClose</sender>
+   <signal>clicked()</signal>
+   <receiver>Form</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>609</x>
+     <y>513</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>350</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonClear</sender>
+   <signal>clicked()</signal>
+   <receiver>treeWidget</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>489</x>
+     <y>513</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>345</x>
+     <y>245</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

@@ -112,9 +112,9 @@ typedef struct {
   char saphira_pickoff_st[16];
   int saphira_pickoff_co;
   float saphira_pickoff;
-  char buffycam_pickoff_st[16];
-  int buffycam_pickoff_co;
-  float buffycam_pickoff;
+  char buffy_pickoff_st[16];
+  int buffy_pickoff_co;
+  float buffy_pickoff;
   char chuck_pup[16];
   int chuck_pup_co;
   char chuck_pup_fcs_st[16];

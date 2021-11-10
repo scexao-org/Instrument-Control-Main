@@ -1,0 +1,53 @@
+Ndx   FOCUSINFO  FOCUS     M2     ROT    ADC    TELDRIVE                ROT_POS   ROT_CMD
+
+1-5     None      None    None    None   None   None
+6-10  01000000   PF_OPT   SPCAM   OFF    False  UNDEF
+11-12 02000000   PF_IR    FMOS    OFF    False* Pointing                 None       None
+13-17 04000000   CS       CS_OPT  OFF    False  Tracking
+18-20 08000000   CS       CS_OPT  OFF    True   Tracking(Non-Sidereal)
+
+21-25   None      None    None    None   None   Slewing
+26-30 10000000   NS_OPT   CS_OPT  OFF    False  Guiding(AG1)                        None
+31-32 20000000   NS_OPT   CS_OPT  OFF    True   Guiding(AG2)             None
+33-37 40000000   NS_OPT   CS_OPT  IMRB   False  Guiding(SV1)
+38-40 80000000   NS_OPT   CS_OPT  IMRB   True   Guiding(SV2)
+
+41-45   None      None    None    None   None   None
+46-50 00010000   NS_OPT   CS_OPT  IMRR   False  UNDEF
+51-52 00020000   NS_OPT   CS_OPT  IMRR   True   Pointing                 None       None
+53-57 00040000   NS_IR    CS_OPT  OFF    False* Tracking
+58-60 00080000   NS_IR    CS_OPT  IMR    False* Tracking(Non-Sidereal)
+
+61-65   None      None    None    None   None   Slewing
+66-70 00100000   NS_OPT   NS_OPT  OFF    False  Guiding(AG1)                        None
+71-72 00200000   NS_OPT   NS_OPT  OFF    True   Guiding(AG2)             None
+73-77 00400000   NS_OPT   NS_OPT  IMRB   False  Guiding(SV1)
+78-80 00800000   NS_OPT   NS_OPT  IMRB   True   Guiding(SV2)
+
+Alternative
+
+1-5     None      None    None    None   None 
+6-10  00000100   NS_OPT   NS_OPT  IMRR   False
+11-12 00000200   NS_OPT   NS_OPT  IMRR   True 
+13-17 00000400   NS_IR    NS_OPT  OFF    False*
+18-20 00000800   NS_IR    NS_OPT  IMR    False*
+
+21-25   None      None    None    None   None 
+26-30 00001000   CS       IR      OFF    False
+31-32 00002000   NS_OPT   IR      OFF    False
+33-37 00004000   NS_OPT   IR      OFF    True 
+38-40 00008000   NS_OPT   IR      IMRB   False
+
+41-45   None      None    None    None   None 
+46-50 00000001   NS_OPT   IR      IMRB   True 
+51-52 00000002   NS_OPT   IR      IMRR   False
+53-57 00000004   NS_OPT   IR      IMRR   True 
+58-60 00000008   NS_IR    IR      OFF    False*
+
+61-65   None      None    None    None   None 
+66-70 00000010   NS_IR    IR      IMR    False*
+71-72 00000020   UNDEF    UNDEF  UNDEF   UNDEF
+73-77 00000040   UNDEF    UNDEF  UNDEF   UNDEF
+78-80 00000080   UNDEF    UNDEF  UNDEF   UNDEF
+
+* No ADC display for any IR focus

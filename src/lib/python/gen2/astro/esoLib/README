@@ -1,0 +1,27 @@
+This module is the python wrpper for eso rtdlib library functions.
+It provides the functions that take numpy objects as input parameters. 
+
+One caveat is that the rtdlib uses float instead of double and the python
+floating point type is double. This causes situations where although you
+see the number with many dicimal points returned from the function, only
+5-7 decimal digits are actually correct. 
+
+Currently only the iqe() function is working, but only slight modifications
+are required to have the funciton work with other functions like iqebgv(),
+etc.
+
+To compile and install the module, just type
+
+python ./setup.py install 
+
+with appropreate options (like --prefix=).
+
+Look at the included test.py for usage example.
+
+TODO:
+  prefix the module with appropreate package (i.e. EsoLib).
+  support more functions.
+
+Yasuhiko Sakakibara <yasu@subaru.naoj.org>
+Eric Jeschke <eric@naoj.org>
+

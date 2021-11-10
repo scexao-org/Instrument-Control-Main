@@ -1,0 +1,141 @@
+#!/usr/bin/env python
+
+# ------------------------------------------------------- #
+#    ___  ___   ________   _____                     _    #
+#   / _ \/ __\ / __\_   \ /__   \__ _ _ __ __ _  ___| |_  #
+#  / /_)/ /   / _\  / /\/   / /\/ _` | '__/ _` |/ _ \ __| #
+# / ___/ /___/ / /\/ /_    / / | (_| | | | (_| |  __/ |_  #
+# \/   \____/\/  \____/    \/   \__,_|_|  \__, |\___|\__| #
+#                                         |___/           #
+#  _____                _    _                            #
+# /__   \_ __ __ _  ___| | _(_)_ __   __ _                #
+#   / /\/ '__/ _` |/ __| |/ / | '_ \ / _` |               #
+#  / /  | | | (_| | (__|   <| | | | | (_| |               #
+#  \/   |_|  \__,_|\___|_|\_\_|_| |_|\__, |               #
+#                                    |___/                #
+#                                                         #
+# ------------------------------------------------------- #
+
+import numpy as np
+import os,sys,time
+import matplotlib.pyplot as plt
+import math as m
+from xaosim.scexao_shmlib import shm
+import subprocess
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import image_processing as impro
+import vibration as vib
+import conex_tt
+import conex3 as conex
+con = conex.conex()
+
+
+slopesteeringtheta = -0.07643424974
+slopesteeringphi = 0.101835075
+polyoap4theta = np.poly1d([-6.28e-4,8.43e-4,7.29e-03,0.0399,0])
+slopeoap4phi = 0.3291207033
+
+hmsg = """
+-------- IRCam target tracking ---------
+
+Usage: ircam_track <separation> <PA>
+
+INPUT <separation> : Separation between star and target (in arcsec)
+INPUT <PA>         : Position angle in degrees (0deg: North, 90deg: East)
+EXAMPLE :  ircam_track 0.2 135 
+
+for any questions, ask Julien Lozi (lozi@naoj.org).
+"""
+
+args = sys.argv[1:]
+
+if len(args) < 2:
+    print(hmsg)
+else:
+    try:
+        sep = float(args[0])
+        pa = float(args[1])
+    except:
+        print(hmsg)
+    if len(args) >= 3:
+        print(hmsg)
+
+# ------------------------------------------------------------------
+#             files and shared memory
+# ------------------------------------------------------------------
+
+try:
+    telescope_status  = shm("/tmp/telescope_status.im.shm", verbose=False)
+except:
+    print("Telescope Status not started")
+    sys.exit()
+
+oap4_file = "/home/scexao/bin/devices/conf/conf_oap4.txt"
+
+f = open(oap4_file,'r')
+f2 = f.readlines()
+f.close()
+oap0 = np.zeros((2))
+for i in range(2):
+    oap0[i] = f2[0].split(';')[2+i].rstrip()
+
+conexids = ["/dev/serial/by-id/usb-Newport_CONEX-AGP_A61MB80N-if00-port0", "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AL01V7AB-if00-port0"]
+
+steering_file = "/home/scexao/bin/devices/conf/conf_steering.txt"
+
+f = open(steering_file,'r')
+f2 = f.readlines()
+f.close()
+steering0 = np.zeros(2)
+for i in range(2):
+    steering0[i] = f2[2].split(';')[2+i].rstrip()
+
+conexttid = "http://133.40.163.196:50001"
+
+print(oap0, steering0)
+
+cnt0 = telescope_status.get_counter()
+
+subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '%.1f as, %d deg' % (sep,pa), '2'])
+subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '%.1f as, %d deg' % (sep, pa), '2'])
+
+try:
+    while True:
+        cnt = telescope_status.get_counter()
+        if cnt == cnt0:
+            time.sleep(1)
+        else:
+            cnt0 = cnt
+            temp = telescope_status.get_data()
+            pad = temp[0][4]
+            print(pad)
+            posx = -sep*m.cos((-pa+pad+180)/180.*m.pi)
+            posy = sep*m.sin((-pa+pad+180)/180.*m.pi)
+            print(posx, posy)
+            
+            sttheta = posx*slopesteeringtheta
+            stphi = posy*slopesteeringphi
+            oaptheta = polyoap4theta(posx)
+            oapphi = posy*slopeoap4phi
+            print(oaptheta, oapphi, sttheta, stphi)
+            
+            oaptheta += oap0[0]
+            oapphi += oap0[1]
+            sttheta += steering0[0]
+            stphi += steering0[1]
+            print(oaptheta, oapphi, sttheta, stphi)
+            
+            conex_tt.move(stphi,sttheta,conexttid)
+            con.open(conexids[0])
+            con.move(oaptheta, "", False)
+            con.close()
+            con.open(conexids[1])
+            con.move(oapphi, "", False)
+            con.close()
+            
+except KeyboardInterrupt:
+    os.system("ircam_steering onaxis")
+    sys.exit()
+    

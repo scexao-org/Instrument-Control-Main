@@ -1,0 +1,116 @@
+#!/usr/bin/env python
+#waeE7124Nf
+# ------------------------------------------------------------------- #
+#    _               _                 ___       _               _    #
+#   /_\  _ __   __ _| | ___   __ _    /___\_   _| |_ _ __  _   _| |_  #
+#  //_\\| '_ \ / _` | |/ _ \ / _` |  //  // | | | __| '_ \| | | | __| #
+# /  _  \ | | | (_| | | (_) | (_| | / \_//| |_| | |_| |_) | |_| | |_  #
+# \_/ \_/_| |_|\__,_|_|\___/ \__, | \___/  \__,_|\__| .__/ \__,_|\__| #
+#                            |___/                  |_|               #
+# ------------------------------------------------------------------- #
+
+import serial
+import os
+import time
+import binascii
+import sys
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import logit #Custom logging library
+
+aoname = "/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_D-if00-port0" #!!!change address 
+
+brate = 9600 # baud rate for Weeder AI board
+tout  = 0.1  # time out for serial connection (in sec)
+delay = 0.05  # safety delay between send - receive 
+
+class aoutput(object):
+    def __init__(self, devname, brate):
+        self.s=serial.Serial(devname,brate,timeout=tout)
+    
+    def voltage(self,voltage):
+        if (float(voltage)>=0) and (float(voltage)<=5):
+            text=":CHAN1:VOLT "+str(float(voltage))+"\r\n"
+            print(text.encode())
+            self.s.write(text.encode())
+            print(self.s.readlines())
+        else:
+            print("Voltage must be between 0 and 5V")
+            
+    def command(self,com):
+        text=str(com)+"\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        print(self.s.readlines())
+         
+    def status(self):
+        text="*IDN?\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        print(self.s.readlines())
+        text=":CHAN1:VOLT ?\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        print(self.s.readlines())
+        
+    def reset(self):
+        text="*RST\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        print(self.s.readlines())
+
+    def close(self):
+        self.s.close()
+
+
+def usage():
+    print("""---------------------------------------
+Usage: first_attenuator <command> <arg>
+---------------------------------------
+command:\n-------
+    voltage  allows the voltage of a
+             channel to be changed \n
+
+arg 1:\n-----
+    voltage    (0 and 5 V)
+    
+examples:\n--------
+    first_attenuator voltage 0.8
+--------------------------------------- """)
+    sys.exit()
+
+def main():
+    args = sys.argv[1:]  # list of read arguments
+    na = args.__len__()  # number of arguments
+
+    if args == []: usage()
+
+    if "voltage" == args[0].lower():
+        if na < 2:
+            usage()
+        if isinstance(float(args[1]),float):
+            if (float(args[1])>=0) and (float(args[1])<=5):
+                ao = aoutput(aoname, brate)
+                ao.voltage(args[1])
+                ao.close()
+            else:
+                print("Please enter a voltage between 0 and 5V")
+        else:
+            print("Please enter a number between 0 and 5V")
+
+    elif "status" == args[0].lower():
+        ao = aoutput(aoname, brate)
+        ao.status()
+
+    elif "reset" == args[0].lower():
+        ao = aoutput(aoname, brate)
+        ao.reset()
+        
+    else:
+        ao = aoutput(aoname, brate)
+        ao.command(args[0])
+    
+if __name__ == "__main__":
+    main()

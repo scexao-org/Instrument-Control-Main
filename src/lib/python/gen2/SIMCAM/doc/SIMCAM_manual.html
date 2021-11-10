@@ -1,0 +1,1037 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<meta name="Robots" content="NOINDEX,NOFOLLOW">
+
+<meta name="Keywords" content="SIMCAM, instrument, interface">
+
+<meta name="Author" content="Eric R. Jeschke">
+<meta name="Generator" content="emacs and human">
+<meta name="Copyright" content="&copy; 2008,2009,2010  Eric R. Jeschke (eric@naoj.org)">
+
+<title></title>
+</head>
+
+<body>
+<h1>The SIMCAM Subaru Instrument Interface Framework</h1>
+<!-- hhmts start -->
+Last modified: Tue Mar 16 09:55:24 HST 2010
+<!-- hhmts end -->
+<p>
+Eric Jeschke <br>
+Subaru Telescope/National Astronomical Observatory of Japan <br>
+<a href="mailto:eric@naoj.org">eric@naoj.org</a>
+<p>
+<center>
+<!-- font size="+4">DRAFT: DO NOT DISTRIBUTE</font -->
+</center>
+
+<a name="audience">
+<h2>Audience</h2>
+</a>
+This document addresses an audience of software developers interested in
+writing software for interfacing an observation instrument to Subaru
+Telescope's Observation Control System (OCS).  Some basic understanding of
+software development principles as well as a general familiarity with
+observatory infrastructures is assumed.
+
+<a name="about">
+<h2>About</h2>
+</a>
+Subaru Telescope's distributed control system is based on four
+fundamental subsystems:
+<ol>
+  <li> There is the <em>Telescope Control System</em> which controls the
+      basic movements of the telescope and its mechanical components, as
+      well as those of the dome, etc.</li>
+      <p>
+  <li> There is the <em>Instrument Control System</em>, which
+      encompasses all of the computer control components of an
+      instrument.</li>
+      <p>
+  <li> There is the data archive system, known as STARS (<em>Subaru
+      Telescope ARchive System</em>).</li>
+      <p>
+  <li> At the center of these systems is the <em>Observation Control
+      System</em>, which interfaces to the three systems referred to
+      above, as well as providing the human interfaces to the operators
+      and observers.  Subaru's OCS is known as "Gen2" (so called because
+      it is the second generation OCS for Subaru).</li>
+      <p>
+</ol>
+At Subaru, the interface between the instrument control system and the
+observation control system is handled by a top-level computer referred
+to as the <em>OBCP</em> (OBservation Control Processor).  The OBCP is
+typically a Unix/Linux-based system that is the locus for commands,
+status, and data files transferred between the two systems.  This is
+illustrated by Figure 1.
+<p>
+Figure 1. Subaru Telescope Subsystem Overview (figure courtesy Scot
+Kleinman) <br>
+<img src="OCS_schematic.png" align="bottom" hspace="20" vspace="20">
+<br clear="all">
+
+<p>
+On the right-hand side of this figure, you can see the OBCP and its
+interfaces with the OCS.  This interface encompasses four basic "channels":
+<ol>
+  <li> Commands to the instrument from the OCS and the instrument's
+      responses; 
+      <p>
+  <li> Requests for external status data from the instrument to the OCS
+      and the OCS's replies with that requested status.
+      <p>
+  <li> Transfers of internal status data of interest from the instrument
+      to the OCS, and
+      <p>
+  <li> Requests for transfers of data files created by the instrument to
+      the OCS, and the OCS's replies about the results of transferring
+      the files.  All files transferred from the instrument are
+      automatically archived from the OCS via STARS.
+      <p>
+</ol>
+
+<b>SIMCAM</b><h2>SIMCAM</h2>
+SIMCAM is a object-oriented software framework, written in Python, for
+interfacing top-level instrument control systems to Subaru Telescope's
+Observation Control System.  As shown in the diagram in Figure 1, SIMCAM
+implements and abstracts the low level interfaces used for commands to,
+status transfer to and from, and file transfer from, the instrument's
+top level computer, or "OBCP".
+Using this framework, developers can write multi-threaded applications
+to interface with the OCS with a quite high level of abstraction.  The
+top-level SIMCAM module can be written to interface with instrument's
+own internal subsystems in a variety of ways, including Python classes
+and functions, embedded C code, FIFOs, sockets, files, shared memory, etc.
+<p>
+
+<a name="SIMCAM_API">
+<h2>The SIMCAM API</h2>
+</a>
+To interface with the SIMCAM framework, a Python module is created which
+defines at least one class inheriting from the BASECAM class.  This
+inheritance provides the class with some abstract superclass methods
+and attributes that will normally be overridden by the subclass.
+<pre class="code">
+#
+# My new instrument
+#
+from SIMCAM import BASECAM, CamError, CamCommandError
+...
+
+class MYCAM(BASECAM):
+
+    ....
+</pre>
+There are several example modules included for real instruments that are
+used at Subaru.  Examining these example modules you will see what
+arguments are necessary for the class constructor (also described in the
+section below <a href="#initialization">Putting it all together: the
+SIMCAM cam</a>). 
+For methods defined inside the class there are a number of useful
+convenience methods for logging, running concurrent tasks and
+interacting with the OCS.  
+
+<a name="commands">
+<h3>Command processing</h3>
+</a>
+Command processing in the SIMCAM framework is based on an event-driven
+callback model that will be familiar to most developers.  By simply
+defining non-private methods in the class, those functions immediately
+become available commands to the OCS.  For example
+<pre class="code">
+class MYCAM(BASECAM):
+    ...
+    ...
+    #######################################
+    # INSTRUMENT COMMANDS
+    #######################################
+
+    def snap(self, frameid=None, itime=10.0):
+
+        self.logger.debug("snap called.")
+        ...
+        ...
+
+</pre>
+Defines a new instrument <code>MYCAM</code> that contains an
+invocable command called <code>snap</code> (presumably some kind of exposure
+command), with parameters <code>frameid</code> and <code>itime</code>.  From
+the OCS side, commands are case-insensitive, so the command might be
+invoked as snap, SNAP, Snap, sNAp, etc.  On the Python side the method name
+should be defined in lower case. 
+<p>
+Parameters should be defined as Python keyword arguments, with default
+values that will be assigned if they are not supplied at the time of
+invocation.
+<p>
+The command does whatever it needs to do (calling other methods, etc).
+There are several possible scenarios for command completion:
+<ol>
+  <li> The method raises a generic exception.  In this case it will be caught
+      and reported as a command completion with error to the OCS (using
+      the exception error string).  A traceback is also logged.
+      <p>
+  <li> The method raises a <code>CamCommandError</code> exception (or a
+      subclass thereof).  This is the preferred way of signaling an
+      error.  An error is reported to the OCS using the exception string
+      and no traceback is logged.
+      <p>
+  <li> The method returns normally and the result is an int or a tuple
+      of (int, str).  In this case, the integer is interpreted as a
+      return code: 0 is success, and non-zero is an error.  In the tuple
+      form, the string provides a diagnostic of success or failure
+      message.
+      <p>
+  <li> The method returns normally, but the result is not an int or a
+      tuple of (int, str).  In this case, the command is assumed to have
+      completed successfully, and a success code and generic diagnostic
+      is returned to the OCS.  If a Python method exits a method by
+      "falling off the end" (i.e. no <code>return</code> statement), the
+      return code is <code>None</code>.  That covers this case.
+      <p>
+</ol>
+<p>
+Note that since the framework is multi-threaded, executing a command does not
+prevent other commands from being received and processed.  Although the 
+API methods of the SIMCAM framework are thread-safe, it is up to the
+developer to make sure that shared instance state in the subclass is
+protected via standard thread-safety techniques such as semaphores,
+locks, condition variables, etc. 
+The <code>threading</code> and <code>Queue</code> packages in the
+standard Python library provides many useful classes for this purpose.
+<p>
+Although commands are typically driven from the OCS side, an instrument 
+can set up it's own autonomous command invocations.  The SIMCAM framework
+includes a thread pool and some common methods for executing a method or
+function on it (see section below "Creating concurrent tasks").
+Alternatively you may choose to create and invoke threads
+using the Python <code>threading</code> library directly.  Either way, a method
+can be spawned off into an independent self-timed loop for handling periodic
+tasks.
+<p>
+Since Python is a dynamic, interpreted language, the turnaround time for 
+developing and debugging new commands is very fast.  Simply add new methods
+to the module in an editor and restart simcam.
+
+<a name="getting_status">
+<h3>Requesting external status</h3>
+</a>
+Although commands are typically initiated from the OCS side, requests for 
+status values are initiated from the instrument side.  A typical example is
+when taking an exposure, the instrument needs the telescope pointing values
+for RA and DEC before and after the exposure for the purpose of creating 
+a FITS file.
+<p>
+The SIMCAM framework provides a method in a delegate object for fetching
+external status values.  Let's enhance our <code>snap</code> method to
+illustrates how it is used:
+<pre class="code">
+    def snap(self, frameid=None, itime=10.0):
+	"""
+        A command to open the shutter of the camera and begin exposure.
+        """
+        ...
+        
+        # Create a dictionary, whose keys are status aliases we want
+	statusDict = {'STATS.RA': None, 'STATS.DEC': None}
+
+        try:
+            self.ocs.requestOCSstatus(statusDict)
+
+        except CamError, e:
+            # Some kind of error occurred--bail out
+            raise CamCommandError("Failed to obtain status: %s" % str(e))
+
+        # Successful call, get values
+        ra, dec = (statusDict['STATS.RA'], statusDict['STATS.DEC'])
+        self.logger.debug("ra=%s, dec=%s" % (ra, dec))
+
+        # Do other snap stuff...
+        ...
+        ...
+
+</pre>
+There are a couple of things to note about this example.  One is the use
+of the logging facility.  If the run-time logging level is set to
+include debug, then the information about the ra and dec will be logged.
+The second is the use of Exceptions to catch and signal errors.  Note
+that the call to 
+<code>requestOCSstatus()</code> is wrapped in a <code>try/except</code>
+clause, and that we re-raise the error as a <code>CamCommandError</code>
+if we run into trouble.  We could also simply return an error code, or
+an error code and message, as described in the section on <a
+href="#commands">command processing</a>.  Thirdly, note how we create
+a dictionary with the keys of the OCS status items for which we want
+values.  These keys are called <em>status aliases</em>.  There are
+hundreds upon hundreds of them.  Someday hopefully we will have a manual
+to describe them all.  Until then, your best bet is to examine the code
+in the example cam modules or ask a member of the Subaru OCS software
+team or a Subaru support scientist what the aliases are for 
+the status values you need, and what the type of those values are.
+<p>
+The call to <code>self.ocs.requestOCSstatus()</code> fills in the dictionary
+with the values fetched from the OCS.  The values are given the appropriate
+type for the kind of status that they are (float, int, string, etc.).
+In this case, the STATS.RA and STATS.DEC values are defined as string
+values in the OCS, which is why they are returned as such.
+Of course, convenience methods could be defined for fetching different sets
+of commonly needed status items and massaging them as appropriate.
+<p>
+We should point out that in many cases, an attempt to fetch a valid status
+alias that has no currently defined value (or even an invalid status alias)
+may not raise an exception.  Instead, that particular dictionary element will
+have an error value in it, and the whole status call will succeed, because
+the OCS system returns these error values without signaling an overall error
+to the low level interface.  These individual errors may be checked for
+by comparing the values with the following method (compare to above):
+<pre class="code">
+    def snap(self, frameid=None, itime=10.0):
+	"""
+        ...
+        ...
+
+        try:
+            self.ocs.requestOCSstatus(statusDict)
+
+        except CamError, e:
+            # Some kind of error occurred--bail out
+            raise CamCommandError("Failed to obtain status: %s" % str(e))
+
+        results = self.ocs.validateStatus(statusDict)
+        if len(results) > 0:
+            self.logger.error("Values are invalid for: %s" % str(results))
+            for alias in results:
+            ...
+            ...
+        ...
+        ...
+</pre>
+The code could then examine the particular aliases to see if it is
+possible to proceed without them.
+
+<a name="sending_status">
+<h3>Distributing instrument status</h3>
+</a>
+Instruments may want to distribute internal status that may be of interest
+to external parties.  In particular, if the skeleton files or observation
+plan files need to conditionally do something based on the state of the 
+instrument, this is usually handled by examining the most recent status that
+was sent by the instrument.  Like status requests, status distribution is 
+initiated by the instrument side, and not the OCS.  Status may be distributed
+at any time by the instrument, and the OCS system will absorb it, process
+it and make it available through the OCS status system.
+
+<a name="internal_status_initialization">
+<h3>Setting up instrument status tables</h3>
+</a>
+Status distribution is a little more complicated than status requests due
+to the way that status is currently handled in the OCS system
+(by tables that are essentially packed buffers).  This underlying buffer
+interface was unfortunately exposed to the API in the first generation OCS,
+which required instruments to pack their own status buffers, and exposed the
+concept of separate status tables.  This internal representation may change in
+Gen2.  Currently, the interface requires a little bit of boilerplate
+code to set up the linkage between the SIMCAM status values and what is
+expected on the OCS side.
+
+<pre class="code">
+    #######################################
+    # INITIALIZATION
+    #######################################
+
+    def initialize(self, ocsint):
+        super(SIMCAM, self).initialize(ocsint)
+
+        self.logger.info("initialize() called")
+
+        # Grab my handle to the OCS interface.
+        self.ocs = ocsint
+
+        # Get instrument configuration info
+        self.obcpnum = self.ocs.get_obcpnum()
+        self.insconfig = self.ocs.get_INSconfig()
+
+        ...
+        ...
+
+        # Get our 3 letter instrument code and full instrument name
+        self.inscode = self.insconfig.getCodeByNumber(self.obcpnum)
+        self.insname = self.insconfig.getNameByNumber(self.obcpnum)
+        
+        self.statusTblName = ('%3.3sS0001' % self.inscode)
+
+        # Used to format status buffer (item lengths must match definitions
+        # of status aliases on OCS side in .../StatusAlias.pro)
+        statfmt = "%(status)-8.8s,%(mode)-8.8s,%(count)8d;"
+
+        # Register my status.
+        self.mystatus = self.ocs.addStatusTable(self.statusTblName,
+                                                ['status', 'mode', 'count',
+                                                 'last_frame'],
+                                                formatStr=statfmt)
+        
+        ...
+        ...
+</pre>
+This code example shows the <code>initialize</code> method, which is part
+of the standard boilerplate code used in initializing the instrument module
+(see <a href="#initialization">Putting it all together: the SIMCAM
+cam</a>). When called, the parameter <code>ocsint</code> is a handle to
+the OCS interface delegate object. 
+After calling the superclass constructor, the method stores this away in its
+internal state in the variable <code>ocs</code> (you encountered this variable
+in earlier examples, now you see where it came from). 
+<p>
+Using that handle, the initialize method can now invoke delegate calls to 
+the interface to accomplish various things.  First, it finds out it's own
+OBCP number (all Subaru instruments are enumerated), followed by it's code 
+(official 3-letter acronym) and full name (canonical name).
+<p>
+It then constructs a table name (which must exist on the OCS side; the 
+example shows the canonical table name for an instrument), a table
+format (a format string describing 
+how to pack the status values into the buffer) and then makes a call to
+<code>addStatusTable()</code> to create a table, containing the listed 
+status elements, and connecting it to the format string.
+
+<a name="internal_status_usage">
+<h3>Getting and setting internal status</h3>
+</a>
+Beyond the boilerplate code, status values can be set any time, anywhere
+in the module by simply assigning the values to the status table object
+(you can also create multiple table objects) in dictionary style, or using
+any of several convenience methods:
+<pre class="code">
+        ...
+        # dictionary style interface...
+        self.mystatus['status'] = 'ALIVE'
+        self.mystatus['last_frame'] = ''
+
+        # Convenience method, with keyword arguments:
+        self.mystatus.setvals(status='ALIVE', last_frame='')
+        ...
+        # Convenience method, with dictionary:
+	statusDict = {'status': 'ALIVE', 'last_frame': ''}
+        self.mystatus.store(statusDict)
+        ...
+</pre>
+The advantage of using the convenience functions is that it ensures that all
+the listed status items are updated together, and not intermixed if
+another thread is also updating, or reading, status.
+<p>
+Similarly, to read your own (instrument) status, you can either access
+the items dictionary style, or use convenience methods:
+<pre class="code">
+        ...
+        # dictionary style interface...
+        last_frame = self.mystatus['last_frame']
+
+        # Multiple items can be fetched, atomically as a group
+        (status, last_frame) = self.mystatus.fetchList(['status',
+                                                        'last_frame'])
+
+        # Or you can use a dict, to get them as a group
+	statusDict = {'status': None, 'last_frame': None}
+        self.mystatus.fetch(statusDict)
+        ...
+</pre>
+Again, using the convenience methods insures that all the status items are
+fetched as a group, atomically.  The goal here is to abstract as much as
+possible the OCS internal representation of status.  For Gen2, it is
+likely that the old status interface will be retained for some time.
+However, using this abstraction 
+means that only the boilerplate code in <code>initialize</code> will
+likely need to be changed for an all new Gen2 status interface.
+
+<a name="internal_status_usage">
+<h3>Transmitting internal status</h3>
+</a>
+Status is not transmitted (distributed) until an explicit call is made to
+do so.  You might define a method to export the status like so: 
+<pre class="code">
+    def putstatus(self, tableName="ALL"):
+        """Export of our status.
+        """
+        if tableName == 'ALL':
+            res = self.ocs.exportStatus()
+
+        else:
+            res = self.ocs.exportStatusTable(tableName)
+
+	return res
+</pre>
+The <code>exportStatus</code> and <code>exportStatusTable</code>
+delegate methods cause the current status table objects (all objects or
+a specific one, respectively) to be collapsed into buffers according to
+the buffer format string and transmitted to the OCS. 
+The <code>putstatus</code> method then becomes a convenience function for
+the class, that can be called from anywhere to push out status, as well as a
+command that can be invoked from the OCS side to test status transfers.
+<p>
+We are now in a position to modify our snap method to send some status
+that indicates the last frame saved:
+<pre class="code">
+    def snap(self, frameid=None, itime=10.0):
+
+        ...
+        ...
+
+        # Do other snap stuff...
+        ...
+
+        # Assuming command was successful:
+        self.mystatus.setvals(last_frame=frameid)
+        self.putstatus()
+</pre>
+
+<a name="archiving">
+<h3>Archiving files</h3>
+</a>
+When an instrument has a FITS file to archive, it uses the fourth interface
+provided by the framework.  This action is also initiated from the instrument
+side by a <em>file transfer request</em>.  The OCS responds by trying to
+transfer the file (currently using FTP as the protocol) and then responding
+with a success or error to the instrument.  The following convenience function
+illustrates the necessary call: 
+<pre class="code">
+    def archive_data_file(self, frameid, fitspath):
+
+        self.logger.info("Archiving FITS file '%s' to the OCS" % frameid)
+
+        self.ocs.archive_frame(frameid, fitspath)
+
+        # If no exceptions raised, then we end up here.  Update status
+        # to indicate last frame saved
+        self.mystatus.setvals(last_frame=frameid)
+        self.putstatus()
+</pre>
+As you can see the <code>self.ocs.archive_frame()</code> call takes a
+frame id (like 'SUKA00048245') and the path to the FITS file.  The FITS
+file does not need to have the name be the frameid.  The call will
+send a file transfer request to the OCS to ask it to copy the file,
+renaming it on the other end as the frame id.
+<p>
+Note that in order for the OCS to transfer the files, an FTP service
+should be configured and running on the OBCP.  There are several good
+open-source FTP servers such as 'vsftp'.  Pick any one.
+<p>
+We are now in a position to modify our snap method to archive the file:
+<pre class="code">
+    def snap(self, frameid=None, itime=10.0):
+        ...
+        ...
+
+        # Do other snap stuff...
+        fitspath = ...
+
+        # Create fits file...
+        ...
+        self.archive_data_file(frameid, fitspath)
+</pre>
+
+<a name="frames">
+<h3>Frame Ids</h3>
+</a>
+You may be wondering what the frame id (frameid, AKA "frame number") is,
+and how they are generated.  If you look back to the <code>snap</code>
+examples, you can see that the frameid was passed in to that command.
+This is the prototypical way that instruments operate at Subaru: FITS
+files to be archived are only created at the behest of a OCS initiated
+command, and such commands will be designed to take the frame id or
+an initial frame id and a count (in the case of generating multiple
+files).
+<p>
+In the rare case that your instrument needs to autonomously allocate a
+frame id and archive a file, you can use the <code>getFrame()</code>
+method to allocate a frame.  The following example shows how this would
+be done:
+<pre class="code">
+        ...
+        ...
+
+        # get a frame id
+        frameid = self.getFrame('A')
+
+        # Create fits file...
+        fitspath = ...
+        ...
+
+        self.archive_data_file(frameid, fitspath)
+</pre>
+<p>
+'A' frames are raw science frames.  'Q' frames are processed science
+frames.  You should use either 'A' or 'Q' according to the kind of data
+to be archived.
+
+<a name="tasks">
+<h3>Creating concurrent tasks</h3>
+</a>
+For many commands, the control flow would work out something like this:
+<ol>
+  <li> Command is received from the OCS side, calls the developer's method
+       (e.g. snap, with parameters frameid and itime).
+       <p>
+  <li> Instrument requests and receives status from the OCS, if needed.
+       <p>
+  <li> Instrument does the command, possibly generating FITS files or status
+       to be sent in the process.  It uses the respective APIs to send status
+       and or files to be archived.
+       <p>
+  <li> Command finishes, via one of the appropriate ways outlined earlier.
+       <p>
+</ol>
+Sometimes, this is not the flow of control that you want.  For example, you
+may want to have an asyncronous command that validates its parameters and then 
+exits quickly, but which initiates continued processing on the instrument
+side that entails further processing.  This is often done for long-running
+commands.  For example, suppose we want a version of snap() that returns
+immediately, but initiates an exposure operation on the instrument.  Later, 
+the instrument will finish the snap as previously described and send the
+finished fits files and update the status value to
+indicate completion of the command.  Let's see how we might do that.
+<pre class="code">
+import SIMCAM.cams.common as common
+    ...
+    ...
+    def snap_async(self, frameid=None, itime=30.0):
+        """Snap command that returns immediately, then later finishes
+        asynchronously.
+        """
+
+        self.logger.info("long_snap called...")
+
+	if not frameid:
+	    raise CamCommandError("No frame number passed!")
+
+        self.logger.info("Starting concurrent task")
+        t = common.FuncTask(self.snap, (), frameid=frameid,
+                                           itime=itime)
+        t.init_and_start(self)
+</pre>
+This command creates a generic function-calling <em>task</em> that will
+call the method <code>snap</code> with no positional arguments and
+the exact same keyword arguments that it was called with.  Then it 
+initializes and starts the task.  The function will be called by another
+thread in the framework's thread pool, leaving this thread to exit the
+current command.
+
+<p>
+The general problem with this sort of approach is the same as for any 
+asynchronous command: what to do if the command fails.  The initial
+command completed with success, but how do you track the result of the
+asynchronous part?  Typically this would be handled via status value
+notification.  Alternatively, another way that this can be handled is to
+have a 2-phase command.  For 
+example, <code>snap()</code> may initiate an exposure and return immediately.
+A second command (e.g. <code>readout</code>) is sent later by the OCS
+to read out the CCD, create the FITS files and archive them.
+
+<p>
+There are a few common enough tasks that they have been added as a
+module of common task code that can be used by any SIMCAM instrument.
+We'll go over two such examples.
+
+<a name="power_outage">
+<h4>Handling Power Failure</h3>
+</a>
+The Subaru summit is covered by an extensive UPS system, which is
+designed to protect instruments against power variability.  One of the
+requirements of OBCPs is that they monitor the power situation and shut
+down in a timely and orderly fashion when there is a summit power
+outage.  The SIMCAM framework provides a task for monitoring the power
+and calling a method <code>powerOff()</code> if the power ever goes
+down.  Assuming that you implement that method, then it suffices to
+start up the monitoring task when your instrument comes up, and stop it
+when it goes down:
+<pre class="code">
+    def start(self, wait=True):
+        super(MYCAM, self).start()
+        ...
+        ...
+
+        # Start task to monitor summit power
+        t = common.PowerCheckTask(self, self.powerOff, self.powerOn,
+                                  interval=10.0)
+        self.power_task = t
+        t.init_and_start(self)
+        ...
+        ...
+
+    def stop(self, wait=True):
+        super(MYCAM, self).stop()
+        
+        ...
+        ...
+        # Terminate power checking task
+        if self.power_task != None:
+            self.power_task.stop()
+
+        self.power_task = None
+
+        ...
+        ...
+</pre>
+This code illustrates two more methods of interest.  <code>start</code>
+is called after <code>initialize</code>, and should contain whatever
+code you need to "start" your instrument.  <code>stop</code> is called
+when the instrument is to be stopped (but not terminated).  You might
+then write your <code>powerOff</code> method as:
+<pre class="code">
+    def powerOff(self):
+        """
+        This method is called when the summit begins to run on UPS
+        power.  Effect an orderly shutdown.
+        """
+        ...
+        ...
+        
+        self.stop()
+
+        res = os.system('/usr/sbin/shutdown -h 60')
+
+        self.ocs.shutdown(res)
+</pre>
+Here <code>stop()</code> calls your method to stop the things your
+instrument needs to, and <code>shutdown</code> tells the SIMCAM
+framework you wish to terminate the program with an exit code of
+whatever the system <code>shutdown</code> command returned.
+<p>
+<a name="periodic_status">
+<h4>Sending Periodic Status</h3>
+</a>
+Our second example is used to illustrate the sending of periodic
+status.  The Subaru OCS likes to receive periodic status updates from
+the instrument as a kind of heartbeat, to indicate that the instrument
+is up and running.  The exact interval is not that important, and
+instruments use anything from 5 seconds to 5 minutes.  A reasonable
+interval might be 60 seconds.  Assuming you have defined a
+<code>putstatus</code> method as described earlier, you can effect that
+simply by invoking the common task:
+<pre class="code">
+    def start(self, wait=True):
+        ...
+        ...
+        # Start task to periodically send status
+        t = common.IntervalTask(self.putstatus, 60.0)
+        self.status_task = t
+        t.init_and_start(self)
+</pre>
+The <code>IntervalTask</code> simply runs the given function at the
+given intervals.  Stopping it is similar to the power monitoring example.
+
+<a name="initialization">
+<h2>Putting it all together: the MYCAM cam</h2>
+</a>
+Here then, is a "shell" of a new camera <code>MYCAM</code>, from top to
+bottom: 
+<pre class="code">
+#
+# MYCAM.py -- shell for a new instrument MYCAM on the SIMCAM framework
+#
+#[ Eric Jeschke (eric@naoj.org) --
+#  Last edit: Mon Apr 14 17:18:54 HST 2008
+#]
+#
+"""
+This file implements a simulator for a simulated instrument (SIMCAM).
+"""
+import sys, os, time
+import threading
+
+from SIMCAM import BASECAM, CamError, CamCommandError
+import SIMCAM.cams.common as common
+
+
+class MYCAMError(CamCommandError):
+    pass
+
+class MYCAM(BASECAM):
+
+    def __init__(self, logger, env, ev_quit=None):
+
+        super(MYCAM, self).__init__()
+        
+        self.logger = logger
+
+        # Convoluted but sure way of getting this module's directory.
+        # Useful if we need to load some files.
+        self.mydir = os.path.split(sys.modules[__name__].__file__)[0]
+
+        self.ev_quit = ev_quit
+        self.ocs = None
+        self.mystatus = None
+
+
+    #######################################
+    # INITIALIZATION
+    #######################################
+
+    def initialize(self, ocsint):
+        """
+        Initialize this instrument for use, but do not start it.  
+        """
+        super(MYCAM, self).initialize(ocsint)
+
+        self.logger.info('***** INITIALIZE CALLED *****')
+
+        # Grab my handle to the OCS interface.
+        self.ocs = ocsint
+
+        # Get instrument configuration info
+        self.obcpnum = self.ocs.get_obcpnum()
+        self.insconfig = self.ocs.get_INSconfig()
+
+        # Thread pool for autonomous tasks
+        self.threadPool = self.ocs.threadPool
+
+        # Required instance variables for starting tasks:
+        self.tag = 'mycam'
+        self.shares = ['logger', 'ev_quit', 'threadPool']
+        
+        # Used to format status buffer (item lengths must match definitions
+        # of status aliases on the OCS side in .../StatusAlias.pro)
+        statfmt = "%(status)-8.8s,%(mode)-8.8s,%(count)8d;"
+
+        # Get our 3 letter instrument code and full instrument name
+        self.inscode = self.insconfig.getCodeByNumber(self.obcpnum)
+        self.insname = self.insconfig.getNameByNumber(self.obcpnum)
+        
+        self.statusTblName = ('%3.3sS0001' % self.inscode)
+
+        # Register my status table.
+        self.mystatus = self.ocs.addStatusTable(self.statusTblName,
+                                                ['status', 'mode', 'count'],
+                                                formatStr=statfmt)
+        
+        # Establish initial status values
+        self.mystatus.setvals(status='ALIVE', mode='LOCAL', count=0)
+
+        # Handles to periodic tasks
+        self.status_task = None
+        self.power_task = None
+
+        # Lock for handling mutual exclusion
+        self.lock = threading.RLock()
+
+
+    def start(self, wait=True):
+        super(MYCAM, self).start()
+        
+        self.logger.info('***** MYCAM STARTED *****')
+
+        # Start auto-generation of status task
+        t = common.IntervalTask(self.putstatus, 60.0)
+        self.status_task = t
+        t.init_and_start(self)
+
+        # Start task to monitor summit power
+        t = common.PowerCheckTask(self, self.powerOff, self.powerOn,
+                                  interval=10.0)
+        self.power_task = t
+        t.init_and_start(self)
+
+
+    def stop(self, wait=True):
+        super(MYCAM, self).stop()
+        
+        # Terminate status generation task
+        if self.status_task != None:
+            self.status_task.stop()
+
+        self.status_task = None
+
+        # Terminate power check task
+        if self.power_task != None:
+            self.power_task.stop()
+
+        self.power_task = None
+
+        self.logger.info('***** MYCAM STOPPED *****')
+
+
+    #######################################
+    # INTERNAL METHODS
+    #######################################
+
+    # Whatever internal methods you want go here.  You can begin the
+    # name with underscore (_) to make it private
+
+
+    #######################################
+    # INSTRUMENT COMMANDS
+    #######################################
+
+    def sleep(self, sleep_time=0):
+	"""One of the commands that are in the OBCPTEST.cd
+        """
+
+        self.logger.info("\nSleeping for %d sec..." % sleep_time)
+        time.sleep(sleep_time)
+        self.logger.info("Woke up refreshed!")
+
+
+    def obcp_mode(self, motor='OFF', mode=None):
+	"""
+        One of the commands that are in the OBCPTEST.cd
+        """
+        self.lock.acquire()
+        try:
+            mode = self.mystatus['mode']
+            if mode == 'LOCAL':
+                self.mystatus.setvals(mode='SLAVE')
+            else:
+                self.mystatus.setvals(mode='LOCAL')
+
+        finally:
+            self.lock.release()
+
+        self.putstatus()
+
+
+    def fits_file(self, motor='OFF', frame_no=None):
+	"""
+        One of the commands that are in the OBCPTEST.cd.
+        """
+
+        # Create FITS file (pyfits module is really useful here)
+        # fitspath = ...
+
+        self.ocs.archive_frame(frame_no, fitspath)
+
+
+    def putstatus(self, target="ALL"):
+        """
+        Forced export of our status.
+        """
+        self.ocs.exportStatus()
+
+
+    def getstatus(self, target="ALL"):
+        """
+        Forced import of status.
+        """
+        # Create a dictionary, whose keys are status aliases we want
+	statusDict = {'STATS.RA': None, 'STATS.DEC': None}
+
+        try:
+            self.ocs.requestOCSstatus(statusDict)
+
+        except CamError, e:
+            # Some kind of error occurred--bail out
+            raise CamCommandError("Failed to obtain status: %s" % str(e))
+
+        # Successful call, get values
+        ra, dec = (statusDict['STATS.RA'], statusDict['STATS.DEC'])
+        self.logger.debug("ra=%s, dec=%s" % (ra, dec))
+
+
+    def powerOff(self):
+        """
+        This method is called when the summit begins to run on UPS
+        power.  Effect an orderly shutdown.
+        """
+        self.stop()
+
+        try:
+            res = os.system('/usr/sbin/shutdown -h 60')
+
+        except OSError, e:
+            self.logger.error("Error issuing shutdown: %s" % str(e))
+
+        self.ocs.shutdown(res)
+
+
+    def powerOn(self):
+        """
+        This method is called when the summit begins to run on line
+        power again.
+        """
+        pass
+    
+#END MYCAM.py
+</pre>
+
+<a name="running">
+<h2>Running SIMCAM</h2>
+</a>
+There is a simple wrapper program called <code>simcam.py</code> that
+provides the appropriate environment for running a SIMCAM module.  A
+typical invocation of this program to start the instrument might be as
+follows:
+<pre class="code">
+$ ./simcam.py --cam=MYCAM --loglevel=0 --log=mycam.log --stderr \
+--paradir=../SkPara/cmd/MYCAM 
+</pre>
+This says to start up the instrument with the log directed to the file
+"mycam.log", an additional copy of the logging directed to stderr, and
+the logging level set to 0 (log everything).  The PARA files will be
+loaded from the path <code>../SkPara/cmd/MYCAM</code>.
+<p>
+Invoking the program with the <code>--help</code> option will list all
+options and their usage.
+
+<a name="SOSS_considerations">
+<h2>Appendix A: Considerations for SOSS Compatibility Mode</h2>
+</a>
+<b>SOSS Compatibility Mode</b> is a mode of operation of Gen2 that
+maintains a level of backward compatibility for legacy observation
+scripts written for <b>SOSS</b>, Subaru's first OCS.  This section
+describes some considerations for developing observations that are
+compatible with either Gen2 or SOSS.
+
+<h3>Abstract commands</h3>
+Subaru operators and observers prepare observation plans as <em>OPE</em>
+files.  These are essentially command scripts with command line
+invocations--it looks much like a batch script, but without any control
+constructs other than a sequential flow of commands.  Observation
+proceeds by highlighting the commands to be executed in a GUI and
+pressing an execute button.
+These commands are either <em>abstract</em> (high-level) commands
+or <em>device dependent</em> (low level) commands.  Device-dependent
+commands are commands that are issued to one of the subsystems (such as
+those described above): telescope, instrument, etc.  Abstract commands
+are essentially macros which undergo an expansion process known as
+<em>decoding</em>.
+<p>
+Abstract commands are written using a macro template language and the
+templates are stored as <em>skeleton</em> files.  The macro language
+includes some primitive control structures that implement the equivalent
+of iteration, subroutine calls, etc.    
+Ultimately, the processing of skeleton files devolves into sequential or
+concurrent issuance of device dependent commands to one of the
+distributed subsystems.  In this manner, potentially complex 
+patterns of interdependent distributed command execution on the four
+subsystems is realized. 
+
+<h3>Device dependent commands and PARA files</h3>
+Throughout this example, we have shown SIMCAM methods using keyword
+arguments with default values for device-dependent commands invoked by
+the OCS.  In the case of SOSS, there is an additional interface
+specification for device-dependent commands, which is implemented via
+"PARA" (parameter) files.
+Essentially, each device-dependent command that can be issued from the 
+OCS has an interface (PARA) file associated with it.  The file describes
+the command name, parameters with their types, and default values.  The
+format of PARA files is described elsewhere.  We mention them here to
+note only that there is another location where default values to
+paramters can be set.  SIMCAM can load and use these PARA files to
+interpret the values coming from the OCS.
+
+<h3>SOSS status aliases</h3>
+It should be noted that the OCS status aliases referring to instrument
+status can be completely different from the keys used on the SIMCAM side
+(or you can choose to keep them in sync, for clarity, if you wish).
+Such aliases on the OCS side are typically the instrument 3-character
+code as prefix, followed by a dot and then an alphanumeric suffix.  For
+example, our <code>status</code> value from earlier may be known on the
+SOSS side as <code>MNI.STATUS</code> (assuming that "MYI" is the code
+for "My New Instrument").
+
+<br clear="all">
+<hr>
+
+</body>
+</html>

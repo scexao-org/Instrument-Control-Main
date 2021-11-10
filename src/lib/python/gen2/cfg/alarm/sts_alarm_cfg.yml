@@ -1,0 +1,179 @@
+Telescope:
+  NsOpt:
+    Rotator:
+      - !DigitalSV
+        Name:      Rotator NsOpt 2nd Limit +
+        ID:        Melco_0004045
+        Gen2Alias: TSCV.ImgRotredB1!M04
+        STSAlias:  STS.Tel.NsOpt.Rot.2ndLimPos
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmNsOptRotPos2ndLimit.ogg
+      - !DigitalSV
+        Name:      Rotator NsOpt 2nd Limit -
+        ID:        Melco_0004046
+        Gen2Alias: TSCV.ImgRotredB1!M08
+        STSAlias:  STS.Tel.NsOpt.Rot.2ndLimNeg
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmNsOptRotNeg2ndLimit.ogg
+
+  NsIR:
+    Rotator:
+      - !DigitalSV
+        Name:      Rotator NsIR 2nd Limit +
+        ID:        Melco_0004049
+        Gen2Alias: TSCV.ImgRotredB2!M04
+        STSAlias:  STS.Tel.NsIR.Rot.2ndLimPos
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmNsIRRotPos2ndLimit.ogg
+      - !DigitalSV
+        Name:      Rotator NsIR 2nd Limit -
+        ID:        Melco_000404A
+        Gen2Alias: TSCV.ImgRotredB2!M08
+        STSAlias:  STS.Tel.NsIR.Rot.2ndLimNeg
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmNsIRRotNeg2ndLimit.ogg
+
+  Cs:
+    Rotator:
+      - !DigitalSV
+        Name:      Rotator Cs 2nd Limit +
+        ID:        Melco_000401B
+        Gen2Alias: TSCV.InsRotredB1!M04
+        STSAlias:  STS.Tel.Cs.Rot.2ndLimPos
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmCsRotPos2ndLimit.ogg
+      - !DigitalSV
+        Name:      Rotator Cs 2nd Limit -
+        ID:        Melco_000401C
+        Gen2Alias: TSCV.InsRotredB1!M08
+        STSAlias:  STS.Tel.Cs.Rot.2ndLimNeg
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmCsRotNeg2ndLimit.ogg
+
+  POpt:
+    Rotator:
+      - !DigitalSV
+        Name:      P Rotator 2nd Limit +
+        ID:        Melco_003602F
+        Gen2Alias: TSCV.P_RotLim!M04
+        STSAlias:  STS.Tel.POpt.Rot.2ndLimPos
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPRotPos2ndLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P Rotator 2nd Limit -
+        ID:        Melco_0036030
+        Gen2Alias: TSCV.P_RotLim!M08
+        STSAlias:  STS.Tel.POpt.Rot.2ndLimNeg
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPRotNeg2ndLimit.ogg
+            Ignore: Yes
+
+    AG_SH:
+      - !DigitalSV
+        Name:      P AG/SH X 2nd Limit -
+        ID:        Melco_0037029
+        Gen2Alias: TSCV.P_AG_SH_2ndLim!M04
+        STSAlias:  STS.Tel.POpt.AG_SH.X.2ndLimNeg
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SHNegX2ndLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH X 2nd Limit +
+        ID:        Melco_003702A
+        Gen2Alias: TSCV.P_AG_SH_2ndLim!M08
+        STSAlias:  STS.Tel.POpt.AG_SH.X.2ndLimPos
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SHPosX2ndLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Y 2nd Limit -
+        ID:        Melco_003702B
+        Gen2Alias: TSCV.P_AG_SH_2ndLim!M10
+        STSAlias:  STS.Tel.POpt.AG_SH.Y.2ndLimNeg
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SHNegY2ndLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Y 2nd Limit +
+        ID:        Melco_003702C
+        Gen2Alias: TSCV.P_AG_SH_2ndLim!M20
+        STSAlias:  STS.Tel.POpt.AG_SH.Y.2ndLimPos
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SHPosY2ndLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Z 2nd Limit -
+        ID:        Melco_003702D
+        Gen2Alias: TSCV.P_AG_SH_2ndLim!M40
+        STSAlias:  STS.Tel.POpt.AG_SH.Z.2ndLimNeg
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SHNegZ2ndLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Z 2nd Limit +
+        ID:        Melco_003702E
+        Gen2Alias: TSCV.P_AG_SH_2ndLim!M80
+        STSAlias:  STS.Tel.POpt.AG_SH.Z.2ndLimPos
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SHPosZ2ndLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH X DPA Fault
+        ID:        Melco_0037030
+        Gen2Alias: TSCV.P_AG_SH_DPA_Fault!M01
+        STSAlias:  STS.Tel.POpt.AG_SH.X.DPAFault
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SH_X_DPAFault.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Y DPA Fault
+        ID:        Melco_0037031
+        Gen2Alias: TSCV.P_AG_SH_DPA_Fault!M02
+        STSAlias:  STS.Tel.POpt.AG_SH.Y.DPAFault
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SH_Y_DPAFault.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Z DPA Fault
+        ID:        Melco_0037032
+        Gen2Alias: TSCV.P_AG_SH_DPA_Fault!M04
+        STSAlias:  STS.Tel.POpt.AG_SH.Z.DPAFault
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SH_Z_DPAFault.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH DPA2 Fault
+        ID:        Melco_003706D
+        Gen2Alias: TSCV.P_AG_SH_DPA2_Fault!M01
+        STSAlias:  STS.Tel.POpt.AG_SH.DPA2Fault
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SH_DPA2Fault.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH DPA3 Fault
+        ID:        Melco_003706E
+        Gen2Alias: TSCV.P_AG_SH_DPA3_Fault!M02
+        STSAlias:  STS.Tel.POpt.AG_SH.DPA3Fault
+        Alarm:
+          Critical: !DigitalAlarm
+            Audio:  ogg/en/AlarmPAG_SH_DPA3Fault.ogg
+            Ignore: Yes

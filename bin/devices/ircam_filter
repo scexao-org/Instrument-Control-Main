@@ -21,7 +21,6 @@ import numpy as np
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from thorlabswheel import thorlabswheel
-from xaosim.scexao_shmlib import shm
 import time
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
@@ -33,20 +32,5 @@ whids = ["usb-FTDI_FT232R_USB_UART_A600crjy-if00-port0"]
 description = "Filter wheel for Chuck and Saphira"
 
 # GENERIC CODE
-mydata = np.zeros((1,1)).astype(np.float32)
-
-if not os.path.isfile("/tmp/"+devname+".im.shm"):
-    os.system("creashmim %s 1 1" % (devname,))
-    time.sleep(0.5)
-
-d = locals()
-exec("whshm = shm('/tmp/%s.im.shm', verbose=False)" % (devname,), globals(), d)
-whshm = d['whshm']
-
 args = sys.argv[1:]
 thorlabswheel(devname, whids, args=args, description=description, color_st=True)
-
-if (args[0].isdigit() and (1 <= int(args[0]) <= 6)):
-    mydata[0,0] = float(args[0])
-    whshm.set_data(mydata)
-whshm.close()

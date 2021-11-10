@@ -1,0 +1,290 @@
+\documentclass[11pt]{report}
+
+% sensible specification of margins, etc.
+\usepackage[paperwidth=8.5in,paperheight=11in]{geometry}
+\geometry{inner=1.0in, outer=1.5in, top=1.0in, bottom=0.5in,
+  includefoot}
+\geometry{twoside}
+
+% for displaying graphics
+\usepackage[]{graphicx}
+
+% use modern and attractive fonts
+\usepackage{fontspec}
+\setmainfont[Mapping=tex-text]{Times New Roman}
+\setsansfont[Mapping=tex-text]{Arial}
+%\setmonofont[Scale=0.85]{Courier New}
+\setmonofont[]{Courier New}
+%% \setmainfont[Mapping=tex-text]{Bitstream Vera Serif}
+%% \setsansfont[Mapping=tex-text]{Bitstream Vera Sans}
+%% \setmonofont[Scale=0.85]{Bitstream Vera Sans Mono}
+
+% Save space in headings
+%% \usepackage[small,compact]{titlesec}
+%% \titlespacing{\section}{0pt}{*0}{*0}
+%% \titlespacing{\subsection}{0pt}{*0}{*0}
+%% \titlespacing{\subsubsection}{0pt}{*0}{*0}
+
+% provides itemize* environment
+\usepackage{mdwlist}
+
+\usepackage{verbatim}
+\newenvironment{myverbatim}
+  {\setlength{\parskip}{0pt}\verbatim}
+  {\endverbatim}
+
+%\raggedright
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{1em plus0.5em minus0.5em}
+
+\setlength{\marginparsep}{0.35in}
+\setlength{\marginparwidth}{1.5in}
+
+\title{Subaru Remote Objects Middleware} 
+\author{Eric Jeschke\\
+{\tt eric@naoj.org}\\
+\\
+Observation Control Software Group\\
+Subaru Telescope\\
+National Astronomical Observatory of Japan}
+
+\pagestyle{plain}    
+
+\begin{document} 
+\maketitle 
+
+\begin{abstract}
+This is a reference manual for software developers using the Subaru
+Remote Objects middleware (hereafter referred to as ``SRO'').  SRO
+provides a fairly simple to use infrastructure based on top of the XML-RPC
+standard.  While XML-RPC provides a robust dynamic remote procedure call
+mechanism, it does not specify some common upper layer services that are
+used by many middleware systems, such as a object name service, service
+failover, publish/subscribe system, etc.  SRO attempts to fill in these
+services as simply, inobtrusively and transparently as possible.
+\end{abstract}
+
+\tableofcontents
+\setcounter{tocdepth}{3}
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\chapter{Introduction}
+This is a reference manual for software developers using the Subaru
+Remote Objects Middleware (hereafter referred to as ``SRO'').  SRO
+provides a fairly simple to use middleware based on top of the XML-RPC
+standard.  While XML-RPC provides a robust dynamic remote procedure call
+mechanism, it does not specify some common upper layer services that are
+used by many middleware systems, such as a object name service, service
+failover, publish/subscribe system, etc.  SRO attempts to fill in these
+services as simply, inobtrusively and transparently as possible.
+SRO provides:
+\begin{itemize}
+\item a simplified API for creating remote object services and
+  remote object proxies to those services;
+\item provision for automatic failover--a proxy can redirect
+  automatically to another instance of a service in the case of failure;
+\item a simple name service based on a flat namespace of strings, that
+  allows host independent location of services (e.g. on a cluster);
+\item a simple publish-subscribe (hereafter referred to as ``pub/sub'')
+  service based on the idea of channels that is very scalable, and
+  allows things like publication or subscription to an aggregation of
+  channels. 
+\item a simple ``manager'' service for starting up and managing
+  processes on a group of hosts.
+\end{itemize}
+
+\section{History of SRO}
+SRO was initially developed as a way to abstract a middleware system.
+The Subaru Telescope Observation System developers knew they needed to
+use a middleware system, but spent a long time trying to figure out
+which middleware system to use: CORBA, ICE, SOAP, etc.  All of
+them seemed to have serious drawbacks.
+
+A decision of which middleware to use is a significant one and
+practically speaking paralyzes development until the choice is made,
+because it is the foundation of everything that will be built on top.
+In an effort to break the paralysis, one developer decided to try and
+write a wrapper to encapsulate the middleware in a way that aligned with
+the ``ideal'' remote object service--in essence, to write the ideal
+remote objects API.  The attributes of such a system might include: 
+\begin{itemize}
+\item it should be an ``object'' based system, exporting the methods of
+  objects residing on local or remote nodes;
+\item it should be as transparent as possible, compared to using
+  ``local'' objects--it should support a wide range of useful data types
+  without special marshalling calls;
+\item it should be cross-platform, allowing services to interoperate
+  between languages and operating systems;
+\item it should support a name service that allows remote objects to
+  live anywhere on the network, and allow one to look up an object or
+  service by name;
+\item it should be as uninvasive as possible, as far as boilerplate code
+  addition to other code using it (this extends to writing method
+  signature stubs--python is a dynamically typed language);
+\item failure handling is important--it should have a way to ``fail
+  over'' to alternate objects/services without any extra code.
+\end{itemize}
+
+Since XML-RPC was available in the standard Python installation it
+was chosen as the transport mechanism to actually implement the method
+calls behind a proxy/service object encapsulation.  What the developers
+found was that the result was a very effective system that matched the
+above attributes.  After many years of use the XML-RPC base has not been
+replaced with another transport mechanism.
+
+Due to its XML-RPC underpinnings, SRO has some significant limits on
+performance compared to ``binary on the wire'' encodings, but for many
+uses it is surprisingly fast and effective.  The use of http as the
+underlying transport means that there are some significant advantages as
+well.  For example, it is very easy to tunnel through a firewall, to
+encrypt (using https) or to use authentication (via simple http
+authentication).  It is also completely dynamic, requiring no method
+stub files to be generated for most dynamic languages.  
+
+\chapter{SRO Basics}
+SRO was implemented in the Python programming language.  Because it uses
+XML-RPC as its transport layer, it is effectively cross-platform to any
+other language that can speak XML-RPC.  However, the simple API to
+creating and using SRO is most fully realized in Python, and other
+language bindings are few and minimally supported at the current time.
+Please see Appendix \ref{app:otherlang} for details.  These examples
+will all be shown in Python.
+
+\section{Initializing SRO}
+Every middleware has a certain amount of boilerplate code that must be
+set up in order to use its features.  SRO tries to make this as minimal
+as possible.  For both client and server side use, the simple expression
+\begin{verbatim}
+import remoteObjects as ro
+...
+ro.init()
+\end{verbatim}
+is sufficient in most cases to initialize the program to subsequently
+create remote object servers and proxies.  
+In the case where the host is not running the SRO name service daemon
+then it is usually necessary to specify the name of a host or hosts
+which are running the name service, so that services can be advertised
+or looked up.  This can be done by specifying the name of the host as a
+parameter to {\tt ro.init()}:
+\begin{verbatim}
+import remoteObjects as ro
+...
+rohosts = ['kiwi', 'banana']
+
+ro.init(rohosts)
+\end{verbatim}
+alternatively, if no parameter is given and the environment variable
+{\tt RO\_HOSTS} (a comma separated list of hosts) is set, it will be
+used.
+The order of specification is:
+\begin{itemize}
+\item if a list of hosts is given, it will be used;
+\item if the environment variable {\tt RO\_HOSTS} is set if will be used;
+\item if there is a name server running on the local host it will be
+  consulted for the host list;
+\item otherwise the node is considered to be an isolated node with no
+  functioning name service.
+\end{itemize}
+
+The SRO interface only needs to be initialized once prior to any
+subsequent calls that attempt to use it.
+
+\section{Creating a SRO Proxy Object}
+Creating proxies to SRO services is very simple.  Assuming that the
+above code preamble has been executed already, the following code
+fragment will create a proxy object to a remote service:
+\begin{verbatim}
+catalog = ro.remoteObjectProxy('catalog')
+\end{verbatim}
+As you can see, services are specified by simple strings in a flat
+namespace.  The client does not know on which host(s) the service is running
+or what port is being used for communication.
+
+This call would set up a proxy object to the ``catalog'' service.
+With some significant caveats, the proxy can be treated more or less like a
+local object.  In the usual case, method calls may be used with it.
+For example, the following call might return a list of tuples of
+items matching the particular {\tt part\_no}:
+\begin{verbatim}
+results = catalog.search(part_no)
+\end{verbatim}
+There are important differences between a local python object and a
+remote proxy object that are due to the obvious fact that the remote
+object is running in a separate process, possibly on a different host. 
+We can succinctly summarize these differences as follows:
+\begin{itemize}
+\item Direct attribute access is generally not supported, except to
+  ``virtual methods'' provided by the service.  In other words, the
+  remote interface is encapsulated via method calls (this is almost
+  always a ``good thing'' when it comes to remote services).
+\item Only certain data types may be passed as parameters to the remote
+  methods.  Fortunately these data types include most of the rich native
+  data types that Python supports.  These types are summarized in
+  Appendix \ref{app:datatypes}. 
+\item Parameter passing is by copy, not by reference, so that it does
+  not make sense to pass mutable structures and expect that any changes
+  to the structure on the remote side will be reflected in the local
+  side.  For example, we cannot pass a dictionary as a parameter and
+  expect additions to it to be reflected on our copy.  (We can pass a
+  dictionary as a parameter and receive a dictionary as part of a method
+  return value.)
+\item Keyword parameters cannot be passed by keyword, only by position.
+  This is again posed by the limitation of the underlying transport
+  mechanism. 
+\end{itemize}
+
+\section{Creating a SRO Server Object}
+
+\chapter{Implementing an SRO System}
+In keeping with its minimalist philosophy, the only thing really
+necessary to creating an SRO system is to run the name service daemon
+somewhere and point all of the hosts at it using the {\tt ro.init(host)}
+initializer.  The name service daemon comes with the SRO package and can
+be run as in the following example:
+\begin{verbatim}
+$ remoteObjectNameServer.py --loglevel=info --log=ro_names.log
+\end{verbatim}
+use the {\tt --help} option to see all of the possible parameters.
+
+This scenario will work perfectly fine for most use cases.  However, SRO
+has some useful failover capabilites built into it, including the
+ability to handle failover of the daemon services themselves.  If you
+are implementing services on a high availability cluster, for example, a
+practical method is to run the name service daemon on each node of the
+cluster.  In that case you can run the daemon on each node.
+In this sort of scenario the SRO name service daemons use the SRO
+pub/sub system to communicate between themselves about the services that
+each knows about.  The pub/sub daemon is run as follows
+
+\begin{verbatim}
+$ PubSub.py --loglevel=info --log=ro_pubsub.log
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix    %>>>> this command starts appendixes
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\label{app:datatypes}
+\chapter{Data types that can be used with SRO}
+SRO builds upon XML-RPC as a transport mechanism and only provides a
+very thin layer on top.  Thus only XML-RPC compliant data types may be
+marshalled between a proxy and the service providing it.  Fortunately
+this is a rich data set that includes many of the most useful types.
+The following table attempts to summarize the list (see XML-RPC
+documentation for more details).
+
+\label{app:advancedtopics}
+\chapter{SRO Advanced Topics}
+
+\section{Remote Object Clients}
+In SRO terminology a \emph{remote object client} is the entity upon
+which the remote object proxy is built.  A remote object client is a
+proxy object that is set up by providing an actual hostname and port 
+
+\label{app:otherlang}
+\chapter{Using SRO with Languages other than Python}
+
+\end{document} 

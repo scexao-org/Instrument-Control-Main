@@ -1,0 +1,31 @@
+*** NEW SET OF FOCUSINFO VALUES IMGROTMODE ***      2006-06-27
+For testing new ImgRot Zenith value for TSCV.ImgRotType
+
+Ndx   FOCUSINFO  FOCUS   Rotator/ADC    ROTATOR   ImgRotMode  ImgRotType
+
+1-5   40000000   Ns_Opt   ImR(B)        ROT_IMRB    0x40        0x12    ImgRot Zenith (Blue)
+6-10  80000000   Ns_Opt   ImR(B)+ADC    ROT_IMRB    0x01        0x10    ImgRot Link (OnWay-Blue)
+11-12 00000008   Ns_IR    (none)        ROT_OUT     0x01                ImgRot Out
+13-17 00010000   Ns_Opt   ImR(R)        ROT_IMRR    0x02        0x0C    ImgRot Free (Red)          free->yellow background
+18-20 00020000   Ns_Opt   ImR(R)+ADC    ROT_IMRR    0x40        0x0C    ImgRot Zenith (Red)
+
+21-25 00400000   Ns_Opt   ImR(B)        ROT_IMRB    0x01        0x12    ImgRot Link (Blue)
+26-30 00800000   Ns_Opt   ImR(B)+ADC    ROT_IMRB    0x02        0x10    ImgRot Free (OnWay-Blue)   free->yellow background
+31-32 00000008   Ns_IR    (none)        ROT_OUT     0x01                ImgRot Out
+33-37 00000100   Ns_Opt   ImR(R)        ROT_IMRR    0x01        0x04    ImgRot Link (OnWay-Red)
+38-40 00000200   Ns_Opt   ImR(R)+ADC    ROT_IMRR    0x40        0x04    ImgRot Zenith (OnWay-Red)
+
+Ndx   FOCUSINFO  FOCUS   Rotator/ADC    ROTATOR   ImgRotMode
+
+41-45 00008000   Ns_Opt   ImR(B)        ROT_IMRB    0x02        0x0C    ImgRot Free (Red?)          yellow background
+46-50 00000001   Ns_Opt   ImR(B)+ADC    ROT_IMRB    0x40        0x04    ImgRot Zenith (OnWay-Red)
+51-52 00000008   Ns_IR    (none)        ROT_OUT     0x01                ImgRot Out
+53-57 00000002   Ns_Opt   ImR(R)        ROT_IMRR    0x01        0x12    ImgRot Link (Blue?)         yellow background
+58-60 00000004   Ns_Opt   ImR(R)+ADC    ROT_IMRR    0x02        0x10    ImgRot Free (OnWay-Blue)   free->yellow background
+
+61-65 00080000   Ns_IR    ImR           ROT_IMR     0x40                ImgRot Zenith
+66-70 00000800   Ns_IR    ImR           ROT_IMR     0x02                ImgRot Free                free->yellow background
+71-72 00000008   Ns_IR    (none)        ROT_OUT     0x01                ImgRot Out
+73-77 00000010   Ns_IR    ImR           ROT_IMR     0x01                ImgRot Link
+78-80 00000010   Ns_IR    ImR           ROT_IMR     0x02                ImgRot Free                free->yellow background
+

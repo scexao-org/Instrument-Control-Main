@@ -1,0 +1,48 @@
+ToDo:
+
+*********************************************
+***    Trivia/Rightness
+*********************************************
+Status Graphs register desired status for Gen2 efficiency
+    query all at once
+        
+*********************************************
+***    Fundamental
+*********************************************
+Duplicate EnvMonitor functionality:
+    (context?) menu for wind monitor
+    how about seeing monitor?
+Theming - Colors/Fonts/Sizes/Line Weights settable
+    graph.theme.dataview.background
+    graph.theme.font
+    graph.theme.ruler.font
+    graph.theme.data.1
+Robust file saving
+Peer data synchronization service
+    to demo, autofill back data on empty startup
+
+
+*********************************************
+***    Future
+*********************************************
+TimeRuler can reveal time range
+Divide program into asynchronous job queues
+    Jobs for long running data aquisition & saving
+    every display should be asynchronous
+Feature to obscure anomalous data
+    move it to a secondary list & remerge timevalue data on save or slot invocation
+    pull selected data via context menu item
+consider the double buffering from
+    http://www.commandprompt.com/community/pyqt/x2765
+
+Remove explicit indexes from CTVData buckets, calculate via position
+
+***************************************
+*** sammy qwidget refactor
+***************************************
+rulers display marks per dpi
+
+
+****************************************
+*** thinking
+****************************************

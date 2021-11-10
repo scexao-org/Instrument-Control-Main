@@ -1,0 +1,1394 @@
+#
+# tel_alarm_cfg.yml - This configuration file contains status
+#                     variables and alarms for telescope-related
+#                     values, e.g., azimuth/elevation, rotator,
+#                     autoguider, ADC, etc.
+#
+#[ Russell Kackley (rkackley@naoj.org) --
+#  Last edit: Tue Feb 12 15:21:05 HST 2013
+#]
+#
+
+Telescope:
+  Mount:
+    # Alarms for telescope azimuth commanded angle limits
+    - !AnalogSV
+      Name:      AZ CMD Angle ANS
+      ID:        Melco_0002003
+      Gen2Alias: TSCS.AZ_CMD
+      Units:     deg
+      Alarm: 
+        WarningLo: !AnalogAlarm
+          Threshold:    -260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold:    -269.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi: !AnalogAlarm
+          Threshold:     260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:     269.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for telescope azimuth real angle limits
+    - !AnalogSV
+      Name:      AZ(Instrumental Error Correction)
+      ID:        Melco_00A11BF
+      Gen2Alias: TSCS.AZ
+      Units:     deg
+      Alarm: 
+        WarningLo: !AnalogAlarm
+          Threshold:    -260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold:    -269.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi: !AnalogAlarm
+          Threshold:     260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:     269.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Audio alarm for azimuth commanded or real angle exceeding limit
+    - !AnalogSV
+      ID:        AzAngleLimit
+      Name:      Azimuth Angle Limit
+      Units:     deg
+      Module:    AngleLimit
+      Class:     AzAngleLimit
+      Alarm: 
+        WarningLo:  !DerivedAlarm
+          Audio:     WarnAzLimitH50Vf.au
+          Method:    azAngleLimitWarningLo
+          MinNotifyInterval: 180
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmAzLimitH50Vf.au
+          Method:    azAngleLimitCriticalLo
+          MinNotifyInterval:  60
+        WarningHi:  !DerivedAlarm
+          Audio:     WarnAzLimitH50Vf.au
+          Method:    azAngleLimitWarningHi
+          MinNotifyInterval: 180
+        CriticalHi: !DerivedAlarm
+          Audio:     AlarmAzLimitH50Vf.au
+          Method:    azAngleLimitCriticalHi
+          MinNotifyInterval:  60
+
+    # Status variable so that we can tell if telescope is at the
+    # "stowed" location
+    - !AnalogSV
+      Name:      EL(Instrumental Error Correction)
+      ID:        Melco_00A11C0
+      Gen2Alias: TSCS.EL
+      Units:     deg
+
+    # Alarms for azimuth and elevation "time to limit" close to zero
+    - !AnalogSV
+      Name:      Time Limit(Az)
+      ID:        Melco_00A13D3
+      Gen2Alias: TSCL.LIMIT_AZ
+      Units:     minute
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: 30
+          MinNotifyInterval: 300
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold:  1
+          MinNotifyInterval:  10
+          Visible:   No
+    - !AnalogSV
+      Name:      Time Limit(EL Low)
+      ID:        Melco_00A13D1
+      Gen2Alias: TSCL.LIMIT_EL_LOW
+      Units:     minute
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: 30
+          MinNotifyInterval: 300
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold:  1
+          MinNotifyInterval:  10
+          Visible:   No
+    - !AnalogSV
+      Name:      Time Limit(EL Up)
+      ID:        Melco_00A13D2
+      Gen2Alias: TSCL.LIMIT_EL_HIGH
+      Units:     minute
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: 30
+          MinNotifyInterval: 300
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold:  1
+          MinNotifyInterval:  10
+          Visible:   No
+
+    # Audio alarms for azimuth and elevation "time to limit" close to
+    # zero
+    - !AnalogSV
+      ID:     TimeLimitAz
+      Name:   Time Limit(Az)
+      Module: AngleLimitTime
+      Alarm: 
+        WarningLo: !DerivedAlarm
+          Audio:     WarnAzLimitTimeH50Vf.au
+          Method:    azLimitTimeWarningLo
+          MinNotifyInterval: 300
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmAzLimitTimeH250Vf.au
+          Method:    azLimitTimeCriticalLo
+          MinNotifyInterval:  10
+    - !AnalogSV
+      ID:     TimeLimitELLow
+      Name:   Time Limit(EL Low)
+      Module: AngleLimitTime
+      Alarm: 
+        WarningLo: !DerivedAlarm
+          Audio:     WarnElLimitTimeH50Vf.au
+          Method:    elLowLimitTimeWarningLo
+          MinNotifyInterval: 300
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmElLimitTimeH50Vf.au
+          Method:    elLowLimitTimeCriticalLo
+          MinNotifyInterval:  10
+    - !AnalogSV
+      ID:     TimeLimitELUp
+      Name:   Time Limit(EL Up)
+      Module: AngleLimitTime
+      Alarm: 
+        WarningLo: !DerivedAlarm
+          Audio:     WarnElLimitTimeH50Vf.au
+          Method:    elHighLimitTimeWarningLo
+          MinNotifyInterval: 300
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmElLimitTimeH50Vf.au
+          Method:    elHighLimitTimeCriticalLo
+          MinNotifyInterval:  10
+
+  AGProbe:
+    # Alarms for Nasmyth AG Probe commanded angle limits
+    - !AnalogSV
+      Name:      AG/SH CMD Angle ANS
+      ID:        Melco_000D004
+      Gen2Alias: TSCL.AG_THETA_CMD
+      FocalStation: NS
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -269.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  269.5   
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Cassegrain AG Probe commanded angle limits
+    - !AnalogSV
+      Name:      AG/SH CMD Angle ANS
+      ID:        Melco_000D004
+      Gen2Alias: TSCL.AG_THETA_CMD
+      FocalStation: CS
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -184.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  184.5   
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Nasmyth AG Probe real angle limits
+    - !AnalogSV
+      Name:      AG/SH Real Angle
+      ID:        Melco_000D002
+      Gen2Alias: TSCL.AG_THETA
+      FocalStation: NS
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -269.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  269.5   
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Cassegrain AG Probe real angle limits
+    - !AnalogSV
+      Name:      AG/SH Real Angle
+      ID:        Melco_000D002
+      Gen2Alias: TSCL.AG_THETA
+      FocalStation: CS
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -184.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  184.5   
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Audio alarm for Nasmyth AG Probe commanded or real angle
+    # exceeding limit
+    - !AnalogSV
+      Name:      AG Probe Angle Limit
+      ID:        AGProbeAngleLimit
+      FocalStation: NS
+      Units:     deg
+      Module:    AngleLimit
+      Class:     AGProbeAngleLimitNs
+      Alarm: 
+        WarningLo:  !DerivedAlarm
+          Audio:     WarnAgLimitH50Vf.au
+          Method:    agProbeAngleLimitWarningLo
+          MinNotifyInterval: 180
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmAgLimitH50Vf.au
+          Method:    agProbeAngleLimitCriticalLo
+          MinNotifyInterval:  60
+        WarningHi:  !DerivedAlarm
+          Audio:     WarnAgLimitH50Vf.au
+          Method:    agProbeAngleLimitWarningHi
+          MinNotifyInterval: 180
+        CriticalHi: !DerivedAlarm
+          Audio:     AlarmAgLimitH50Vf.au
+          Method:    agProbeAngleLimitCriticalHi
+          MinNotifyInterval:  60
+
+    # Audio alarm for Nasmyth AG Probe commanded or real angle
+    # exceeding limit
+    - !AnalogSV
+      Name:      AG Probe Angle Limit
+      ID:        AGProbeAngleLimit
+      FocalStation: CS
+      Units:     deg
+      Module:    AngleLimit
+      Class:     AGProbeAngleLimitCs
+      Alarm: 
+        WarningLo:  !DerivedAlarm
+          Audio:     WarnAgLimitH50Vf.au
+          Method:    agProbeAngleLimitWarningLo
+          MinNotifyInterval: 180
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmAgLimitH50Vf.au
+          Method:    agProbeAngleLimitCriticalLo
+          MinNotifyInterval:  60
+        WarningHi:  !DerivedAlarm
+          Audio:     WarnAgLimitH50Vf.au
+          Method:    agProbeAngleLimitWarningHi
+          MinNotifyInterval: 180
+        CriticalHi: !DerivedAlarm
+          Audio:     AlarmAgLimitH50Vf.au
+          Method:    agProbeAngleLimitCriticalHi
+          MinNotifyInterval:  60
+
+  ADC:
+    # Status variables so we can determine if ADC is in or out
+    - !DigitalSV
+      ID:        Melco_0004122
+      Name:      ADC In
+      Gen2Alias: TSCV.ADCInOut!M08
+    - !DigitalSV
+      ID:        Melco_0004123
+      Name:      ADC Out
+      Gen2Alias: TSCV.ADCInOut!M10
+
+    # Status variables so we can determine if Prime Focus ADC drive is
+    # on or off
+    - !DigitalSV
+      ID:        Melco_003610B
+      Name:      P ADC Drive On
+      Gen2Alias: TSCV.ADCONOFF_PF!M01
+    - !DigitalSV
+      ID:        Melco_003610C
+      Name:      P ADC Drive Off
+      Gen2Alias: TSCV.ADCONOFF_PF!M02
+
+    # Status variables so we can determine if Prime Focus ADC is
+    # synched or not
+    - !DigitalSV
+      ID:        Melco_00A1244
+      Name:      P ADC SYNC Mode
+      Gen2Alias: TSCV.ADCMODE_PF!M40
+    - !DigitalSV
+      ID:        Melco_00A1245
+      Name:      P ADC ASYNC Mode
+      Gen2Alias: TSCV.ADCMODE_PF!M80
+
+    # Status variables so we can determine if ADC drive is on or off
+    - !DigitalSV
+      ID:        Melco_000410B
+      Name:      ADC Drive On
+      Gen2Alias: TSCV.ADCOnOff!M01
+    - !DigitalSV
+      ID:        Melco_000410C
+      Name:      ADC Drive Off
+      Gen2Alias: TSCV.ADCOnOff!M02
+
+    # Status variables so we can determine if ADC drive is synched or
+    # not
+    - !DigitalSV
+      ID:        Melco_00A102E
+      Name:      ADC-EL SYNC Mode
+      Gen2Alias: TSCV.ADCMode!M04
+    - !DigitalSV
+      ID:        Melco_00A102F
+      Name:      ADC-EL ASYNC Mode
+      Gen2Alias: TSCV.ADCMode!M08
+
+
+    # Audio alarm for Prime Focus ADC in free mode
+    - !DigitalSV
+      ID:     PrimeADCFreeMode
+      Name:   Prime Focus ADC in Free Mode
+      Module: ADCFree
+      Class:  ADCFreePF
+      Alarm:
+        Warning: !DerivedAlarm
+          Audio:  WarnAdcPfFreeH50Vf.au
+          Method: adcFree
+          MinNotifyInterval: 600
+
+    # Audio alarm for Nasmyth ADC in free mode
+    - !DigitalSV
+      ID:     NsADCFreeMode
+      Name:   Ns Focus ADC in Free Mode
+      Module: ADCFree
+      Class:  ADCFreeNs
+      Alarm:
+        Warning: !DerivedAlarm
+          Audio:  WarnAdcNsFreeH50Vf.au
+          Method: adcFree
+          MinNotifyInterval: 600
+
+    # Audio alarm for Cassegrain ADC in free mode
+    - !DigitalSV
+      ID:     CsADCFreeMode
+      Name:   Cs Focus ADC in Free Mode
+      Module: ADCFree
+      Class:  ADCFreeCs
+      Alarm:
+        Warning: !DerivedAlarm
+          Audio:  WarnAdcCsFreeH50Vf.au
+          Method: adcFree
+          MinNotifyInterval: 600
+
+  Rotator:
+    # Alarm for image rotator "time to limit" close to zero
+    - !AnalogSV
+      Name:      Time Limit(InR/ImR/Probe)
+      ID:        Melco_00A13D4
+      Gen2Alias: TSCL.LIMIT_ROT
+      Units:     minute
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: 30
+          MinNotifyInterval: 300
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold:  1
+          MinNotifyInterval:  10
+          Visible:   No
+
+    # Audio alarm for image rotator "time to limit" close to zero
+    - !AnalogSV
+      Name:   Time Limit(InR/ImR/Probe)
+      ID:     TimeLimitInRImRProbe
+      Units:  minute
+      Module: AngleLimitTime
+      Alarm: 
+        WarningLo: !DerivedAlarm
+          Audio:     WarnRotLimitTimeH50Vf.au
+          Method:    rotLimitTimeWarningLo
+          MinNotifyInterval: 300
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmRotLimitTimeH50Vf.au
+          Method:    rotLimitTimeCriticalLo
+          MinNotifyInterval:  10
+
+    # Alarms for Nasmyth image rotator commanded angle limits
+    - !AnalogSV
+      Name:      Rotator CMD ANS
+      ID:        Melco_0004002
+      Gen2Alias: TSCS.IMGROTCMD
+      FocalStation: NS
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -179.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  179.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Cassegrain image rotator commanded angle limits
+    - !AnalogSV
+      Name:      Rotator CMD ANS
+      ID:        Melco_0004002
+      Gen2Alias: TSCS.INSROTCMD
+      FocalStation: CS
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -269.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  269.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Nasmyth image rotator real angle limits
+    - !AnalogSV
+      Name:      Rotator Real Angle
+      ID:        Melco_0004001
+      Gen2Alias: TSCS.INSROTPOS
+      FocalStation: NS
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -179.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  179.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Cassegrain image rotator real angle limits
+    - !AnalogSV
+      Name:      Rotator Real Angle
+      ID:        Melco_0004001
+      Gen2Alias: TSCS.INSROTPOS
+      FocalStation: CS
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -269.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  260
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  269.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Audio alarm for Nasmyth image rotator commanded or real angle
+    # exceeding limit
+    - !AnalogSV
+      Name:      Rotator Angle Limit
+      ID:        RotAngleLimit
+      FocalStation: NS
+      Units:     deg
+      Module:    AngleLimit
+      Class:     RotAngleLimitNs
+      Alarm: 
+        WarningLo:  !DerivedAlarm
+          Audio:     WarnRotLimitH50Vf.au
+          Method:    rotAngleLimitWarningLo
+          MinNotifyInterval: 180
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmRotLimitH50Vf.au
+          Method:    rotAngleLimitCriticalLo
+          MinNotifyInterval:  60
+        WarningHi:  !DerivedAlarm
+          Audio:     WarnRotLimitH50Vf.au
+          Method:    rotAngleLimitWarningHi
+          MinNotifyInterval: 180
+        CriticalHi: !DerivedAlarm
+          Audio:     AlarmRotLimitH50Vf.au
+          Method:    rotAngleLimitCriticalHi
+          MinNotifyInterval:  60
+
+    # Audio alarm for Cassegrain image rotator commanded or real angle
+    # exceeding limit
+    - !AnalogSV
+      Name:      Rotator Angle Limit
+      ID:        RotAngleLimit
+      FocalStation: CS
+      Units:     deg
+      Module:    AngleLimit
+      Class:     RotAngleLimitCs
+      Alarm: 
+        WarningLo:  !DerivedAlarm
+          Audio:     WarnRotLimitH50Vf.au
+          Method:    rotAngleLimitWarningLo
+          MinNotifyInterval: 180
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmRotLimitH50Vf.au
+          Method:    rotAngleLimitCriticalLo
+          MinNotifyInterval:  60
+        WarningHi:  !DerivedAlarm
+          Audio:     WarnRotLimitH50Vf.au
+          Method:    rotAngleLimitWarningHi
+          MinNotifyInterval: 180
+        CriticalHi: !DerivedAlarm
+          Audio:     AlarmRotLimitH50Vf.au
+          Method:    rotAngleLimitCriticalHi
+          MinNotifyInterval:  60
+
+    # Alarms for Prime Focus (P_IR) image rotator commanded angle
+    # limits
+    - !AnalogSV
+      Name:      P Rotator CMD ANS
+      ID:        Melco_0036002
+      Gen2Alias: TSCS.INSROTCMD_PF
+      FocalStation: P_IR
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -179.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  179.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Prime Focus (P_OPT) image rotator commanded angle
+    # limits
+    - !AnalogSV
+      Name:      P Rotator CMD ANS
+      ID:        Melco_0036002
+      Gen2Alias: TSCS.INSROTCMD_PF
+      FocalStation: P_OPT
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -240
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -249.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  240
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  249.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Prime Focus (P_IR) image rotator real angle limits
+    - !AnalogSV
+      Name:      P Rotator Real Angle
+      ID:        Melco_0036001
+      Gen2Alias: TSCS.INSROTPOS_PF
+      FocalStation: P_IR
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -179.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  175
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  179.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Alarms for Prime Focus (P_OPT) image rotator real angle limits
+    - !AnalogSV
+      Name:      P Rotator Real Angle
+      ID:        Melco_0036001
+      Gen2Alias: TSCS.INSROTPOS_PF
+      FocalStation: P_OPT
+      Units:     deg
+      Alarm: 
+        WarningLo:  !AnalogAlarm
+          Threshold: -240
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalLo: !AnalogAlarm
+          Threshold: -249.5
+          MinNotifyInterval:  60
+          Visible:   No
+        WarningHi:  !AnalogAlarm
+          Threshold:  240
+          MinNotifyInterval: 180
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold:  249.5
+          MinNotifyInterval:  60
+          Visible:   No
+
+    # Audio alarm for Prime Focus (P_IR) image rotator commanded or
+    # real angle exceeding limit
+    - !AnalogSV
+      Name:      P Rotator Angle Limit
+      ID:        RotAngleLimit
+      FocalStation: P_IR
+      Units:     deg
+      Module:    AngleLimit
+      Class:     RotAngleLimitP_IR
+      Alarm: 
+        WarningLo:  !DerivedAlarm
+          Audio:     WarnRotLimitH50Vf.au
+          Method:    rotAngleLimitWarningLo
+          MinNotifyInterval: 180
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmRotLimitH50Vf.au
+          Method:    rotAngleLimitCriticalLo
+          MinNotifyInterval:  60
+        WarningHi:  !DerivedAlarm
+          Audio:     WarnRotLimitH50Vf.au
+          Method:    rotAngleLimitWarningHi
+          MinNotifyInterval: 180
+        CriticalHi: !DerivedAlarm
+          Audio:     AlarmRotLimitH50Vf.au
+          Method:    rotAngleLimitCriticalHi
+          MinNotifyInterval:  60
+
+    # Audio alarm for Prime Focus (P_OPT) image rotator commanded or
+    # real angle exceeding limit
+    - !AnalogSV
+      Name:      P Rotator Angle Limit
+      ID:        RotAngleLimit
+      FocalStation: P_OPT
+      Units:     deg
+      Module:    AngleLimit
+      Class:     RotAngleLimitP_OPT
+      Alarm: 
+        WarningLo:  !DerivedAlarm
+          Audio:     WarnRotLimitH50Vf.au
+          Method:    rotAngleLimitWarningLo
+          MinNotifyInterval: 180
+        CriticalLo: !DerivedAlarm
+          Audio:     AlarmRotLimitH50Vf.au
+          Method:    rotAngleLimitCriticalLo
+          MinNotifyInterval:  60
+        WarningHi:  !DerivedAlarm
+          Audio:     WarnRotLimitH50Vf.au
+          Method:    rotAngleLimitWarningHi
+          MinNotifyInterval: 180
+        CriticalHi: !DerivedAlarm
+          Audio:     AlarmRotLimitH50Vf.au
+          Method:    rotAngleLimitCriticalHi
+          MinNotifyInterval:  60
+
+    # Status variables for Nasmyth PA command timeout alarm
+    - !AnalogSV
+      Name:      Rotator CMD ANS
+      ID:        Melco_0004002_PACmd
+      Gen2Alias: TSCS.ROTCMD
+      Units:     deg
+    - !AnalogSV
+      Name:      Rotator Real Angle
+      ID:        Melco_0004001_PACmd
+      Gen2Alias: TSCS.ROTPOS
+      Units:     deg
+
+    # Audio alarm for Nasmyth PA command timeout alarm
+    - !DigitalSV
+      Name:      PA Command Timeout
+      ID:        PA_Cmd_Timeout
+      FocalStation: NS
+      Module:    PACmd
+      Class:     PACmdNs
+      Alarm: 
+        Warning:  !DerivedAlarm
+          Audio:   WarnPAcmdFailH50Vf.au
+          Method:  paCmdWarning
+          MinNotifyInterval: 300
+
+    # Audio alarm for Cassegrain PA command timeout alarm
+    - !DigitalSV
+      Name:      PA Command Timeout
+      ID:        PA_Cmd_Timeout
+      FocalStation: CS
+      Module:    PACmd
+      Class:     PACmdCs
+      Alarm: 
+        Warning:  !DerivedAlarm
+          Audio:   WarnPAcmdFailH50Vf.au
+          Method:  paCmdWarning
+          MinNotifyInterval: 300
+
+    # Audio alarm for Prime Focus PA command timeout alarm
+    - !DigitalSV
+      Name:      PF PA Command Timeout
+      ID:        PA_Cmd_Timeout
+      FocalStation: PF
+      Module:    PACmd
+      Class:     PACmdPF
+      Alarm: 
+        Warning:  !DerivedAlarm
+          Audio:   WarnPAcmdFailH50Vf.au
+          Method:  paCmdWarning
+          MinNotifyInterval: 300
+
+  NsOpt:
+    Rotator:
+      - !DigitalSV
+        Name:      Rotator NsOpt 1st Limit +
+        ID:        Melco_0004043
+        Gen2Alias: TSCV.ImgRotredB1!M01
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnNsOptRotPos1stLimit.ogg
+      - !DigitalSV
+        Name:      Rotator NsOpt 1st Limit -
+        ID:        Melco_0004044
+        Gen2Alias: TSCV.ImgRotredB1!M02
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnNsOptRotNeg1stLimit.ogg
+
+  NsIR:
+    Rotator:
+      - !DigitalSV
+        Name:      Rotator NsIR 1st Limit +
+        ID:        Melco_0004047
+        Gen2Alias: TSCV.ImgRotredB2!M01
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnNsIRRotPos1stLimit.ogg
+      - !DigitalSV
+        Name:      Rotator NsIR 1st Limit -
+        ID:        Melco_0004048
+        Gen2Alias: TSCV.ImgRotredB2!M02
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnNsIRRotNeg1stLimit.ogg
+  Cs:
+    Rotator:
+      - !DigitalSV
+        Name:      Rotator Cs 1st Limit +
+        ID:        Melco_0004019
+        Gen2Alias: TSCV.InsRotredB1!M01
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnCsRotPos1stLimit.ogg
+      - !DigitalSV
+        Name:      Rotator Cs 1st Limit -
+        ID:        Melco_000401A
+        Gen2Alias: TSCV.InsRotredB1!M02
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnCsRotNeg1stLimit.ogg
+
+  POpt:
+    Rotator:
+      - !DigitalSV
+        Name:      P Rotator 1st Limit +
+        ID:        Melco_003602D
+        Gen2Alias: TSCV.P_RotLim!M01
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnPRotPos1stLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P Rotator 1st Limit -
+        ID:        Melco_003602E
+        Gen2Alias: TSCV.P_RotLim!M02
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnPRotNeg1stLimit.ogg
+            Ignore: Yes
+
+    AG_SH:
+      - !DigitalSV
+        Name:      P AG/SH X 1st Limit -
+        ID:        Melco_0037023
+        Gen2Alias: TSCV.P_AG_SH_XY_1stLim!M10
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnPAG_SHNegX1stLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH X 1st Limit +
+        ID:        Melco_0037024
+        Gen2Alias: TSCV.P_AG_SH_XY_1stLim!M20
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnPAG_SHPosX1stLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Y 1st Limit -
+        ID:        Melco_0037025
+        Gen2Alias: TSCV.P_AG_SH_XY_1stLim!M40
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnPAG_SHNegY1stLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Y 1st Limit +
+        ID:        Melco_0037026
+        Gen2Alias: TSCV.P_AG_SH_XY_1stLim!M80
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnPAG_SHPosY1stLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Z 1st Limit -
+        ID:        Melco_0037027
+        Gen2Alias: TSCV.P_AG_SH_Z_1stLim!M01
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnPAG_SHNegZ1stLimit.ogg
+            Ignore: Yes
+      - !DigitalSV
+        Name:      P AG/SH Z 1st Limit +
+        ID:        Melco_0037028
+        Gen2Alias: TSCV.P_AG_SH_Z_1stLim!M02
+        Alarm:
+          Warning: !DigitalAlarm
+            Audio:  ogg/en/WarnPAG_SHPosZ1stLimit.ogg
+            Ignore: Yes
+
+  Guiding:
+    # Status variables so we can determine if guide star is being
+    # detected
+    - !DigitalSV
+      ID:        Melco_003B004
+      Name:      PIR AG for SH Star Detect Start
+      Gen2Alias: TSCV.AGPIRCCalc!M04
+    - !DigitalSV
+      ID:        Melco_003B020
+      Name:      PIR Fibre AG Star Detect Start
+      Gen2Alias: TSCV.AGFMOSCCalc!M04
+    - !DigitalSV
+      ID:        Melco_003D013
+      Name:      HSC AG for SC Star Detect Start
+      Gen2Alias: TSCV.HSC.SCAG.CCalc!M04
+    - !DigitalSV
+      ID:        Melco_003E013
+      Name:      HSC AG for SH Star Detect Start
+      Gen2Alias: TSCV.HSC.SHAG.CCalc!M04
+
+    # Alarms for guide star loss 
+    - !AnalogSV
+      ID:        Melco_003B01A
+      Name:      PIR AG for SH Star Posn Intensity
+      Gen2Alias: TSCL.AGPIRIntensity
+      Alarm: 
+        CriticalLo: !AnalogAlarm
+          Threshold: 1
+          Visible:   No
+          MinNotifyInterval: 30
+    - !AnalogSV
+      ID:        Melco_003B038
+      Name:      PIR Fibre AG Star Posn Intensity
+      Gen2Alias: TSCL.AGFMOSIntensity
+      Alarm: 
+        CriticalLo: !AnalogAlarm
+          Threshold: 1
+          Visible:   No
+          MinNotifyInterval: 30
+    - !AnalogSV
+      ID:        Melco_003D01D
+      Name:      HSC AG for SC Star Posn Intensity
+      Gen2Alias: TSCL.HSC.SCAG.Intensity
+      Alarm: 
+        CriticalLo: !AnalogAlarm
+          Threshold: 1
+          Visible:   No
+          MinNotifyInterval: 30
+    - !AnalogSV
+      ID:        Melco_003E01C
+      Name:      HSC AG for SH Star Posn Intensity
+      Gen2Alias: TSCL.HSC.SHAG.Intensity
+      Alarm: 
+        CriticalLo: !AnalogAlarm
+          Threshold: 1
+          Visible:   No
+          MinNotifyInterval: 30
+    - !AnalogSV
+      ID:        Melco_0006028
+      Name:      AG Star Position1 Intensity on AG
+      Gen2Alias: TSCL.AG1Intensity
+      Alarm: 
+        CriticalLo: !AnalogAlarm
+          Threshold: 1
+          Visible:   No
+          MinNotifyInterval: 30
+    - !AnalogSV
+      ID:        Melco_0007128
+      Name:      SV Star Position1 Intensity on SV
+      Gen2Alias: TSCL.SV1Intensity
+      Alarm: 
+        CriticalLo: !AnalogAlarm
+          Threshold: 1
+          Visible:   No
+          MinNotifyInterval: 30
+    - !DigitalSV
+      ID:     GuideStarLost
+      Name:   Guide Star Lost
+      Module: GuideStar
+      Alarm:
+        Critical: !DerivedAlarm
+          Audio:  AlarmGuideStarLostH100Vf.au
+          Method: guideStarLost
+          MinNotifyInterval: 30
+
+    # Alarms for AG position error exceeding the threshold
+    - !AnalogSV
+      ID:        AG_PosnError
+      Name:      AG Position Error
+      Gen2Alias: STATL.AGRERR
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold: 500
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold: 1000
+          Visible:   No
+    - !AnalogSV
+      ID:        SV_PosnError
+      Name:      SV Autoguider Position Error
+      Gen2Alias: STATL.SVRERR
+      Alarm: 
+        WarningHi: !AnalogAlarm
+          Threshold: 500
+          Visible:   No
+        CriticalHi: !AnalogAlarm
+          Threshold: 1000
+          Visible:   No
+    - !AnalogSV
+      ID:     AutoguiderPosnError
+      Name:   Autoguider Position Error
+      Module: AG_PosnError
+      Alarm:
+        Warning: !DerivedAlarm
+          Method: agPosnErrorWarn
+        Critical: !DerivedAlarm
+          Method: agPosnErrorCrit
+
+    - !AnalogSV
+      ID:     SV_AutoguiderPosnError
+      Name:   SV Autoguider Position Error
+      Module: AG_PosnError
+      Alarm:
+        Warning: !DerivedAlarm
+          Method: svAGPosnErrorWarn
+        Critical: !DerivedAlarm
+          Method: svAGPosnErrorCrit
+
+  TipTilt:
+    # Status variables so we can determine if Tip-Tilt mode, drive
+    # on/off, etc.
+    - !DigitalSV
+      ID:        Melco_002800B
+      Name:      Tip-Tilt Chopping Mode
+      Gen2Alias: TSCV.TT_Mode!M01
+    - !DigitalSV
+      ID:        Melco_002800C
+      Name:      Tip-Tilt Tip-Tilt Mode
+      Gen2Alias: TSCV.TT_Mode!M02
+    - !DigitalSV
+      ID:        Melco_0028029
+      Name:      Tip-Tilt Position Mode
+      Gen2Alias: TSCV.TT_Mode!M04
+    - !DigitalSV
+      ID:        Melco_002800D
+      Name:      Tip-Tilt MAINT Mode
+      Gen2Alias: TSCV.TT_Mode!M80
+    - !DigitalSV
+      ID:        Melco_0028007
+      Name:      Tip-Tilt Drive On
+      Gen2Alias: TSCV.TT_Drive!M01
+    - !DigitalSV
+      ID:        Melco_0028008
+      Name:      Tip-Tilt Drive Off
+      Gen2Alias: TSCV.TT_Drive!M02
+    - !DigitalSV
+      ID:        Melco_002802A
+      Name:      Tip-Tilt Drive On RDY
+      Gen2Alias: TSCV.TT_Drive!M04
+    - !DigitalSV
+      ID:        Melco_0028066
+      Name:      Chopping Start
+      Gen2Alias: TSCV.TT_ChopStat!M01
+    - !DigitalSV
+      ID:        Melco_0028067
+      Name:      Chopping Stop
+      Gen2Alias: TSCV.TT_ChopStat!M02
+    - !DigitalSV
+      ID:        Melco_0028026
+      Name:      Tip-Tilt Chopping Start Ready
+      Gen2Alias: TSCV.TT_ChopStat!M04
+    - !DigitalSV
+      ID:        Melco_0028045
+      Name:      Tip-Tilt Data Available
+      Gen2Alias: TSCV.TT_DataAvail!M01
+
+    # Audio alarm for Tip-Tilt drive turned off
+    - !DigitalSV
+      ID:     TipTiltOff
+      Name:   Tip Tilt Drive Off
+      Module: TipTilt
+      Alarm:
+        Warning: !DerivedAlarm
+          Audio:  WarnTipTiltOffLauren2.au
+          Method: warnTipTiltDriveOff
+          MinNotifyInterval: 10
+          NotifyTimeout:     48
+
+  Cover:
+    # Status variables so we can determine mirror cover states
+    - !DigitalSV
+      ID:        Melco_0024005
+      Name:      PM/M3 Cover Open OPN
+      Gen2Alias: TSCV.M1CoverOnway!M01
+    - !DigitalSV
+      ID:        Melco_0024006
+      Name:      PM/M3 Cover Close OPN
+      Gen2Alias: TSCV.M1CoverOnway!M02
+    - !DigitalSV
+      ID:        Melco_0024057
+      Name:      PM/M3 Cover Stop
+      Gen2Alias: TSCV.M1CoverOnway!M04
+    - !DigitalSV
+      ID:        Melco_0024007
+      Name:      PM Cover Upper U-1A Open
+      Gen2Alias: TSCV.M1Cover!M01
+    - !DigitalSV
+      ID:        Melco_0024009
+      Name:      PM Cover Upper U-1A Close
+      Gen2Alias: TSCV.M1Cover!M04
+    - !DigitalSV
+      ID:        Melco_002400B
+      Name:      PM Cover Upper U-1B Open
+      Gen2Alias: TSCV.M1Cover!M10
+    - !DigitalSV
+      ID:        Melco_002400D
+      Name:      PM Cover Upper U-1B Close
+      Gen2Alias: TSCV.M1Cover!M40
+    - !DigitalSV
+      ID:        Melco_002400F
+      Name:      PM Cover Upper U-2A Open
+      Gen2Alias: TSCV.M1Cover!M100
+    - !DigitalSV
+      ID:        Melco_0024011
+      Name:      PM Cover Upper U-2A Close
+      Gen2Alias: TSCV.M1Cover!M400
+    - !DigitalSV
+      ID:        Melco_0024013
+      Name:      PM Cover Upper U-2B Open
+      Gen2Alias: TSCV.M1Cover!M1000
+    - !DigitalSV
+      ID:        Melco_0024015
+      Name:      PM Cover Upper U-2B Close
+      Gen2Alias: TSCV.M1Cover!M4000
+    - !DigitalSV
+      ID:        Melco_0024017
+      Name:      PM Cover Upper U-3A Open
+      Gen2Alias: TSCV.M1Cover!M10000
+    - !DigitalSV
+      ID:        Melco_0024019
+      Name:      PM Cover Upper U-3A Close
+      Gen2Alias: TSCV.M1Cover!M40000
+    - !DigitalSV
+      ID:        Melco_002401B
+      Name:      PM Cover Upper U-3B Open
+      Gen2Alias: TSCV.M1Cover!M100000
+    - !DigitalSV
+      ID:        Melco_002401D
+      Name:      PM Cover Upper U-3B Close
+      Gen2Alias: TSCV.M1Cover!M400000
+    - !DigitalSV
+      ID:        Melco_002401F
+      Name:      PM Cover Upper U-3C Open
+      Gen2Alias: TSCV.M1Cover!M1000000
+    - !DigitalSV
+      ID:        Melco_0024021
+      Name:      PM Cover Upper U-3C Close
+      Gen2Alias: TSCV.M1Cover!M4000000
+    - !DigitalSV
+      ID:        Melco_0024023
+      Name:      PM Cover Upper U-3D Open
+      Gen2Alias: TSCV.M1Cover!M10000000
+    - !DigitalSV
+      ID:        Melco_0024025
+      Name:      PM Cover Upper U-3D Close
+      Gen2Alias: TSCV.M1Cover!M40000000
+    - !DigitalSV
+      ID:        Melco_0024027
+      Name:      PM Cover Lower L-A Open
+      Gen2Alias: TSCV.M1Cover!M100000000
+    - !DigitalSV
+      ID:        Melco_0024029
+      Name:      PM Cover Lower L-A Close
+      Gen2Alias: TSCV.M1Cover!M400000000
+    - !DigitalSV
+      ID:        Melco_002402B
+      Name:      PM Cover Lower L-B Open
+      Gen2Alias: TSCV.M1Cover!M1000000000
+    - !DigitalSV
+      ID:        Melco_002402D
+      Name:      PM Cover Lower L-B Close
+      Gen2Alias: TSCV.M1Cover!M4000000000
+    - !DigitalSV
+      ID:        Melco_002402F
+      Name:      PM Cover Lower L-C Open
+      Gen2Alias: TSCV.M1Cover!M10000000000
+    - !DigitalSV
+      ID:        Melco_0024031
+      Name:      PM Cover Lower L-C Close
+      Gen2Alias: TSCV.M1Cover!M40000000000
+    - !DigitalSV
+      ID:        Melco_0024033
+      Name:      PM Cover Lower L-D Open
+      Gen2Alias: TSCV.M1Cover!M100000000000
+    - !DigitalSV
+      ID:        Melco_0024035
+      Name:      PM Cover Lower L-D Close
+      Gen2Alias: TSCV.M1Cover!M400000000000
+    - !DigitalSV
+      ID:        Melco_0024037
+      Name:      PM Cover Door U-1A-I Open
+      Gen2Alias: TSCV.M1Cover!M1000000000000
+    - !DigitalSV
+      ID:        Melco_0024039
+      Name:      PM Cover Door U-1A-I Close
+      Gen2Alias: TSCV.M1Cover!M4000000000000
+    - !DigitalSV
+      ID:        Melco_002403B
+      Name:      PM Cover Door U-1B-I Open
+      Gen2Alias: TSCV.M1Cover!M10000000000000
+    - !DigitalSV
+      ID:        Melco_002403D
+      Name:      PM Cover Door U-1B-I Close
+      Gen2Alias: TSCV.M1Cover!M40000000000000
+    - !DigitalSV
+      ID:        Melco_002403F
+      Name:      PM Cover Door U-2A-I-A Open
+      Gen2Alias: TSCV.M1Cover!M100000000000000
+    - !DigitalSV
+      ID:        Melco_0024041
+      Name:      PM Cover Door U-2A-I-A Close
+      Gen2Alias: TSCV.M1Cover!M400000000000000
+    - !DigitalSV
+      ID:        Melco_0024043
+      Name:      PM Cover Door U-2A-I-B Open
+      Gen2Alias: TSCV.M1Cover!M1000000000000000
+    - !DigitalSV
+      ID:        Melco_0024045
+      Name:      PM Cover Door U-2A-I-B Close
+      Gen2Alias: TSCV.M1Cover!M4000000000000000
+    - !DigitalSV
+      ID:        Melco_0024047
+      Name:      PM Cover Door U-2B-I-A Open
+      Gen2Alias: TSCV.M1Cover!M10000000000000000
+    - !DigitalSV
+      ID:        Melco_0024049
+      Name:      PM Cover Door U-2B-I-A Close
+      Gen2Alias: TSCV.M1Cover!M40000000000000000
+    - !DigitalSV
+      ID:        Melco_002404B
+      Name:      PM Cover Door U-2B-I-B Open
+      Gen2Alias: TSCV.M1Cover!M100000000000000000
+    - !DigitalSV
+      ID:        Melco_002404D
+      Name:      PM Cover Door U-2B-I-B Close
+      Gen2Alias: TSCV.M1Cover!M400000000000000000
+    - !DigitalSV
+      ID:        Melco_002404F
+      Name:      PM Cover Door U-3A-I Open
+      Gen2Alias: TSCV.M1Cover!M1000000000000000000
+    - !DigitalSV
+      ID:        Melco_0024051
+      Name:      PM Cover Door U-3A-I Close
+      Gen2Alias: TSCV.M1Cover!M4000000000000000000
+    - !DigitalSV
+      ID:        Melco_0024053
+      Name:      PM Cover Door U-3B-I Open
+      Gen2Alias: TSCV.M1Cover!M10000000000000000000
+    - !DigitalSV
+      ID:        Melco_0024055
+      Name:      PM Cover Door U-3B-I Close
+      Gen2Alias: TSCV.M1Cover!M40000000000000000000
+    - !DigitalSV
+      ID:        Melco_00240EB
+      Name:      PM Cover Door U-3C-I Open
+      Gen2Alias: TSCV.M1Cover!M100000000000000000000
+    - !DigitalSV
+      ID:        Melco_00240ED
+      Name:      PM Cover Door U-3C-I Close
+      Gen2Alias: TSCV.M1Cover!M400000000000000000000
+    - !DigitalSV
+      ID:        Melco_00240EF
+      Name:      PM Cover Door U-3D-I Open
+      Gen2Alias: TSCV.M1Cover!M1000000000000000000000
+    - !DigitalSV
+      ID:        Melco_00240F1
+      Name:      PM Cover Door U-3D-I Close
+      Gen2Alias: TSCV.M1Cover!M4000000000000000000000
+
+    - !DigitalSV
+      ID:     MirrorCover
+      Name:   Dummy SV to determine mirror cover state
+      Module: MirrorCover
+
+  Mirror:
+    - !AnalogSV
+      ID:        Melco_00A1171
+      Name:      Heat Exh Mirror Temp Real
+      Gen2Alias: TSCL.M1_TEMP
+      Units:     Deg C
+
+    - !AnalogSV
+      ID:     MirrorDewpoint
+      Name:   Mirror Dewpoint
+      Module: MirrorDewpoint
+      Alarm: 
+        Warning: !DerivedAlarm
+          Method:    warnTemperature
+          MinNotifyInterval: 300
+          Audio:    ogg/en/WarnMirrorDewpoint.ogg
+
+  Other:
+    # Miscellanous status variables for telescope drive state, focal
+    # station, etc.
+    - !DigitalSV
+      Name:      Telescope drive state
+      ID:        TelDrive
+      Gen2Alias: STATL.TELDRIVE
+
+    - !DigitalSV
+      Name:      Telescope focal station
+      ID:        FocStation
+      Gen2Alias: STATL.TSC_F_SELECT
+
+    - !DigitalSV
+      Name:      Telescope focus info
+      ID:        FocusInfo
+      Gen2Alias: TSCV.FOCUSINFO
+
+    - !DigitalSV
+      Name:      TSC Focus Pattern Alarm
+      ID:        Melco_00A1401
+      Gen2Alias: TSCV.FOCUSALARM!M40
+
+    - !DigitalSV
+      Name:      TSC/Rotator/ADC Selected Alarm
+      ID:        Melco_00A1402
+      Gen2Alias: TSCV.FOCUSALARM!M80
+
+    - !AnalogSV
+      Name:      Result Code at Time Limit Cal
+      ID:        Melco_00A13D6
+      Gen2Alias: TSCL.LIMIT_FLAG
+
+    # These dummy status variables load in the named modules and
+    # instantiate the class in the module.
+    - !DigitalSV
+      Name:   Dummy SV to provide information on telescope state
+      ID:     TelState
+      Module: TelState
+
+    - !DigitalSV
+      Name:   Dummy SV to provide telescope focal station
+      ID:     FocalStation
+      Module: FocalStation
+
+    - !DigitalSV
+      Name:   Dummy SV to determine angle limit time
+      ID:     AngleLimitTime
+      Module: AngleLimitTime
+
+    - !DigitalSV
+      Name:   Dummy SV to determine minimum angle limit time
+      ID:     AngleLimitTimeMin
+      Module: AngleLimitTimeMin

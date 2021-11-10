@@ -39,12 +39,16 @@ sleep 1
 echo "Lyot mask:"
 lyot wheel home &
 sleep 1
-echo "inverse PIAA x:"
-invpiaa x home &
-sleep 1
-echo "inverse PIAA y:"
-invpiaa y home &
-sleep 1
+#echo "inverse PIAA x:"
+#invpiaa x home &
+#sleep 1
+#echo "inverse PIAA y:"
+#invpiaa y home &
+#sleep 1
+echo "REACH OAP:"
+reach_oap home &
+echo "REACH rotation:"
+reach_rotation home &
 echo "OAP4 theta:"
 oap4 theta home &
 sleep 1
@@ -93,8 +97,12 @@ sleep 1
 echo "IR cam focusing lens #2::"
 ircam_fcs f2 home &
 sleep 1
+echo "IR cam pupil x:"
+ircam_pupil x home &
+echo "IR cam pupil y:"
+ircam_pupil y home &
 echo "SAPHIRA pickoff:"
-saphira_pickoff home &
+buffy_pickoff home &
 sleep 1
 echo "Chuck pupil lens focus::"
 chuck_pup_fcs home &
@@ -103,3 +111,11 @@ echo "PyWFS pickoff:"
 pywfs_pickoff home &
 echo "RHEA pickoff:"
 rhea_pickoff home &
+echo "PyWFS fieldstop x:"
+pywfs_fieldstop x home &
+echo "PyWFS fieldstop y:"
+pywfs_fieldstop y home &
+echo "VAMPIRES fieldstop x:"
+vampires_fieldstop x home &
+echo "VAMPIRES fieldstop y:"
+vampires_fieldstop y home &

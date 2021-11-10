@@ -1,0 +1,249 @@
+#!/usr/bin/env python
+
+# ======================================================== #
+#  _   _       _      ___             _                    #
+# | | | | ___ | |_   / __\ ____  ___ | |_                  #
+# | --- |/ _ \| __|  \_\_ |  _ \/ _ \| __|                 #
+# | --- | (_) | |_   __\ \| (_) |(_) | |_                  #
+# |_| |_|\___/\___|  \___/|  __/\___/\___|                 #
+#                         |_|                              #
+#    _   _ _                                               #
+#   /_\ | (_) __ _ _ __                                    #
+#  //_\\| | |/ _` | '_ \                                   #
+# /  _  \ | | (_| | | | |                                  #
+# \_/ \_/_|_|\__, |_| |_|                                  #
+#            |___/                                         #
+#                                                          #
+# ======================================================== #
+
+import os
+import time
+import sys
+import pdb
+import numpy as np
+from astropy.io import fits as pf
+import math as m
+
+from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxkw.redisutil.typed_db import Redis
+
+MILK_SHM_DIR = os.getenv('MILK_SHM_DIR') # Expected /tmp <- MULTIVERSE FIXING NEEDED
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import image_processing as impro
+import conex_tt
+
+#from xaosim.scexao_shmlib import shm
+from pyMilk.interfacing.isio_shmlib import SHM as shm
+
+
+# ------------------------------------------------------------------
+#  Read database for some stage status
+# ------------------------------------------------------------------
+def RDB_pull(rdb):
+
+    fits_keys_to_pull = {'D_IMRPAD','OBJECT'}
+    # Now Getting the keys
+    with rdb.pipeline() as pipe:
+        for key in fits_keys_to_pull:
+            pipe.hget(key, 'FITS header')
+            pipe.hget(key, 'value')
+        values = pipe.execute()
+    status = {k: v for k,v in zip(values[::2], values[1::2])}
+
+    pad = float(status['D_IMRPAD']) % 360
+    target = status['OBJECT']
+
+    return(pad,target)
+
+# ------------------------------------------------------------------
+#            Configure communication with SCExAO's redis
+# ------------------------------------------------------------------
+rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+# Is the server alive ?
+try:
+    alive = rdb.ping()
+    if not alive:
+        raise ConnectionError
+except:
+    print('Error: can\'t ping redis DB.')
+    sys.exit(1)
+
+pad,target = RDB_pull(rdb)
+
+
+# Reading in shared memory
+#------------------------
+args = sys.argv[1:]
+if args != []:
+    if len(args) >= 3:
+        if args[0] == "chuckxy":
+            posx = float(args[1])
+            posy = float(args[2])
+        elif args[0] == "skyangle":
+            sep = float(args[1])
+            pa = float(args[2])
+    if len(args) == 6:
+        nim = float(args[3])
+        gain = float(args[4])
+        cam = args[5]
+    if len(args) == 5:
+        nim = float(args[3])
+        gain = float(args[4])
+        cam = "ircam0"
+    elif len(args) == 4:
+        nim = float(args[3])
+        gain = 0.8
+        cam = "ircam0"
+    elif len(args) == 3:
+        nim = 100
+        gain = 0.8
+        cam = "ircam0"
+        
+else:
+    posx = 0
+    posy = 0
+    sep = 0
+    pa = 0
+    nim = 100
+    gain = 0.9
+    cam = "ircam0"
+
+if cam == "ircam0" and args[0] == "skyangle":
+    posx = -sep*m.cos(m.radians(pa-pad))
+    posy = -sep*m.sin(m.radians(pa-pad))
+elif cam == "kcam" and args[0] == "skyangle":
+    posx = -sep*m.sin(m.radians(pa-pad))
+    posy = sep*m.cos(m.radians(pa-pad))
+
+
+shm_im = shm(cam)
+shm_im_dark = shm("%s_dark" %cam)
+shm_im_badpixmap = shm("%s_badpixmap" %cam)
+shm_ircam_retroinj = shm("ircam0_retroinj")
+
+dark_cam = shm_im_dark.get_data()
+badpixmap_cam = shm_im_badpixmap.get_data()
+
+
+
+# Main
+#------------------------
+
+# ------------------------------------------------------------------
+#                        Parameters
+# ------------------------------------------------------------------
+
+
+pscale = 16.2 #mas per pixel in Chuckcam
+
+
+im_cam = shm_im.get_data().astype(np.float)
+
+(ysizeim,xsizeim) = im_cam.shape
+cnt = 0
+cnt1 = 0
+i = 0
+
+a = 256
+rm = 10
+
+devname = "reach_oap"
+
+conexid = "http://133.40.163.196:50002"
+conexnames = ["theta", "phi"]
+
+pos0 = conex_tt.status(devname,conexid)[::-1]
+print(pos0)
+theta0 = pos0[0]
+phi0 = pos0[1]
+
+if cam == "ircam0":
+    dist_file = "/home/scexao/bin/devices/conf/distortion_chuck.txt"
+else:
+    dist_file = "/home/scexao/bin/devices/conf/distortion_buffy.txt"
+
+dist = []
+with open(dist_file) as f:
+    for line in f.readlines():
+        dist.append([float(s) for s in line[:-1].split(';')[1:]])
+px1 = np.array(dist[0])
+py1 = np.array(dist[1])
+
+ind = np.array([[0,0],[1,0],[2,0],[3,0],[4,0],[0,1],[0,2],[0,3],[0,4],[1,1],[1,2],[1,3],[2,1],[2,2],[3,1]])
+px2 = np.zeros((5,5))
+py2 = np.zeros((5,5))
+for i in range(len(px1)):
+    px2[ind[i,0],ind[i,1]] = px1[i]
+    py2[ind[i,0],ind[i,1]] = py1[i]
+
+xt = np.polynomial.polynomial.polyval2d(posx,posy,px2)
+yt = np.polynomial.polynomial.polyval2d(posx,posy,py2)
+print(posx,posy)
+print(xt, yt)
+
+retroinjpos = np.zeros(20)
+
+if cam == "ircam0":
+    xcorr = 0
+    ycorr = 4/pscale
+    camera = "Chuckcam"
+else:
+    xcorr = -1
+    ycorr = -0.45
+    camera = "Buffycam"
+
+# loop
+while True:
+    try:
+        while (cnt1 <= cnt):
+            cnt1 = shm_im.get_counter()
+        cnt = cnt1
+        if i < nim:
+            if i == 0:
+                #print(read_shm().shape)
+                im_cam = shm_im.get_data().astype(np.float)/float(nim)
+            else:
+                im_cam += shm_im.get_data().astype(np.float)/float(nim)
+            i += 1
+            if i == nim//2:
+                pad,target = RDB_pull(rdb)
+        else:
+            i = 0
+            im_cam -= dark_cam
+            im_cam *= badpixmap_cam
+            if cam == "ircam0":
+                corim = np.median(im_cam[:int(ysizeim/10),:], axis=0)+np.median(im_cam[-int(ysizeim/10):,:], axis=0)
+                corim /= 2.
+                corim2 = np.tile(corim, (ysizeim,1))
+                im_cam -= corim2
+            
+            posst,xoff,yoff,strehlv,dia_ring,distco,angleco,contrastco = impro.binary_processing(im_cam, target=target, mas_pix=pscale, pad=pad, nst=1, a=a, rm=rm, saveplot=False,retroinj=True, strehlcalc = False, verbose=False, camera = camera)
+            posst[1,0] += xcorr
+            posst[1,1] += ycorr
+            if cam == "ircam0":
+                theta0 += gain*(posst[1,0]-xt)/500
+                phi0 += gain*(posst[1,1]-yt)/500
+            else:
+                theta0 += gain*(posst[1,1]-xt)/500
+                phi0 -= gain*(posst[1,0]-yt)/500
+                
+            conex_tt.move(theta0, phi0, devname, conexid)
+            posst[0,0] = xoff
+            posst[0,1] = yoff
+            retroinjpos[:2*posst.shape[0]] = posst.flatten()
+            shm_ircam_retroinj.set_data(retroinjpos.astype(np.float32))
+
+            sys.stdout.write('\r dx: %.2f, dy: %.2f, sep: %.1f, angle: %.1f, theta: %.4f, phi: %.4f' % (posst[1,0], posst[1,1], distco[0], angleco[0]%360, theta0, phi0))
+            sys.stdout.flush()
+            time.sleep(0.001)
+                
+            
+    except KeyboardInterrupt:
+        print('KeyboardInterrupt caught')
+        shm_im.close()
+        shm_im_dark.close()
+        shm_im_badpixmap.close()
+        
+        sys.exit()

@@ -1,0 +1,20 @@
+			WARNING
+
+THE TELSTAT LIGHT PATH DISPLAY IS A PROTOTYPE AND MAY NOT BE
+GEOMETRICALLY ACCURATE.  I.E. THERE MAY BE A LIGHT PATH
+OBSTRUCTION FROM THE TOP SCREEN OR WIND SCREEN, EVEN THOUGH THE
+DISPLAY APPEARS TO SHOW THAT THERE IS NOT!
+
+The TelStat light path display, which may be enabled or disabled
+from the Options menu, is a prototype feature which is intended
+to represent the elevation of the light path relative to the top
+screen and the wind screen.  The display geometries of the top 
+screen, wind screen and light path have been derived from 
+Subaru design drawings and are believed to be fairly accurate, 
+but they have not been verified on the actual instrument.  As
+such, the display should not be relied on as proof that there 
+is no light path obstruction.
+
+--------------
+
+Last update:  2004-05-20

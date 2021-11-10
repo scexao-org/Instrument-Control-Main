@@ -1,0 +1,8 @@
+#! /usr/bin/env wish 
+
+set fitspath [lindex $argv 0]
+
+# Have the skycat viewer named "anaview" load the image file
+send anaview load_image $fitspath
+
+exit 0

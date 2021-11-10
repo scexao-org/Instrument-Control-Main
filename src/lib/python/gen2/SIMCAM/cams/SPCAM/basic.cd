@@ -1,0 +1,104 @@
+<Command>
+EXEC SPCAM ALLOC ;
+
+EXEC SPCAM INIT ;
+
+EXEC SPCAM MESSIAINIT ;
+EXEC SPCAM SHUTTERINIT ;
+EXEC SPCAM FILTERINIT ;
+EXEC SPCAM CCDINIT ;
+
+EXEC SPCAM SHUTTEROPEN ;
+EXEC SPCAM SHUTTERCLOSE ;
+
+EXEC SPCAM STATUS ;
+
+
+EXEC SPCAM FILTERINITPOS ;
+
+EXEC TSC AZELDRIVE MOTOR=ON COORD=ABS AZ=NOP EL=89.5 AZ_SPEED=0.5 EL_SPEED=0.5 ;
+
+EXEC SPCAM FILTERRESTORE ;
+
+EXEC SPCAM FILTERSET FILTER="W-S-G+" ;
+EXEC SPCAM FILTERSET FILTER="W-S-R+" ;
+EXEC SPCAM FILTERSET FILTER="W-S-I+" ;
+EXEC SPCAM FILTERSET FILTER="W-S-Z+" ;
+
+EXEC SPCAM FILTERSET FILTER="W-J-U" ;
+EXEC SPCAM FILTERSET FILTER="I-A-L524" ;
+EXEC SPCAM FILTERSET FILTER="W-J-B" ;
+EXEC SPCAM FILTERSET FILTER="W-J-V" ;
+EXEC SPCAM FILTERSET FILTER="W-C-RC" ;
+EXEC SPCAM FILTERSET FILTER="W-C-IC" ;
+
+
+#######################
+## Example of Exposure
+#######################
+
+## Move Telescope
+EXEC TSC TELDRIVE MOTOR=ON COORD=ABS RA=******.*** DEC=+******.***;
+EXEC TSC INSROT_PF TELESCOPE=LINK COORD=ABS POSITION=+90 ;
+
+## Start Exposure
+EXEC SPCAM EXP EXP=420 NAME="object%03d" OBJECT="0415 blank field" ;
+EXEC SPCAM EXP EXP=300 NAME="object%03d" OBJECT="Autoguiding test (blind track)" ;
+
+## Finish Tracking
+exec TSC AG_TRACKING MOTOR=OFF ;
+
+
+######################################################################
+##### Utility Exposure
+######################################################################
+
+EXEC SPCAM WIPE ;
+EXEC SPCAM WIPE ;
+EXEC SPCAM WIPE ; 
+EXEC SPCAM WIPE ;
+EXEC SPCAM WIPE ;
+EXEC SPCAM WIPE ; 
+
+
+#################
+## multi exposure
+#################
+
+EXEC TSC TELDRIVE MOTOR=ON COORD=REL RA=000000.000 DEC=000010.00 ;
+EXEC SPCAM TAKE EXP=60 ;
+
+EXEC SPCAM READ NAME="object%03d" OBJECT=":B1:focus test" ;
+
+#################
+## twilight
+#################
+
+EXEC SPCAM EXP EXP=300 NAME="object%03d" OBJECT="twilight" ;
+EXEC TSC TELDRIVE MOTOR=ON COORD=REL RA=000000.000 DEC=-000100.00 ;
+
+#################
+## Bias
+#################
+
+EXEC SPCAM WIPE ;
+EXEC SPCAM BIAS NAME="bias%03d" ;
+
+#################
+## Dark
+#################
+
+EXEC SPCAM DARK EXP=900 NAME="dark%03d" ;
+
+
+
+EXEC SPCAM STATUS;
+
+EXEC SPCAM ABORT;
+EXEC SPCAM ABORT TARGET=READ;
+
+EXEC SPCAM ARCHIVESOME N=1 ;
+EXEC SPCAM ARCHIVEALL ;
+
+EXEC SPCAM FREE ;
+</Command>

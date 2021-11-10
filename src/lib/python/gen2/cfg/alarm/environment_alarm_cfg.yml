@@ -1,0 +1,134 @@
+#
+# environment_alarm_cfg.yml - This configuration file has status variables
+#                             and alarms for environmental conditions,
+#                             e.g., temperatures, windspeed, humidity.
+#
+#[ Russell Kackley (rkackley@naoj.org) --
+#  Last edit: Tue Feb 12 11:38:16 HST 2013
+#]
+#
+
+Environment:
+  # Low temperature alarm
+  - !AnalogSV
+    ID:        Melco_000C005
+    Name:      Weather Temperature
+    Gen2Alias: TSCL.TEMP_O
+    Units:     Deg C
+    Alarm: 
+      WarningLo: !AnalogAlarm
+        Threshold: -10
+        Audio:    WarnLowTempH50Vf.au
+        MinNotifyInterval: 300
+
+  # High humidity alarm
+  - !AnalogSV
+    ID:        Melco_000C006
+    Name:      Weather Humidity
+    Gen2Alias: TSCL.HUMI_O
+    Units:     RH %
+    Alarm: 
+      WarningHi: !AnalogAlarm
+        Threshold: 70
+        MinNotifyInterval: 300
+        Visible:  No
+      CriticalHi: !AnalogAlarm
+        Threshold: 80
+        MinNotifyInterval: 15
+        Visible:  No
+
+  # High windspeed alarm
+  - !AnalogSV
+    ID:        Melco_000C002
+    Name:      Weather Wind Velocity(AVG)
+    Gen2Alias: TSCL.WINDS_O
+    Units:     mph
+    Alarm: 
+      WarningHi: !AnalogAlarm
+        Threshold: 15
+        MinNotifyInterval: 300
+        Visible:  No
+      CriticalHi: !AnalogAlarm
+        Threshold: 20
+        MinNotifyInterval: 15
+        Visible:  No
+
+  # High humidity audio alarm - depends on external and internal
+  # humidity
+  - !AnalogSV
+    ID:     HighHumidity
+    Name:   High humidity
+    Module: Enviro
+    Units:  RH %
+    Alarm: 
+      WarningHi: !DerivedAlarm
+        Method:   warnHumidity
+        Audio:    WarnHighHumidH50Vf.au
+        MinNotifyInterval: 300
+      CriticalHi: !DerivedAlarm
+        Method:   critHumidity
+        Audio:    AlarmHighHumidH50Vf.au
+        MinNotifyInterval: 15
+
+  # High windspeed audio alarm - depends on external and internal
+  # humidity
+  - !AnalogSV
+    ID:     HighWindspeed
+    Name:   High windspeed
+    Units:  mph
+    Module: Enviro
+    Alarm: 
+      WarningHi: !DerivedAlarm
+        Method:   warnWindspeed
+        Audio:    WarnHighWindH50Vf.au
+        MinNotifyInterval: 300
+      CriticalHi: !DerivedAlarm
+        Method:   critWindspeed
+        Audio:    AlarmHighWindH50Vf.au
+        MinNotifyInterval: 15
+
+  # External dewpoint temperature
+  - !AnalogSV
+    ID:     ExternalDewpoint
+    Name:   External Dewpoint
+    Gen2Alias: STATL.DEW_POINT_O
+    Units:  deg C
+
+  # Audio alarm when humidity has dropped from Critical and has been
+  # in Warning or OK range for 15 minutes
+  - !DigitalSV
+    ID:     HumidityInRange15Min
+    Name:   Humidity in range 15 min
+    Module: Enviro
+    Alarm: 
+      OK: !DerivedAlarm
+        Method:   humidityInRange15
+        Audio:    AlertEnvOKH250Vf.au
+        MinNotifyInterval:  900
+        NotifyTimeout:     1200
+
+  # Audio alarm when windspeed has dropped from Critical and has been
+  # in Warning or OK range for 15 minutes
+  - !DigitalSV
+    ID:     WindspeedInRange15Min
+    Name:   Windspeed in range 15 min
+    Module: Enviro
+    Alarm: 
+      OK: !DerivedAlarm
+        Method:   windspeedInRange15
+        Audio:    AlertEnvOKH250Vf.au
+        MinNotifyInterval:  900
+        NotifyTimeout:     1200
+
+  # Audio alarm when humidity and/or windspeed has dropped from
+  # Critical and both have been in Warning or OK range for 30 minutes
+  - !DigitalSV
+    ID:     EnviroInRange30Min
+    Name:   Environment in range 30 min
+    Module: Enviro
+    Alarm: 
+      OK: !DerivedAlarm
+        Method:   enviroInRange30
+        Audio:    AlertEnvOK30H2100Vf.au
+        MinNotifyInterval: 1800
+        NotifyTimeout:     2100

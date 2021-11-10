@@ -1,0 +1,212 @@
+Gen2 TODO
+---------
+Key: F--Finished, I--In progress, P--Partially implemented/working
+     W--Workaround
+
+FRONT ENDS
+==========
+
+Integgui2
+---------
+[ ] Frames not sorted in IntegGUI Obs Journal; mostly affects SPCAM
+[ ] Bug causing crash when loading FITS files during lots of activity
+[ ] Occasional crashing--log error message indicates something in GTK toolkit?
+[ ] Preserve history for observation journal and command history across
+      restarts
+
+Fits Viewer
+-----------
+[I] Achieve feature parity and reasonable speed compared to old fits viewer
+[ ] Preserve history across restarts
+
+skTask viewer
+-------------
+[ ] Need to add events that happen at the sub-DD command level
+
+TelStat
+-------
+[D] change to monitor subscription style for processing status
+[ ] Fix uptime stability
+[ ] Make sure lamp display is showing the proper status
+
+EnvMonitor
+----------
+[D] change to monitor subscription style for processing status
+[ ] need to save pickle file at some interval, but throw away old, old data
+[ ] look into using RRD files
+
+hskymon
+-------
+[ ] Occasionally still crashing
+
+Web interface
+-------------
+[ ] Bogus TSRs cause problems--put in some more error checking
+[ ] Show integgui-style frame summary 
+
+Misc
+----
+[P] Allow change of displays for GUI applications
+
+BACK ENDS
+=========
+
+Task Manager
+------------
+[ ] Error messages can be improved
+[ ] When failing to initialize by loading bad tasks, etc. during
+    initializeFromSession the TM does not cleanly show the errors
+
+SOSS Compatibility
+------------------
+[ ] @user register seems to be used by some PARA files--but not implemented
+      (e.g. EXEC SPCAM CAMERA  and EXEC SPCAM T1)
+    However, these don't seem to be used in any skeletons
+[ ] Check whether any TSC PARA files need to be updated for change in cal
+     lamps
+[ ] QDAS frames are being saved with world write permission--just umask issue?
+
+Databases
+---------
+[ ] QDASvgwStarList.py hard codes the host name
+
+TSC interface
+-------------
+[ ] Check if there is a speed difference logging in as "OBS"
+[ ] Why do some agsh_probe_local(_pf) commands take longer in Gen2
+[ ] Test speed vs. SOSS at different foci
+
+STARS interface
+---------------
+[ ] Need "plan B"
+
+Frame Service
+-------------
+[ ] Needs to be upgraded to Postgres
+[ ] Be able to dynamically toggle pulling frames from SOSS
+
+ANA functions
+-------------
+[D] Have TelStat button bring up TelStat
+[ ] Check if we need to bypass "empty" Q frames (COMICS)
+[ ] Do we need an EXEC ANA CHECK_FRAME command? (MOIRCS)
+
+Periodic commands
+-----------------
+[ ] Frame check
+[ ] Automatic pruning of FITS files?
+[ ] Automatic archival of logs
+[ ] ut1-utc upgrade--how to make it automatic?
+[ ] tomorrow-2am file
+
+Middleware
+----------
+[ ] Consider having remoteObjectManager use PubSub to distribute uptime 
+    info instead of polling this information using BootManager
+[ ] Should PubSub have a security layer (allow only certain subscriptions)
+[ ] Should datasink transactions be reported via the monitor?
+[ ] PubSub/Monitor may need ORDERED and TWOWAY options implemented?
+
+Logs
+----
+[ ] Log-cutting function is stripping out non-log formatted lines
+[P] Need to change Gen2 configuration to allow log files to rotate (mostly done--need to do a couple more)
+
+
+System Admin
+------------
+[ ] Order front end workstations
+[ ] Order remote workstations
+[ ] Finish reclaiming disk space at summit and base
+[ ] Get simulator moved off of base RAID 6
+[ ] Implement power shutdown
+[ ] Implement better monitoring via Shinken
+[ ] Implement better monitoring via STS
+[ ] Backups using LVM snapshots
+[ ] Establish procedure using LVM snapshots for system patching/upgrading
+[ ] Add summit, remote and OCS room printers to Gen2
+[ ] Should GUIs and VNC sessions run as a different user from Gen2?
+
+Training and Precheck
+---------------------
+
+Documentation
+-------------
+* always need more
+
+By instrument
+=============
+VGW
+---
+[ ] Need to update vignette map to reflect removal of AO36 layer at CS
+[ ] Upgrade to skycat 3.0.x and tcl 8.4.x
+
+FLDMON
+------
+[ ] Need to make default not to show FLDMON frames in FITS viewers 
+[ ] How about IntegGUI?
+
+SPCAM
+-----
+[ ] working well, except for performance of certain TSC commands using PF
+
+HDS
+---
+* working well
+
+COMICS
+------
+* working well
+
+IRCS
+----
+[ ] occasional restart of portmapper needed (FITS transfer RPC registration issue?)
+
+AO188
+-----
+* working well
+
+WAVEPLAT
+--------
+* working well
+
+MOIRCS
+------
+* working well
+
+FOCAS
+-----
+* working well
+
+FMOS
+----
+* working well
+[F] There is an issue with the frames database due to the way FMOS allocates
+      frames
+
+HICIAO
+------
+* working well
+
+K3D
+---
+* working well
+
+HSC
+---
+[ ] Need to finish adding to the back ends
+[ ] Need to finish adding to the GUIs
+[ ] Document the process
+[ ] Try to increase sharing
+
+Long Term
+---------
+[ ] Rewrite most DD commands to be more efficient, starting with telescope commands (no PARA file processing)
+[ ] Deprecate all SOSS QDAS code
+[ ] Need to add HSC instrument and document the process
+[ ] New Observation Proposal Tool and possibly Observing Tool
+[ ] Deprecate old fits viewer when new one is good enough
+[ ] Deprecate VGW subsystem when we have a guider interface replacement
+[ ] Refactor or rewrite TelStat
+[ ] Deprecate old IntegGUI
+[ ] Deprecate Instrument Monitor when there is a reasonable replacement

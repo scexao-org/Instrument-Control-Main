@@ -1,0 +1,635 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<meta name="Robots" content="NOINDEX,NOFOLLOW">
+
+<meta name="Keywords" content="Gen2, HOWTO, running">
+
+<meta name="Author" content="Eric Jeschke">
+<meta name="Generator" content="emacs and human">
+
+<title>Gen2 HOWTO</title>
+</head>
+
+<body>
+<h1>Gen2 HOWTO</h1>
+<hr>
+<font size="+2">
+<center>
+<strong>DRAFT DOCUMENT, UNDER FREQUENT REVISION</strong>
+<p>
+<strong>Last Revision</strong>: <br>
+2007.05.06 &nbsp;&nbsp; Eric Jeschke (eric@naoj.org), Bruce Bon (eric@naoj.org)
+<p>
+<em>As Gen2 is under rapid development, these instructions are likely to
+be in flux.  Please report any inaccuracies to the OCS team.</em>
+</center>
+</font>
+This document describes the basics of running the Subaru Gen2
+Observation Control System in various configurations.  It is intended to
+aid developers and advanced users wanting to start their own copy of Gen2.
+
+
+<h2>Contents</h2>
+<blockquote>
+<strong><a href="#installation">Installation</a></strong><br>
+    <blockquote>
+    <strong><a href="#inst1">1.  Required hardware</a></strong><br>
+    <strong><a href="#inst2">2.  Required software</a></strong><br>
+    <strong><a href="#inst3">3.  Subaru SSD software</a></strong><br>
+    </blockquote>
+<strong><a href="#running">Running Gen2</a></strong><br>
+    <blockquote>
+    <strong><a href="#run1">1.  Booting Gen2</a></strong><br>
+    <strong><a href="#run2">2.  Initializing the Frame Server</a></strong><br>
+    <strong><a href="#run3">3.  Running Tasks from the Task Manager</a></strong><br>
+    <strong><a href="#run4">4.  Feeding Real Status to Gen2</a></strong><br>
+    <strong><a href="#run5">5.  Running TelStat</a></strong><br>
+    <strong><a href="#run6">6.  Running IntegGUI</a></strong><br>
+    </blockquote>
+</blockquote>
+
+
+<hr>
+<p>
+<a name="installation">
+<h2>Installation</h2></a>
+
+<blockquote>
+<strong><a href="#inst1">Step 1: Required hardware</a></strong><br>
+<strong><a href="#inst2">Step 2: Required software</a></strong><br>
+<strong><a href="#inst3">Step 3: Subaru SSD software</a></strong><br>
+</blockquote>
+
+<a name="inst1">
+<h3>Step 1: Required hardware</h3></a>
+<ul>
+  <li>Intel x86 class machine(s) with "reasonably large" amount of RAM or
+      SPARC machine(s) with same.  May run on other architectures (Your
+      Mileage May Vary).
+</ul>
+
+<a name="inst2">
+<h3>Step 2: Required software</h3></a>
+<ul>
+  <li> Reasonable Linux or Solaris distribution;
+      <p>
+  <li> Python 2.3 (or later) installed (for any "reasonable" linux
+      distro this will be the case);
+      <p>
+  <li> a small number of third-party packages (numpy, pyfits, others?);
+      <p>
+  <li> (optional) The following optional packages may be necessary for
+      specific functionality in certain environments: 
+      <ul>
+        <li> pygtk: for certain GUIs (instrument tester, STARS tester, SPOT)
+        <li> pyqt: for certain GUIs (guider test gui)
+        <li> pytk: for certain GUIs (TelStat)
+        <li> perl-tk: for certain GUIs (IntegGUI-Gen2)
+        <li> Oracle XE client, cx_Oracle: for accessing existing Subaru
+            databases
+        <li> others?
+      </ul>
+</ul>
+
+<a name="inst3">
+<h3>Step 3: Subaru SSD software</h3></a>
+A Subversion check out of the following SSD repositories:
+<ul>
+  <li> Required common functionality:
+      <pre>
+      $ mkdir ~/Svn
+      $ cd ~/Svn
+      $ svn co -N svn+ssh://ssdsrc/var/svn/repos/lib/trunk lib
+      $ cd lib; svn up python
+      </pre>
+      <p>
+  <li> If you want TelStat
+      <pre>
+      $ cd ~/Svn
+      $ svn co -N svn+ssh://ssdsrc/var/svn/repos/ocs/soss/ssd/trunk/product
+      $ cd product
+      $ svn up OSSO   # also brings in OSSO_AdmUsr*, OSSO_ObcpStat.d, OSSO_TelSummary.d
+      $ cd OSSO/OSSO_TelStat.d
+      $ ln -s ../../../lib/python gen2lib
+      $ ln -s ../../../lib/python/Gen2 gen2src
+      </pre>
+      <p>
+  <li> If you want IntegGUI Gen2
+      <pre>
+      $ cd ~/Svn
+      $ svn co svn+ssh://ssdsrc/var/svn/repos/users/eric/SOSS g2-soss
+      </pre>
+      <p>
+</ul>
+<p>
+Once you have a check out, "build" the SSD software.  It is mostly
+Python, so this mostly creates the proper configuration files. 
+<pre>
+      $ cd ~/Svn/lib/python
+      $ make
+</pre>
+
+<a name="running">
+<h2>Running Gen2</h2></a>
+
+<blockquote>
+<strong><a href="#run1">Step 1: Booting Gen2</a></strong><br>
+<strong><a href="#run2">Step 2. Initializing the Frame Server</a></strong><br>
+<strong><a href="#run3">Step 3. Running Tasks from the Task Manager</a></strong><br>
+<strong><a href="#run4">Step 4. Feeding Real Status to Gen2</a></strong><br>
+<strong><a href="#run5">Step 5. Running TelStat</a></strong><br>
+<strong><a href="#run6">Step 6. Running IntegGUI</a></strong><br>
+</blockquote>
+
+<a name="run1">
+<h3>Step 1: Booting Gen2</h3></a>
+Open a terminal window and issue the following commands:
+<pre>
+      $ export PYTHONPATH=$HOME/Svn/lib/python  # bash
+      $ setenv PYTHONPATH $HOME/Svn/lib/python   # tcsh
+      $ cd ~/Svn/lib/python/Gen2
+      $ ./BootManager.py --config=solo
+</pre>
+The <code>--config</code> argument is required and directs the Boot
+Manager to initialize itself with the selected running configuration map
+out of the <tt>g2config.py</tt> file.
+<p>
+The following maps are currently defined:
+<ul>
+  <li> <strong>solo</strong> <br>
+      Configured to run everything on one host.  Useful for testing,
+      demos, etc.
+      Note that you <em>may</em> need to edit the "localhost" entry in your
+      <code>/etc/hosts</code> file to add the alias "localhos"--this is
+      due to an unfortunate limitation in the SOSS rpc packet format
+      that limits hostnames to 8 characters.  Type "hostname" at the
+      Unix prompt; if the result is eight characters or less you
+      probably don't need to worry about this.
+      <p>
+  <li> <strong>gen2</strong> <br>
+      Configured to run gen2 on the gen2 development cluster.
+      <p>
+  <li> <strong>ssd</strong> <br>
+      Configured to run gen2 on the OCS team developer machines, using
+      several hosts in a fake cluster.
+      <p>
+  <li> <strong>sim</strong> <br>
+      Configured to run gen2 on the SOSS simulator machines (mobs, mobc, mdbs
+      and mvgw), using them in a fake cluster.  <em><b>Use with care!</b>
+      SOSS must be shutdown first</em>.
+      <p>
+  <li> <strong>summit</strong> <br>
+      Configured to run gen2 on the SOSS summit machines (obs, obc, dbs
+      and vgw), using them in a fake cluster.  <em><b>Use with care!</b>
+      SOSS must be shutdown first</em>.
+      <p>
+</ul>
+<p>
+By default, the Boot Manager drops you into a command prompt.  The
+command interpreter uses readline, so you have history and standard
+command line editing, etc.  Commands take the form of a python method
+call, sans the object syntax. 
+<p>
+You will want to use the following steps to bring up Gen2:
+<pre>
+      $ ./BootManager.py --config=solo
+      bootmgr> start(0)
+      check_svc: 1, {('ssd17.subaru.nao.ac.jp', 7070): (0, 99)}
+      0
+      bootmgr> start(1)
+      0
+      bootmgr> start(2)
+      0
+      bootmgr> start(3)
+      0
+</pre>
+<p>
+You will want to use the following steps to shut down Gen2:
+<pre>
+      bootmgr> shutdown()
+      {('ssd17.subaru.nao.ac.jp', 7070): (0, 0)}
+      bootmgr> ^D
+      $ 
+</pre>
+
+<h3>Details</h3>
+Here is an explanation of the steps, in more detail:
+<ol>
+  <li>
+      <pre>
+      bootmgr> start(0)
+      </pre>
+      This command causes the Boot Manager to start the remote objects
+      Manager Service on the nodes defined in the configuration, and to
+      send to each Manager Service service definitions from the
+      current configuration, as specified with the "--config" option
+      and defined in g2config.py.
+      Diagnostic log messages to go /tmp/ro_mgrsvc.log, and all output
+      to stdout and stderr are redirected into /tmp/ro_mgrsvc_stdout.log.
+      The ro_mgrsvc_stdout.log file includes some log messages redirected 
+      from server processes started up by the Manager Service.
+      The process ID of the Manager Service is stored into /tmp/ro_mgrsvc.pid.
+      <p>
+
+  <li>
+      <pre>
+      bootmgr> start(1)
+      </pre>
+      This command causes the Boot Manager to start all services that
+      are defined at stage 1 in the configuration.  
+      This stage contains all "infrastructure" level services.
+      Currently this is just the Remote Objects Name Service, 
+      which is started on all cluster nodes and records diagnostic 
+      messages in the Gen2/Logs/ro_names.log file.  
+      <p>
+  
+  <li>
+      <pre>
+      bootmgr> start(2)
+      </pre>
+      Stage 2 defines Gen2 services that are desirable to have up before
+      "everything else". Currently just the Boot Manager (server), Session
+      Manager and Monitor are started at this stage.  Status might also
+      concievably be started at this stage, but currently is not.  This
+      stage should be considered a "quiescent" Gen2 system.
+      <p>
+  
+  <li>
+      <pre>
+      bootmgr> start(3)
+      </pre>
+      Stage 3 defines all the remaining services, which includes most
+      interfaces.  After level 3 is up the system is "hot" and ready for
+      operation. 
+      <p>
+  
+</ol>
+<p>
+After the system is up, the Boot Manager makes it very easy to stop,
+start and restart entire stages or selected services.  The following
+shows some useful commands:
+<ul>
+  <li>
+      <pre>
+      bootmgr> stop("taskmgr")
+      bootmgr> start("taskmgr")
+      bootmgr> restart("taskmgr")
+      </pre>
+      Stop, start or restart a selected service.  If a number is given,
+      refers to the entire stage.
+      <p>
+  
+  <li>
+      <pre>
+      bootmgr> uptime([])
+      bootmgr> uptime('monitor')
+      </pre>
+      Shows the uptime for all services and just the monitor, respectively.
+      <p>
+  
+  <li>
+      <pre>
+      bootmgr> stopall()
+      </pre>
+      Stops all services in all levels, except for level 0.
+      <p>
+  
+  <li>
+      <pre>
+      bootmgr> shutdown()
+      </pre>
+      Like <code>stopall()</code> plus shuts down the Manager Service on
+      every node as well. 
+      <p>
+  
+  <li>
+      <pre>
+      bootmgr> reloadConfig()
+      </pre>
+      Reload the g2config.py configuration file.  Usually you want to
+      follow this by a <code>setup()</code> command to flush any
+      configuration changes out to the Manager Service running on all nodes.
+      <p>
+  
+</ul>
+<p>
+You can quit the Boot Manager shell at any time using Control-D.  Once
+the Manager Service, is initialized, Boot Manager shell is generally not
+needed except if you want to control services manually from a terminal
+window.  (Stage 2 actually starts a detached copy of the Boot Manager
+running in "service mode";  this is what is used by the "BM" tab in
+IntegGUI-g2, which gives the same basic functionality as the Boot
+Manager command prompt). 
+<p>
+For most configurations, you will find logs written to the "Logs"
+subdirectory of .../Gen2/.  
+Also of possible interest are the Remote Object Manager Service logs
+found in /tmp/ro_mgrsvc.log and /tmp/ro_mgrsvc_stdout.log .
+
+<a name="run2">
+<h3>Step 2: Initializing the Frame Server</h3></a>
+
+Do <strong>not</strong> follow this procedure if you plan to use
+IntegGUI, which has a Launcher button for doing this.
+<p>
+To initialize the Frame Server to provide SPCAM frame ID's, starting
+at the specified ID, open a terminal window, and run frameSvc.py
+as follows:
+<pre>
+      $ export PYTHONPATH=$HOME/Svn/lib/python  # bash
+      $ setenv PYTHONPATH $HOME/Svn/lib/python   # tcsh
+      $ cd ~/Svn/lib/python/Gen2
+      $ ./frameSvc.py --set SPCAM SUPA80002000
+      Frameid reset to 'SUPA80002000'
+</pre>
+
+
+<a name="run3">
+<h3>Step 3: Running Tasks from the Task Manager</h3></a>
+
+Do <strong>not</strong> follow this procedure if you plan to use
+IntegGUI, which is an alternative way of running tasks.
+To run tasks under the Gen2 TaskManager, open a terminal window, and start the
+TaskManager remote command line interface:
+<pre>
+      $ export PYTHONPATH=$HOME/Svn/lib/python  # bash
+      $ setenv PYTHONPATH $HOME/Svn/lib/python   # tcsh
+      $ cd ~/Svn/lib/python/Gen2
+      $ ./TaskManager.py --cmd
+      yacc: Warning. no p_error() function is defined.
+      taskmgr> !loadModules(['TCS', 'TelTask', 'SPCAM', 'g2eng', 'OBSTask'])
+      0
+      taskmgr> !setAllocs(['monitor', 'status', 'TCSint0', 'SPCAM', 'sessions', 'frames'])
+      0
+      taskmgr> !loadParaDirs(['../SkPara/cmd/TSC', '../SkPara/cmd/SPCAM', '../SkPara/cmd/OBS'])
+      0
+      taskmgr> 
+</pre>
+These three steps loaded two task modules, manually set the allocation
+handles to subsystems and loaded a set of PARA files for type-checking
+device-dependent (telescope and instrument) commands.  If these complete
+successfully then you are now ready to issue commands.
+<p>
+You may now execute device dependent commands from the TaskManager
+command prompt.  For example:
+<pre>
+      taskmgr> EXEC TSC AG_PARTS MOTOR=ON SHUTTER=OPEN
+      taskmgr> EXEC TSC INSROT_PF MOTOR=ON TELESCOPE=LINK COORD=ABS
+</pre>
+
+
+<h3>Details</h3>
+The Task Manager command line interface, like the Boot Manager command 
+line interface, has history and command completion.  Python-style method
+calls are preceeded by a bang (i.e. exclamation or "!") and these are
+used to configure the Task Manager.  Any command not beginning with a
+bang is considered to be a SOSS-style task creation command.
+<p>
+Tasks are defined in files in the gen2/src/Tasks directory, in this case
+in TelTask.py and SPCAM.py.  If the task class definition inherits from
+g2Task.g2Task, then the task may not have been implemented completely 
+enough for the device dependent command to work.  In this case, you
+will see an error log message in the gen2/src/Logs/taskmgr.log file;
+e.g. "E   S:TaskManager.py,L:448  Error creating task...".
+If the command succeeds, this log file will show several information (I)
+and debug (D) messages.  The last of these log messages should be
+an information message ending in "terminated with result '0'".
+<p>
+Parameter constraints are defined in .para files, which are in subdirectories
+of ../SkPara/cmd, in this case in the TSC and SPCAM subdirectories.
+If the parameter checking step fails, you will see error messages
+in the taskmgr.log file.
+<p>
+Other log files of interest are the gen2/src/Logs/monitor.log file
+and the gen2/src/Logs/TCSsim.log.  The monitor.log file
+will have debug messages for a number of events, including task 
+start, ack and end times.  If a device dependent command makes it past
+the parameter checking step and is sent to the TCS simulator, then
+the TCSsim.log file will record its receipt, acknowledgement and 
+completion.
+
+
+<a name="run4">
+<h3>Step 4: Feeding Real Status to Gen2</h3></a>
+
+To create a continuous feed of status data to Gen2,
+open a terminal window, and start TCSstatSim.py:
+<pre>
+      $ cd ~/Svn/lib/python/SOSS/STATint
+      $ ./TCSstatSim.py -H obs1 -s 1.0 -l 1.0 -v 2.0 -d $HOME/Svn/gen2/src/def/StatusDecodeTab.def localhost
+</pre>
+This will pull status data from SOSS on obs1 (every 5-10 seconds), and 
+forward it to the Gen2 status module.
+
+<p>
+To feed a single full set of status data to Gen2,
+replace the TCSstatSim.py command line above with:
+<pre>
+      $ ./TCSstatSim.py -H obs1 -s -l -v -I -d $HOME/Svn/gen2/src/def/StatusDecodeTab.def localhost
+</pre>
+This will pull status data from SOSS on obs1 just once, and will 
+forward it to the Gen2 status module.
+
+<h3>Details</h3>
+
+TCSstatSim.py accepts a number of options, followed by a single positional
+argument, which is the hostname of the system on which the receiving
+Gen2 status process is running.
+Options that you can give to TCSstatSim.py:
+<pre>
+  -d &lt;filespec&gt;
+             Read status decoding tables from &lt;filespec&gt;.  This file must
+             be a Gen2-style decoding table, and defaults to
+             'newdef/StatusDecodeTab.def'.
+  -F         Send constant data read from files, NOT pulled from -H host.
+             (Current version will generate zero- or integer-filled V data
+             rather than reading it from files.)
+  -H obs1    Host from which to pull TCS data, default to obs1.
+             -F and -H are mutually exclusive.  Whichever of these is last
+             will determine where data is read from.
+  -I         Initialize only.  After a single copy of each category of
+             data (specified by -s, -S, -l, -L, -v, -V) is sent, terminate.
+
+  -S ss.s    Period for pulling TCSS data from OBS, default to 5.0 seconds.
+  -s ss.s    Period for pushing TCSS data to STATint host, def to 0.1 seconds.
+  -S,-s      Without a period value, causes sending with default periods.
+             If neither -s nor -S are furnished, no TCSS data will be processed.
+  -L ss.s    Period for pulling TCSL data from OBS, default to 5.0 seconds.
+  -l ss.s    Period for pushing TCSL data to STATint host, def to 1.0 seconds.
+  -L,-l      Without a period value, causes sending with default periods.
+             If neither -l nor -L are furnished, no TCSL data will be processed.
+  -V ss.s    Period for pulling TCSV data from OBS, default to 10.0 seconds.
+  -v ss.s    Period for pushing TCSV data to STATint host, def to 1.0 seconds.
+  -V,-v      Without a period value, causes sending with default periods.
+             If neither -v nor -V are furnished, no TCSV data will be processed.
+  -vl        With no argument, send all SDS's (up to vs size per interval).
+  -vs        Send all V SDS's, or all that are in the vl list, each interval.
+             [this is the default]
+  -vs &lt;size&gt; Send no more than &lt;size&gt; data at each V interval.
+  -vz        Send zero data in V packets [this is the default].
+  -vi        Send integer data in V packets (0,1,2,...,255,0,1,...).
+  -vr        Randomize SDS selection for V packets sent
+  -vn        Set SDS's V packets to follow order given in decoding tables
+</pre>
+Once TCSstatSim.py has started, it gives you a command prompt ("cmd>"),
+at which point you can dynamically modify its behavior with any
+of the following:
+<pre>
+    ?,H,h       print this help information
+    Q,q,X,x     terminate program
+
+    ds          stop  sending TCSS data
+    s           start sending TCSS data at previous or default rate
+    s ss.s      start sending TCSS data every ss.s seconds
+    S ss.s      specify period for pulling TCSS data from OBS
+
+    dl          stop  sending TCSL data
+    l           start sending TCSL data at previous or default rate
+    l ss.s      start sending TCSL data every ss.s seconds
+    L ss.s      specify period for pulling TCSL data from OBS
+
+    dv          stop  sending TCSV data
+    v           start sending TCSV data at previous or default rate
+    v ss.s      start sending TCSV data every ss.s seconds
+    V ss.s      specify period for pulling TCSV data from OBS
+    vs &lt;size&gt;   send no more than &lt;size&gt; data at each V interval
+    vs          send all V SDS's, or all that are in the vl list, each interval
+    vz          send zero data in V packets
+    vi          send integer data in V packets (0,1,2,...,255,0,1,...)
+    vl          with no argument, send all SDS's (up to vs size per interval)
+    vr          randomize SDS selection for V packets sent
+    vn          set SDS's V packets to follow order given in decoding tables
+
+    S ss.s      specify period for pulling TCSS data from OBS
+    L ss.s      specify period for pulling TCSL data from OBS
+    V ss.s      specify period for pulling TCSV data from OBS
+</pre>
+
+
+<a name="run5">
+<h3>Step 5: Running TelStat</h3></a>
+To run TelStat,open a terminal window, and start OSSO_TelStat:
+<pre>
+      $ cd ~/Svn/product/OSSO/OSSO_TelStat.d
+      $ setenv PYTHONPATH OSSO_TelStatLib:$PYTHONPATH
+      $ ./OSSO_TelStat -d -g2 -l
+</pre>
+
+<h3>Details</h3>
+
+TelStat will place log files in the directory from which you run it
+(unless you are running under SOSS!).  You should check these files,
+or at least delete them, from time to time, especially if you use
+the "-l" option -- they can become rather large.
+
+<p>
+Options that you can give to OSSO_TelStat:
+<pre>
+  -l                Run TelStat with data logging turned on; this will
+  -logdata          produce a file named 'TelStat_ReplayData_&lt;timetag&gt;.log'
+                    in the current directory, containing all of the 
+                    status alias values used by TelStat until either the
+                    end of the run or until logging is turned off with
+                    the Options menu.
+
+  -d                Run TelStat with debug menu turned on.
+  -debug
+
+  -s                Run TelStat in local simulation mode for debugging.
+  -sim
+
+  -g2               Run TelStat in OCS Gen 2 mode, pulling status data
+  -gen2             from a Gen 2 status.py server.  If not specified,
+                    TelStat is run in SOSS mode, using OSSC_screenPrint
+                    calls to pull status data from OBS.
+
+  -r &lt;logSpec&gt;      Run TelStat to replay a data log created by the -l 
+  -replay &lt;logSpec&gt; option.  This also turns debugging mode on, to
+                    allow control of the playback.
+
+  -i &lt;n&gt;            When -r is specified, -i &lt;n&gt; will skip the first
+  -initskip &lt;n&gt;     n records before starting the replay.  If the replay
+                    session is restarted (by selecting 
+                    Options/Restart Data Replay), TelStat will again
+                    skip the first n records, thus restarting at the
+                    same record as initially requested.
+
+  -n                Initialize TelStat to do no data updates
+  -norefresh        (this only makes sense if debugging is turned on, 
+                    so this does nothing if -d was not specified).
+</pre>
+
+
+<a name="run6">
+<h3>Step 6: Running IntegGUI</h3></a>
+<p>
+Do <strong>not</strong> follow this procedure if you plan to use the 
+TaskManager directly, which is an alternative way of running tasks.
+Do, however, boot Gen2, as described under 
+<strong><a href="#run1">Step 1</a></strong>, above.
+
+<p>
+To run tasks under the IntegGUI, open a terminal window, and start the
+TaskManager remote command line interface:
+<pre>
+      $ export PYTHONPATH=$HOME/Svn/lib/python  # bash
+      $ setenv PYTHONPATH $HOME/Svn/lib/python   # tcsh
+      $ cd ~/Svn/g2-soss/product/load
+      $ IntegGUI.py         # . must be in your path
+</pre>
+
+This will display one error message and a variety of information and warning
+messages, which may be ignored.
+IntegGUI may be started at any time after the BootManager start(0) command
+has completed.
+
+<p>
+To display the IntegGUI log file, open another teriminal window and:
+<pre>
+      $ cd ~/Svn/g2-soss/product/load
+      $ tail -f OSSO_ObsOpe.log
+</pre>
+
+<p>
+<strong>Command Launcher commands to issue:</strong>
+
+<p>
+<strong>SM</strong> tab:
+<ul>
+    <li><strong>Reset Frame Counter</strong> -- In the boxes, enter
+        "SPCAM" and "SUPA80000000" (or whatever combination of instrument
+        name and starting frame ID).  This allows Gen2 applications to
+        request frame ID's from the FrameServer for the specified instrument.
+        This performs the same function as
+        <strong><a href="#run2">Step 2</a></strong>, above, so there is
+        no need to do both.
+    <li><strong>Allocate</strong> -- Select SPCAM from the drop-down menu
+        (or other instrument, as appropriate).
+    <li><strong>Change Proposal</strong> -- Fill in the boxes for Prop-ID,
+        Observers, Support Scientist and Operator, before clicking on the
+        button.  These strings go into status alias values, and are used
+        in FITS headers for images captured.
+</ul>
+
+<p>
+<strong>TM</strong> tab:
+<ul>
+    <li><strong>Load Modules</strong> -- For SuprimeCam, enter
+        "TelTask SPCAM g2eng" in the box, before clicking on the button.
+    <li><strong>Load PARA Dirs</strong> -- For SuprimeCam, enter
+        "TCS OBS SPCAM" in the box, before clicking on the button.
+</ul>
+
+
+<!-- --------------------------------------------------------------------- -->
+<hr>
+<!-- hhmts start -->
+Last modified: Tue Sep  2 16:37:02 HST 2008
+<!-- hhmts end -->
+<address><a href="mailto:eric@naoj.org">Eric Jeschke</a></address>
+
+</body>
+</html>

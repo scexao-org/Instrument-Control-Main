@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# number of arguments to script
+NBARGS=2
+
+for arg in "$@"; do
+  shift
+  case "$arg" in
+    "J")
+    piaa1 6 &
+    piaa2 7 & ;;
+    "H")
+    piaa1 8 &
+    piaa2 7 & ;;
+    "K")
+    piaa1 7 &
+    piaa2 8 & ;;
+    "out")
+    piaa1 7 &
+    piaa2 7 & ;;
+  esac
+done
+
+
+

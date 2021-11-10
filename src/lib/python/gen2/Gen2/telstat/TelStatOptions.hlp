@@ -1,0 +1,45 @@
+Turn Prototype Light Path Off/On
+  The first selection in the Options menu toggles the telescope light path 
+  display on/off.  This depicts the light path of the telescope with respect 
+  to the wind screen and top screen -- if it intersects the filled-in 
+  portion of either, then the light path will be partially or fully 
+  obstructed.
+
+  WARNING:  THE TELSTAT LIGHT PATH DISPLAY IS A PROTOTYPE AND MAY NOT BE 
+  GEOMETRICALLY ACCURATE.  I.E. THERE MAY BE A LIGHT PATH OBSTRUCTION FROM 
+  THE TOP SCREEN OR WIND SCREEN, EVEN THOUGH THE DISPLAY APPEARS TO SHOW 
+  THAT THERE IS NOT!
+
+Set refresh delay = 
+  Between cycles of acquiring and displaying data, TelStat sleeps for a 
+  period that we call the "refresh delay", during which all window graphics 
+  are brought up-to-date.  The "Set refresh delay" selections allow the 
+  cycle rate of TelStat to be controlled.  The total TelStat cycle period 
+  is the sum of the data acquisition period, the display period and the 
+  refresh delay period.  Typically, the total cycle is about 1.3 seconds 
+  for TelStat running in Hilo with a refresh delay of 1 second.
+
+Switch to Summit/Simulator data
+  This option will only appear if you are running in the Simulator.  It
+  allows you to display either Simulator or Summit status data.
+
+Turn Data Logging On/Off
+  This selection toggles data logging between on and off.  Any time data
+  logging is on, all raw status data used in the TelStat display is saved
+  to a file, which can later be either inspected or played back to
+  duplicate the display as it appeared during operations.  This is useful
+  when there is some anomaly that the operator would like the OCS team
+  to investigate.  In this case, please turn data logging on and note
+  the time and the symptoms of the anomaly.  You may turn data logging
+  on and off, as desired.
+
+Test sound
+  This plays a sequence of 5 of the alert sounds, beginning with
+  "Warning: low temperature" and ending with "Alert: environmental 
+  conditions have been in range for 30 minutes".  The purpose of this 
+  button is to allow you to set your volume control.  The alerts are 
+  NOT related to actual environmental conditions!
+
+--------------
+
+Last update:  2008-08-26

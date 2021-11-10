@@ -1,0 +1,331 @@
+OSSO_TelStat Version 2.1.13 2008-09-18
+
+  Significant modifications since previous released version:
+
+    - OCSI Issue 1158:  Corrected computation of guiding errors for
+      FMOS AG, to get the scatter plot working.
+______________________________________________________________________________
+
+OSSO_TelStat Version 2.1.12 2008-08-26
+
+  Significant modifications since previous released version:
+
+    - OCSI Issue 1999:  Added interpretation of AO-related focus
+      configuration status, and display in the Telescope Pane.
+    - Moved the data logging toggle from Debug to Options menu, so that it
+      will be available during operations.  Please see Help/Options help for
+      how to use this feature.
+______________________________________________________________________________
+
+OSSO_TelStat Version 2.1.11 2008-04-23
+
+  Minor modifications to make TelStat run under Solaris 8 SOSS (STN2),
+  Solaris 10 SOSS (STN3), or Linux.
+______________________________________________________________________________
+
+OSSO_TelStat Version 2.1.8 2008-01-02
+
+  Significant modifications since previous released version:
+
+    - OCSI Issue 1158:  Added interpretation of FMOS AG status and improved
+      the Tracking Pane handling of missing data.
+______________________________________________________________________________
+
+OSSO_TelStat Version 2.1.5 2007-12-21
+
+  Modifications since previous released version:
+
+    - OCSI Issue 1158:  Modified to eliminate spurious FMOS "guide star lost"
+      alerts -- this is an interim modification until the complete FMOS
+      guiding changes can be determined.
+______________________________________________________________________________
+
+OSSO_TelStat Version 2.1.4 2007-04-16
+
+  Major release version 2 supports status data acquisition from both
+  the SOSS OBS status server and the Gen 2 status.py server.
+
+  Significant modifications since previous released version:
+
+    - Added command-line option -g2/-gen2 to select data acquisition
+      from the Gen 2 status.py server; modified internal data types,
+      tables and conversions to support both data sources.
+
+    - Modified the replay log data formats to be compatible with
+      internal Python types, instead of the SOSS OSSO_screenPrint
+      output formats.  The new TelStat version will *NOT*
+      replay data logs made with the old formats.
+
+    - OCSI Issue 492:  Appended SV calculation mode (CTR, BSEC, PK or SLIT)
+      to "Guiding (SV)" in the tracking pane.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.3.1 2006-01-09
+
+  Modifications since previous released version:
+
+    - OCSI Issue 492:  Modified to reduce excessive log volume when
+      OSSC_screenPrint returns fatal errors.  Especially applies to 
+      remote operations.
+
+    - OCSI Issue 500:  Corrected audio clip for "Warning: Tip/Tilt 
+      drive turned off" to make it play at normal speed.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.3 2006-01-04
+
+  Modifications since previous released version:
+
+    - OCSI Issue 167:  Added log messages to monitor process size.
+
+    - OCSI Issue 176:  Suppressed most TSCL.CAL_HCT1/2_AMP error messages,
+      since this seems to be normal for some telescope configurations.
+
+    - OCSI Issue 185:  Revised interpretation of M2 status to match
+      results from testing in September.
+
+    - OCSI Issue 425:  If the azimuth or rotator time-to-limit values
+      exceed 30 minutes, then no limit warning message will be issued,
+      even though the azimuth or rotator value is close to a limit.
+
+    - OCSI Issue 426:  When the IR M2 is mounted, TelStat will sound
+      a warning ("Tip/Tilt drive turned off") if the drive turns off.
+
+    - OCSI Issue 429:  If an X error occurs during start-up, TelStat
+      will log a traceback and terminate gracefully, allowing restart.
+
+    - OCSI Issue 474:  Added "Guiding(AGPIR)" and "Guiding(AGFMOS)"
+      to the list of recognized guiding states.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.2 2005-08-29
+
+  Modifications since previous released version:
+
+    - OCSI Issue  83:  Fixed bug to eliminate audible alarms in the 
+      case where azimuth, rotator or probe position status data is 
+      not available.
+
+    - OCSI Issue 185:  Added tip/tilt/chopping status to the IR M2
+      status in the Telescope Pane.
+
+    - OCSI Issue 191:  Corrected errors in the display of ADC and
+      rotator status in the Telescope Pane.
+
+    - OCSI Issue 192:  Reduced volume of repetitious log messages.
+
+    - OCSI Issue 215:  Eliminated display of camera threshold values
+      in the Tracking Pane when neither AG nor SV is guiding.
+
+    - OCSI Issue 287:  Corrected hour angle display for the case where
+      LST - RA is less than -12 hours -- add 24 hours.
+
+    - OCSI Issue 288:  Corrected bug that turned the non-Pf AG probe
+      location in the Tracking Pane purple when not actually slewing.
+
+    - OCSI Issue 289:  Increased focus Z precision to 4 decimal places
+      in the Telescope Pane.
+
+    - Added a menu option, "Test sound", that issues several of the
+      audible messages in a row, to support setting speaker volume and
+      to confirm that the sound system is working.
+
+    - Added an instrument definition for FMOS (MOIRCS was added earlier).
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.1.3 2005-06-25
+
+  Modifications since previous released version:
+
+    - OCSI Issue 192:  Modified to only log duplicate OSSC_screenPrint
+      error messages every 500th time, about every 10 minutes if such
+      a message repeats on every iteration.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.1.2 2005-06-07
+
+  Modifications since previous released version:
+
+    - OCSI Issue 196:  Fixed bug that caused audible environment alerts 
+      to be suppressed when the dome was open.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.1.1 2005-05-26
+
+  Modifications since previous released version:
+
+    - OCSI Issue 4:  Replaced complete suppression of audible
+      "commanded position angle not achieved" warning, with suppression
+      for (6 + 0.667 * ROTDIF) seconds, where ROTDIF is the difference
+      between commanded and achieved rotator angles in degrees.
+
+    - OCSI Issues 49, 97, 129, 130, 145:  All of these issues were related
+      to changes in status alias definitions that were implemented by FAI
+      since last year, but for which the SSD team was not fully informed.
+      For TelStat version 1.1.1, all such definition changes have been 
+      investigated, and code modified and tested as needed.
+      All use of the TSCV.Focus and TSCV.TelDrive aliases has been 
+      removed, replaced by use of the TSCV.FOCUSINFO, TELSTAT.TELDRIVE 
+      and STATL.TELDRIVE aliases.
+
+    - OCSI Issue 86:  Revised the environment pane to issue audible 
+      "in range" alerts at 15 and 30 minutes after humidity and/or
+      wind speed come into the acceptable range (<80% humidity, 
+      < 20 m/sec wind speed).
+
+    - The temporary code, that allowed a user to switch between old
+      status alias definitions and new, has been removed.  Version 1.1.1
+      will ONLY use the new status aliases, in particular TSCV.FOCUSINFO.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.1 2005-03-10
+
+  Modifications since previous released version:
+
+    - OCSI Issue 5, items (b,d):  Changed plotting units in the Tracking 
+      Pane scatter plot to arcsec instead of milliarcsec.  Corrected 
+      scaling so to interpret TSCL.AG1dX, etc. as units of milliarcsec 
+      rather than units of 0.01 milliarcsec as it says in document 
+      SOSS-18-03-9.  Made plot to clear when telescope leaves guiding
+      mode.  Remaining items in Issue 5 are deferred.
+
+    - OCSI Issue 9:  Suppressed rotator limit alarm during slewing.
+
+    - OCSI Issue 10:  The AG probe position near the bottom of the Tracking
+      Pane is now displayed in purple if the probe position is changing,
+      and in black (normal) otherwise.
+
+    - OCSI Issue 38:  The position of the Top Screen graphic in the Telescope 
+      Pane was modified to eliminate the apparent obstruction to the light
+      path observed when the Top Screen is stowed and the telescope pointing
+      at the zenith.  WARNING: the light path graphic is *not* accurately
+      calibrated; a clear light path in the Telescope Pane does not guarantee
+      a clear light path for the real telescope!
+
+    - OCSI Issue 40:  Modified the Pointing Pane to display the equinox
+      (e.g. 2000.0,1970.0) from the STATS.EQUINOX status value.  Previously
+      this was hard-coded to always display 2000.0.
+
+    - OCSI Issue 44:  Implemented the "Guide star lost" audible alarm, which
+      sounds when the guide star/SV intensity falls to zero.  This was always
+      planned, but had been suppressed to avoid false alarms.
+
+    - OCSI Issue 49:  Implemented code to use new Focus and M2 status alias
+      values, and option under the Options menu, and on the command line, 
+      to switch back and forth between the old and new status alias values.
+
+    - OCSI Issue 63:  Modified both the Dome Lamps Pane and the Calibration 
+      Lamps Pane to test validity of data.  When data is missing or invalid,
+      indicator color turns red; when 2 or more lamps are on, those indicators
+      turn yellow.
+
+    - OCSI Issue 69:  Added instrument/device definitions to allow display
+      of all defined proposal ID's and targets, in particular those for the
+      Kyota 3D instrument.
+
+    - OCSI Issue 71:  Found and fix bug that caused incorrect LST display
+      during February of any year.
+
+    - Errors found in computation of the Pointing/Tracking/Guiding status
+      in the Tracking Pane were found and corrected.
+
+    - Fixed bug in fractions of seconds of declination.  Fixed bugs in some
+      error handling statements that could hang TelStat when bad status is
+      detected.
+
+    - Added a facility that, should an unhandled exception occur, will 
+      write a traceback and the latest status data values into a 
+      time-tagged log file in $OSS_PRGLOG. 
+
+    - Moved the help file directory to the same as the TelStat library,
+      allowing existing distribution scripts to work.
+
+    - Suppressed time-to-limit alert when rotator limit = 0.0, because this
+      sometimes occurs when the rotator is not at or near its limit.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.0.12a 2004-10-12
+
+  Modifications since previous released version:
+
+    - Replaced old time-to-limit section in the Target Pane with new
+      code that uses the newly available TSC time-to-limit status values.
+
+    - Added default target that does nothing but print a message, so 
+      that "make" will NOT be the same as "make install".
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.0.11 2004-10-05
+
+  Modifications since previous released version:
+
+    - The hour angle (HA) displayed in the time pane has been modified to
+      force it into a range of -12 hours to +12 hours, rather than
+      0 to 24 hours as before.
+
+    - The sign has been removed from right ascension (RA), since its value
+      is always positive.
+
+    - Configuration has been modified to get the directory for logging from
+      the environment variable, OSS_PRGLOG, rather from a hard-coded value.
+
+    - Startup script, OSSO_TelStatus.sh, has been modified to eliminate the
+      hard-code path to the directory containing OSSC_screenPrint, and the
+      configuration modified to simply find OSSC_screenPrint in the 
+      environment's search path.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.0.10 2004-09-17
+
+  Bug fix since previous released version:
+
+    - Mitaka could not start OSSO_TelStat due to conflict between versions of 
+      TCL and TK.  Start-up script has been modified to remove the conflict.
+
+    - Remote and Mitaka OSSO_TelStat were not using correct path to 
+      OSSC_screenPrint.  Code has been modified to retrieve path from 
+      environment rather than a hard coded path.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.0.9 2004-08-04
+
+  Bug fix since previous released version:
+
+    - When the rotator was at or near its limit, the audible message issued 
+      was "Alarm: AG probe at limit" or "Warning: close to AG probe limit".  
+      This has been fixed -- it now says "Alarm: rotator at limit" or 
+      "Warning: close to rotator limit".
+
+  Enhancements since previous released version:
+
+    - Excessive delay in shutdown sequence eliminated.
+
+    - The audible messsage, "Warning: commanded position angle not achieved" 
+      was being played whenever the commanded position/rotator angle was 
+      changed, without any delay to allow the mechanism to catch up with 
+      the command.  A suppression period which is proportional to the
+      commanded change in position angle has been added to the code, so that 
+      you shouldn't hear this warning if the rotator is operating normally.
+      *** This has temporarily been completely suppressed, however,
+      pending further analysis by Noumaru-san. ***
+
+    - Time-to-limit value omitted during telescope slewing.
+
+    - Release Notes added to the Help menu.
+______________________________________________________________________________
+
+OSSO_TelStat Version 1.0.6 2004-06-03
+
+  Enhancements since previous released version:
+
+    - Prototype light path graphic enabled by default.
+
+    - Options menu enabled, providing refresh delays of 1, 2, 5, 10 and
+      20 seconds, and toggle control of prototype light path graphic.
+      See Help/Options help.
+
+    - Autoguider scatter plot changed to display 256 most recent points.
+
+    - Environment plots changed to display up to 4 hours of data.
+
+    - Air mass value displayed in larger font.

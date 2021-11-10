@@ -13,10 +13,14 @@ class wheel(object):
         self.s = None
         
     def open(self, devid):
-        self.s = serial.Serial(devid, 115200, timeout=0.5)
-        self.s.write('\r'.encode())
-        dummy = self.s.readline() # flush the port
-
+        try:
+            self.s = serial.Serial(devid, 115200, timeout=0.5)
+            self.s.write('\r'.encode())
+            dummy = self.s.readline() # flush the port
+        except:
+            print("Thorlabs wheel %s not connected" %devid)
+            sys.exit()
+            
     def move(self, slot, devname):
         self.s.write(str.encode("pos=%c\r" % (slot,)))
         dummy = self.s.readline()

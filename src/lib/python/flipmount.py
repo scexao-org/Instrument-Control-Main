@@ -25,12 +25,15 @@ home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 import dio
 import logit #Custom logging library
-from   xaosim.scexao_shmlib   import shm
 
+from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxkw.redisutil.typed_db import Redis
+
+rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+LEGACY_EXEC = '/home/scexao/bin/scexaostatus'
 
 # =====================================================================
 # =====================================================================
-mydata = np.zeros((1,1)).astype(np.float32) # required for shared memory added by PP (copying Frantz)
 
 class flipmount:
 
@@ -58,6 +61,9 @@ class flipmount:
         elif "reset" in args[0]:
             self.savestate()
 
+        elif "set" in args[0]:
+            self.setout()
+
         elif "status" in args[0]:
             self.status()
             
@@ -73,6 +79,7 @@ Usage: %s <command>
 COMMAND:
     status  displays status
      reset  reset status
+       set  set status to out
 ---------------------------------------""") % (self.flipname,)
     
     # -----------------------------------------------------------------
@@ -88,36 +95,37 @@ COMMAND:
 
     # -----------------------------------------------------------------
     def savestate(self):
-        if not os.path.isfile("/tmp/%s.im.shm" % (self.flipname,)):
-            os.system("creashmim %s 1 1" % (self.flipname,))
-            print("Position unsure")
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'UNKNOWN', '3'])
-        intspshm = shm("/tmp/%s.im.shm" % (self.flipname,), verbose=False)
-        intsp = int(intspshm.get_data())
-        if intsp:
-            mydata[0,0] = float(0)
-            intspshm.set_data(mydata)
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'OUT', '1'])
+        key = rdb.hget('map:shm_lookup', self.flipname)
+        # Now Getting the keys
+        value = rdb.hget(key, 'value').strip()
+        if value == 'IN':
+            value = 'OUT'
+            color = '1'
+        elif value == 'OUT':
+            value = 'IN'
+            color = '0'
         else:
-            mydata[0,0] = float(np.ones(1))
-            intspshm.set_data(mydata)
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'IN', '0'])
-        intspshm.close()
+            value = 'UNKNOWN'
+            color = '3'
+            
+        command = LEGACY_EXEC + ' set ' + self.flipname + ' "' + value + '" ' + color
+        os.system(command)
+
+    # -----------------------------------------------------------------
+    def setout(self):
+        value = 'OUT'
+        color = '1'
+        command = LEGACY_EXEC + ' set ' + self.flipname + ' "' + value + '" ' + color
+        os.system(command)
 
     # -----------------------------------------------------------------
     def status(self):
-        if not os.path.isfile("/tmp/%s.im.shm" % (self.flipname,)):
-            print("Position unsure")
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'UNKNOWN', '3'])
-        
-        d = locals()
-        exec("intspshm = shm('/tmp/%s.im.shm', verbose=False)" % (self.flipname,), globals(), d)
-        intspshm = d['intspshm']
-        intsp = int(intspshm.get_data())
-        if intsp:
+        key = rdb.hget('map:shm_lookup', self.flipname)
+        # Now Getting the keys
+        value = rdb.hget(key, 'value').strip()
+        if value == 'IN':
             print("Flip mount is in")
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'IN', '0'])
-        else:
+        elif value == 'OUT':
             print("Flip mount is out")
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.flipname, 'OUT', '1'])
-        intspshm.close()
+        else:
+            print("Flip mount in unknown state")

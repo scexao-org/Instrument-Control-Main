@@ -1,0 +1,50 @@
+
+OLD TODO FROM GARBODEN, BON:
+"scp" it to the summit (in two steps) (need an associated oAcct)
+
+Missing features:
+update the user stories!
+
+++Output a target list ope file for use by skymonitor
+
++make ope file directly in python
+
+lots of testing needed (especially GUI)
+we need logging, lots of logging!
+
+spot format NOT in python (e.g. XML)
+
++import a target list (e.g. name, ra, dec, equinox, comment)
+
+add activity sequences!!
+general refactoring
+recent files dialog
+show division in columnar tables
+why is the dither list grey and the other lists white?  should be grey
+A tool tip-esque work flow hint (creat a target or recipe)
+
+? convert to tabs
+Start conversations about two more instruments (HDS->hoe, ircs? SpCam?)
+deployment (i.e. install/freeze and multiple platforms, iso)
+
+"editing" functions (e.g. undo, cut, copy, paste, new)
+-support undo  (related to unsaved work)
+check if there is unsaved work before quiting, opening, newing.
+-make graph (including color highlights and minor rounding errors)
+more validation
+
+auto checkpoint (i.e. autosave .bak file)
+-more work on activity status
+-hook up all comments or grey them out
+hide second spc button row if unneeded (does strange things to the spacing)
+-print plan human readable (xml -> html)
+move some buttons around!!
+try uniform on hbox (didn't work)
+swap activity status and comment
+-hook up pane minimize/maximize or disable them
+need status bar/ message window
+
+add a new instrument or two (pattern)
+
+allow multiple GUI's
+
