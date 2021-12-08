@@ -199,7 +199,10 @@ class devices:
                 for i in range(len(conexnames)):
                     self.devnamec = devname+'_'+conexnames[i]
                     self.conexid = "/dev/serial/by-id/"+conexids[i]
-                    self.con.open(self.conexid)
+                    opened = self.con.open(self.conexid)
+                    if not opened:
+                        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+                        sys.exit()
                     pos[self.col-2] = self.con.status(self.devnamec)
                     self.col += 1
                     self.con.close()
@@ -269,7 +272,10 @@ CONTENT:""")
 
     # -----------------------------------------------------------------
     def conex_home(self, conu):
-        self.con.open(self.conexid)
+        opened = self.con.open(self.conexid)
+        if not opened:
+            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+            sys.exit()
         self.con.home(self.devnamec)
         pos0 = -1000.
         d = locals()
@@ -296,7 +302,10 @@ CONTENT:""")
         
     # -----------------------------------------------------------------
     def conex_status(self, conu):
-        self.con.open(self.conexid)
+        opened = self.con.open(self.conexid)
+        if not opened:
+            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+            sys.exit()
         pos = self.con.status(self.devnamec)
         self.con.close()
         if pos == 0:
@@ -320,7 +329,10 @@ CONTENT:""")
               
     # -----------------------------------------------------------------
     def conex_goto(self, pos, conu):
-        self.con.open(self.conexid)
+        opened = self.con.open(self.conexid)
+        if not opened:
+            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+            sys.exit()
         self.con.move(pos, self.devnamec)
         pos0 = -1000.
         d = locals()
@@ -348,7 +360,10 @@ CONTENT:""")
     # -----------------------------------------------------------------
     def conex_goto_slot(self, slot, conu):
         if (1 <= slot <= self.nslots):
-            self.con.open(self.conexid)
+            opened = self.con.open(self.conexid)
+            if not opened:
+                subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+                sys.exit()
             d = locals()
             exec("pos = self.param%d[slot-1]" %(self.col,), globals(), d)
             pos = d['pos']
