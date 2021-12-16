@@ -626,11 +626,11 @@ int main(int argc, char **argv)
     printf("OPTIONS :\n");
     printf("   %s create:\n", argv[0]);
     printf("      create shared memory (run every time the structure has changed)\n");
-    printf("   %s set <variable> <value> <color>:\n", argv[0]);
-    printf("      Set variable, color is optional \n");
+    printf("   %s set <variable> <value> <value>:\n", argv[0]);
+    printf("      Set variable, value is optional \n");
     printf("   %s disp:\n", argv[0]);
     printf("      Display variables\n");
-    printf("   Color code (xterm):\n");
+    printf("   value code (xterm):\n");
     printf("      -1:WHITE 0:RED 1:GREEN 2:BLUE 3:ORANGE 4:BLACK \n");
     printf("\n");
     exit(0);
@@ -638,859 +638,866 @@ int main(int argc, char **argv)
 
   cmdOK = 0;
 
-  if (strcmp(argv[1], "create") == 0)
+  char *command = argv[1];
+  char *status_item = argv[2];
+  char *value = "0";
+  if (argc >= 4)
+    value = argv[3];
+  char *color = "-1";
+  if (argc >= 5)
+    color = argv[4];
+
+  if (strcmp(command, "create") == 0)
   {
     printf("create status shared memory structure\n");
     create_status_shm();
     cmdOK = 1;
   }
-
-  if (strcmp(argv[1], "set") == 0)
+  else if (strcmp(command, "set") == 0)
   {
     read_status_shm();
     cmdOK = 1;
     // NPS1
-    if (strcmp(argv[2], "nps1_1") == 0)
+    if (strcmp(status_item, "nps1_1") == 0)
     {
-      SCExAO_status[0].nps1_1_co = atoi(argv[4]);
+      SCExAO_status[0].nps1_1_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps1_2") == 0)
+    else if (strcmp(status_item, "nps1_2") == 0)
     {
-      SCExAO_status[0].nps1_2_co = atoi(argv[4]);
+      SCExAO_status[0].nps1_2_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps1_3") == 0)
+    else if (strcmp(status_item, "nps1_3") == 0)
     {
-      SCExAO_status[0].nps1_3_co = atoi(argv[4]);
+      SCExAO_status[0].nps1_3_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps1_4") == 0)
+    else if (strcmp(status_item, "nps1_4") == 0)
     {
-      SCExAO_status[0].nps1_4_co = atoi(argv[4]);
+      SCExAO_status[0].nps1_4_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps1_5") == 0)
+    else if (strcmp(status_item, "nps1_5") == 0)
     {
-      SCExAO_status[0].nps1_5_co = atoi(argv[4]);
+      SCExAO_status[0].nps1_5_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps1_6") == 0)
+    else if (strcmp(status_item, "nps1_6") == 0)
     {
-      SCExAO_status[0].nps1_6_co = atoi(argv[4]);
+      SCExAO_status[0].nps1_6_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps1_7") == 0)
+    else if (strcmp(status_item, "nps1_7") == 0)
     {
-      SCExAO_status[0].nps1_7_co = atoi(argv[4]);
+      SCExAO_status[0].nps1_7_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps1_8") == 0)
+    else if (strcmp(status_item, "nps1_8") == 0)
     {
-      SCExAO_status[0].nps1_8_co = atoi(argv[4]);
+      SCExAO_status[0].nps1_8_co = atoi(color);
     }
     // NPS2
-    if (strcmp(argv[2], "nps2_1") == 0)
+    else if (strcmp(status_item, "nps2_1") == 0)
     {
-      SCExAO_status[0].nps2_1_co = atoi(argv[4]);
+      SCExAO_status[0].nps2_1_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps2_2") == 0)
+    else if (strcmp(status_item, "nps2_2") == 0)
     {
-      SCExAO_status[0].nps2_2_co = atoi(argv[4]);
+      SCExAO_status[0].nps2_2_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps2_3") == 0)
+    else if (strcmp(status_item, "nps2_3") == 0)
     {
-      SCExAO_status[0].nps2_3_co = atoi(argv[4]);
+      SCExAO_status[0].nps2_3_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps2_4") == 0)
+    else if (strcmp(status_item, "nps2_4") == 0)
     {
-      SCExAO_status[0].nps2_4_co = atoi(argv[4]);
+      SCExAO_status[0].nps2_4_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps2_5") == 0)
+    else if (strcmp(status_item, "nps2_5") == 0)
     {
-      SCExAO_status[0].nps2_5_co = atoi(argv[4]);
+      SCExAO_status[0].nps2_5_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps2_6") == 0)
+    else if (strcmp(status_item, "nps2_6") == 0)
     {
-      SCExAO_status[0].nps2_6_co = atoi(argv[4]);
+      SCExAO_status[0].nps2_6_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps2_7") == 0)
+    else if (strcmp(status_item, "nps2_7") == 0)
     {
-      SCExAO_status[0].nps2_7_co = atoi(argv[4]);
+      SCExAO_status[0].nps2_7_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps2_8") == 0)
+    else if (strcmp(status_item, "nps2_8") == 0)
     {
-      SCExAO_status[0].nps2_8_co = atoi(argv[4]);
+      SCExAO_status[0].nps2_8_co = atoi(color);
     }
     // NPS3
-    if (strcmp(argv[2], "nps3_1") == 0)
+    else if (strcmp(status_item, "nps3_1") == 0)
     {
-      SCExAO_status[0].nps3_1_co = atoi(argv[4]);
+      SCExAO_status[0].nps3_1_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps3_2") == 0)
+    else if (strcmp(status_item, "nps3_2") == 0)
     {
-      SCExAO_status[0].nps3_2_co = atoi(argv[4]);
+      SCExAO_status[0].nps3_2_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps3_3") == 0)
+    else if (strcmp(status_item, "nps3_3") == 0)
     {
-      SCExAO_status[0].nps3_3_co = atoi(argv[4]);
+      SCExAO_status[0].nps3_3_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps3_4") == 0)
+    else if (strcmp(status_item, "nps3_4") == 0)
     {
-      SCExAO_status[0].nps3_4_co = atoi(argv[4]);
+      SCExAO_status[0].nps3_4_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps3_5") == 0)
+    else if (strcmp(status_item, "nps3_5") == 0)
     {
-      SCExAO_status[0].nps3_5_co = atoi(argv[4]);
+      SCExAO_status[0].nps3_5_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps3_6") == 0)
+    else if (strcmp(status_item, "nps3_6") == 0)
     {
-      SCExAO_status[0].nps3_6_co = atoi(argv[4]);
+      SCExAO_status[0].nps3_6_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps3_7") == 0)
+    else if (strcmp(status_item, "nps3_7") == 0)
     {
-      SCExAO_status[0].nps3_7_co = atoi(argv[4]);
+      SCExAO_status[0].nps3_7_co = atoi(color);
     }
-    if (strcmp(argv[2], "nps3_8") == 0)
+    else if (strcmp(status_item, "nps3_8") == 0)
     {
-      SCExAO_status[0].nps3_8_co = atoi(argv[4]);
+      SCExAO_status[0].nps3_8_co = atoi(color);
     }
     // cal source
-    if (strcmp(argv[2], "src_fib_st") == 0)
+    else if (strcmp(status_item, "src_fib_st") == 0)
     {
-      strncpy(SCExAO_status[0].src_fib_st, argv[3], 15);
-      SCExAO_status[0].src_fib_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].src_fib_st, value, 15);
+      SCExAO_status[0].src_fib_co = atoi(color);
     }
-    if (strcmp(argv[2], "src_fib_x") == 0)
+    else if (strcmp(status_item, "src_fib_x") == 0)
     {
-      SCExAO_status[0].src_fib_x = atof(argv[3]);
+      SCExAO_status[0].src_fib_x = atof(value);
     }
-    if (strcmp(argv[2], "src_fib_y") == 0)
+    else if (strcmp(status_item, "src_fib_y") == 0)
     {
-      SCExAO_status[0].src_fib_y = atof(argv[3]);
+      SCExAO_status[0].src_fib_y = atof(value);
     }
-    if (strcmp(argv[2], "src_select_st") == 0)
+    else if (strcmp(status_item, "src_select_st") == 0)
     {
-      strncpy(SCExAO_status[0].src_select_st, argv[3], 15);
-      SCExAO_status[0].src_select_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].src_select_st, value, 15);
+      SCExAO_status[0].src_select_co = atoi(color);
     }
-    if (strcmp(argv[2], "src_select") == 0)
+    else if (strcmp(status_item, "src_select") == 0)
     {
-      SCExAO_status[0].src_select = atof(argv[3]);
+      SCExAO_status[0].src_select = atof(value);
     }
-    if (strcmp(argv[2], "src_flux_irnd") == 0)
+    else if (strcmp(status_item, "src_flux_irnd") == 0)
     {
-      strncpy(SCExAO_status[0].src_flux_irnd, argv[3], 15);
+      strncpy(SCExAO_status[0].src_flux_irnd, value, 15);
     }
-    if (strcmp(argv[2], "src_flux_optnd") == 0)
+    else if (strcmp(status_item, "src_flux_optnd") == 0)
     {
-      strncpy(SCExAO_status[0].src_flux_optnd, argv[3], 15);
+      strncpy(SCExAO_status[0].src_flux_optnd, value, 15);
     }
-    if (strcmp(argv[2], "src_flux_filter") == 0)
+    else if (strcmp(status_item, "src_flux_filter") == 0)
     {
-      strncpy(SCExAO_status[0].src_flux_filter, argv[3], 15);
+      strncpy(SCExAO_status[0].src_flux_filter, value, 15);
     }
     // oap1
-    if (strcmp(argv[2], "oap1_st") == 0)
+    else if (strcmp(status_item, "oap1_st") == 0)
     {
-      strncpy(SCExAO_status[0].oap1_st, argv[3], 15);
-      SCExAO_status[0].oap1_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].oap1_st, value, 15);
+      SCExAO_status[0].oap1_co = atoi(color);
     }
-    if (strcmp(argv[2], "oap1_theta") == 0)
+    else if (strcmp(status_item, "oap1_theta") == 0)
     {
-      SCExAO_status[0].oap1_theta = atof(argv[3]);
+      SCExAO_status[0].oap1_theta = atof(value);
     }
-    if (strcmp(argv[2], "oap1_phi") == 0)
+    else if (strcmp(status_item, "oap1_phi") == 0)
     {
-      SCExAO_status[0].oap1_phi = atof(argv[3]);
+      SCExAO_status[0].oap1_phi = atof(value);
     }
-    if (strcmp(argv[2], "oap1_f") == 0)
+    else if (strcmp(status_item, "oap1_f") == 0)
     {
-      SCExAO_status[0].oap1_f = atoi(argv[3]);
+      SCExAO_status[0].oap1_f = atoi(value);
     }
     // integrating sphere
-    if (strcmp(argv[2], "intsphere") == 0)
+    else if (strcmp(status_item, "intsphere") == 0)
     {
-      strncpy(SCExAO_status[0].intsphere, argv[3], 15);
-      SCExAO_status[0].intsphere_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].intsphere, value, 15);
+      SCExAO_status[0].intsphere_co = atoi(color);
     }
     // polarizer
-    if (strcmp(argv[2], "polarizer") == 0)
+    else if (strcmp(status_item, "polarizer") == 0)
     {
-      strncpy(SCExAO_status[0].polarizer, argv[3], 15);
-      SCExAO_status[0].polarizer_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].polarizer, value, 15);
+      SCExAO_status[0].polarizer_co = atoi(color);
     }
-    if (strcmp(argv[2], "polarizer_theta") == 0)
+    else if (strcmp(status_item, "polarizer_theta") == 0)
     {
-      SCExAO_status[0].polarizer_theta = atof(argv[3]);
+      SCExAO_status[0].polarizer_theta = atof(value);
     }
     // dichroic
-    if (strcmp(argv[2], "dichroic_st") == 0)
+    else if (strcmp(status_item, "dichroic_st") == 0)
     {
-      strncpy(SCExAO_status[0].dichroic_st, argv[3], 15);
-      SCExAO_status[0].dichroic_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].dichroic_st, value, 15);
+      SCExAO_status[0].dichroic_co = atoi(color);
     }
-    if (strcmp(argv[2], "dichroic") == 0)
+    else if (strcmp(status_item, "dichroic") == 0)
     {
-      SCExAO_status[0].dichroic = atof(argv[3]);
+      SCExAO_status[0].dichroic = atof(value);
     }
     // pupil
-    if (strcmp(argv[2], "pupil_st") == 0)
+    else if (strcmp(status_item, "pupil_st") == 0)
     {
-      strncpy(SCExAO_status[0].pupil_st, argv[3], 15);
-      SCExAO_status[0].pupil_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pupil_st, value, 15);
+      SCExAO_status[0].pupil_co = atoi(color);
     }
-    if (strcmp(argv[2], "pupil_wheel") == 0)
+    else if (strcmp(status_item, "pupil_wheel") == 0)
     {
-      SCExAO_status[0].pupil_wheel = atof(argv[3]);
+      SCExAO_status[0].pupil_wheel = atof(value);
     }
-    if (strcmp(argv[2], "pupil_x") == 0)
+    else if (strcmp(status_item, "pupil_x") == 0)
     {
-      SCExAO_status[0].pupil_x = atoi(argv[3]);
+      SCExAO_status[0].pupil_x = atoi(value);
     }
-    if (strcmp(argv[2], "pupil_y") == 0)
+    else if (strcmp(status_item, "pupil_y") == 0)
     {
-      SCExAO_status[0].pupil_y = atoi(argv[3]);
+      SCExAO_status[0].pupil_y = atoi(value);
     }
     // Compensating plate
-    if (strcmp(argv[2], "compplate") == 0)
+    else if (strcmp(status_item, "compplate") == 0)
     {
-      strncpy(SCExAO_status[0].compplate, argv[3], 15);
-      SCExAO_status[0].compplate_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].compplate, value, 15);
+      SCExAO_status[0].compplate_co = atoi(color);
     }
     // piaa1
-    if (strcmp(argv[2], "piaa1_st") == 0)
+    else if (strcmp(status_item, "piaa1_st") == 0)
     {
-      strncpy(SCExAO_status[0].piaa1_st, argv[3], 15);
-      SCExAO_status[0].piaa1_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].piaa1_st, value, 15);
+      SCExAO_status[0].piaa1_co = atoi(color);
     }
-    if (strcmp(argv[2], "piaa1_wheel") == 0)
+    else if (strcmp(status_item, "piaa1_wheel") == 0)
     {
-      SCExAO_status[0].piaa1_wheel = atof(argv[3]);
+      SCExAO_status[0].piaa1_wheel = atof(value);
     }
-    if (strcmp(argv[2], "piaa1_x") == 0)
+    else if (strcmp(status_item, "piaa1_x") == 0)
     {
-      SCExAO_status[0].piaa1_x = atoi(argv[3]);
+      SCExAO_status[0].piaa1_x = atoi(value);
     }
-    if (strcmp(argv[2], "piaa1_y") == 0)
+    else if (strcmp(status_item, "piaa1_y") == 0)
     {
-      SCExAO_status[0].piaa1_y = atoi(argv[3]);
+      SCExAO_status[0].piaa1_y = atoi(value);
     }
     //piaa2
-    if (strcmp(argv[2], "piaa2_st") == 0)
+    else if (strcmp(status_item, "piaa2_st") == 0)
     {
-      strncpy(SCExAO_status[0].piaa2_st, argv[3], 15);
-      SCExAO_status[0].piaa2_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].piaa2_st, value, 15);
+      SCExAO_status[0].piaa2_co = atoi(color);
     }
-    if (strcmp(argv[2], "piaa2_wheel") == 0)
+    else if (strcmp(status_item, "piaa2_wheel") == 0)
     {
-      SCExAO_status[0].piaa2_wheel = atof(argv[3]);
+      SCExAO_status[0].piaa2_wheel = atof(value);
     }
-    if (strcmp(argv[2], "piaa2_x") == 0)
+    else if (strcmp(status_item, "piaa2_x") == 0)
     {
-      SCExAO_status[0].piaa2_x = atoi(argv[3]);
+      SCExAO_status[0].piaa2_x = atoi(value);
     }
-    if (strcmp(argv[2], "piaa2_y") == 0)
+    else if (strcmp(status_item, "piaa2_y") == 0)
     {
-      SCExAO_status[0].piaa2_y = atoi(argv[3]);
+      SCExAO_status[0].piaa2_y = atoi(value);
     }
-    if (strcmp(argv[2], "piaa2_f") == 0)
+    else if (strcmp(status_item, "piaa2_f") == 0)
     {
-      SCExAO_status[0].piaa2_f = atoi(argv[3]);
+      SCExAO_status[0].piaa2_f = atoi(value);
     }
     //nuller
-    if (strcmp(argv[2], "nuller_pickoff_st") == 0)
+    else if (strcmp(status_item, "nuller_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].nuller_pickoff_st, argv[3], 15);
-      SCExAO_status[0].nuller_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].nuller_pickoff_st, value, 15);
+      SCExAO_status[0].nuller_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "nuller_pickoff") == 0)
+    else if (strcmp(status_item, "nuller_pickoff") == 0)
     {
-      SCExAO_status[0].nuller_pickoff = atof(argv[3]);
+      SCExAO_status[0].nuller_pickoff = atof(value);
     }
     // PG1
-    if (strcmp(argv[2], "PG1_pickoff") == 0)
+    else if (strcmp(status_item, "PG1_pickoff") == 0)
     {
-      strncpy(SCExAO_status[0].PG1_pickoff, argv[3], 15);
-      SCExAO_status[0].PG1_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].PG1_pickoff, value, 15);
+      SCExAO_status[0].PG1_pickoff_co = atoi(color);
     }
     // fpm
-    if (strcmp(argv[2], "fpm_st") == 0)
+    else if (strcmp(status_item, "fpm_st") == 0)
     {
-      strncpy(SCExAO_status[0].fpm_st, argv[3], 15);
-      SCExAO_status[0].fpm_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].fpm_st, value, 15);
+      SCExAO_status[0].fpm_co = atoi(color);
     }
-    if (strcmp(argv[2], "fpm_wheel") == 0)
+    else if (strcmp(status_item, "fpm_wheel") == 0)
     {
-      SCExAO_status[0].fpm_wheel = atof(argv[3]);
+      SCExAO_status[0].fpm_wheel = atof(value);
     }
-    if (strcmp(argv[2], "fpm_x") == 0)
+    else if (strcmp(status_item, "fpm_x") == 0)
     {
-      SCExAO_status[0].fpm_x = atoi(argv[3]);
+      SCExAO_status[0].fpm_x = atoi(value);
     }
-    if (strcmp(argv[2], "fpm_y") == 0)
+    else if (strcmp(status_item, "fpm_y") == 0)
     {
-      SCExAO_status[0].fpm_y = atoi(argv[3]);
+      SCExAO_status[0].fpm_y = atoi(value);
     }
-    if (strcmp(argv[2], "fpm_f") == 0)
+    else if (strcmp(status_item, "fpm_f") == 0)
     {
-      SCExAO_status[0].fpm_f = atoi(argv[3]);
+      SCExAO_status[0].fpm_f = atoi(value);
     }
     // lyot
-    if (strcmp(argv[2], "lyot_st") == 0)
+    else if (strcmp(status_item, "lyot_st") == 0)
     {
-      strncpy(SCExAO_status[0].lyot_st, argv[3], 15);
-      SCExAO_status[0].lyot_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].lyot_st, value, 15);
+      SCExAO_status[0].lyot_co = atoi(color);
     }
-    if (strcmp(argv[2], "lyot_wheel") == 0)
+    else if (strcmp(status_item, "lyot_wheel") == 0)
     {
-      SCExAO_status[0].lyot_wheel = atof(argv[3]);
+      SCExAO_status[0].lyot_wheel = atof(value);
     }
-    if (strcmp(argv[2], "lyot_x") == 0)
+    else if (strcmp(status_item, "lyot_x") == 0)
     {
-      SCExAO_status[0].lyot_x = atoi(argv[3]);
+      SCExAO_status[0].lyot_x = atoi(value);
     }
-    if (strcmp(argv[2], "lyot_y") == 0)
+    else if (strcmp(status_item, "lyot_y") == 0)
     {
-      SCExAO_status[0].lyot_y = atoi(argv[3]);
+      SCExAO_status[0].lyot_y = atoi(value);
     }
     // inverse piaa
-    if (strcmp(argv[2], "invpiaa_st") == 0)
+    else if (strcmp(status_item, "invpiaa_st") == 0)
     {
-      strncpy(SCExAO_status[0].invpiaa_st, argv[3], 15);
-      SCExAO_status[0].invpiaa_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].invpiaa_st, value, 15);
+      SCExAO_status[0].invpiaa_co = atoi(color);
     }
-    if (strcmp(argv[2], "invpiaa_x") == 0)
+    else if (strcmp(status_item, "invpiaa_x") == 0)
     {
-      SCExAO_status[0].invpiaa_x = atof(argv[3]);
+      SCExAO_status[0].invpiaa_x = atof(value);
     }
-    if (strcmp(argv[2], "invpiaa_y") == 0)
+    else if (strcmp(status_item, "invpiaa_y") == 0)
     {
-      SCExAO_status[0].invpiaa_y = atof(argv[3]);
+      SCExAO_status[0].invpiaa_y = atof(value);
     }
-    if (strcmp(argv[2], "invpiaa_theta") == 0)
+    else if (strcmp(status_item, "invpiaa_theta") == 0)
     {
-      SCExAO_status[0].invpiaa_theta = atoi(argv[3]);
+      SCExAO_status[0].invpiaa_theta = atoi(value);
     }
-    if (strcmp(argv[2], "invpiaa_phi") == 0)
+    else if (strcmp(status_item, "invpiaa_phi") == 0)
     {
-      SCExAO_status[0].invpiaa_phi = atoi(argv[3]);
+      SCExAO_status[0].invpiaa_phi = atoi(value);
     }
     // oap4
-    if (strcmp(argv[2], "oap4_st") == 0)
+    else if (strcmp(status_item, "oap4_st") == 0)
     {
-      strncpy(SCExAO_status[0].oap4_st, argv[3], 15);
-      SCExAO_status[0].oap4_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].oap4_st, value, 15);
+      SCExAO_status[0].oap4_co = atoi(color);
     }
-    if (strcmp(argv[2], "oap4_theta") == 0)
+    else if (strcmp(status_item, "oap4_theta") == 0)
     {
-      SCExAO_status[0].oap4_theta = atof(argv[3]);
+      SCExAO_status[0].oap4_theta = atof(value);
     }
-    if (strcmp(argv[2], "oap4_phi") == 0)
+    else if (strcmp(status_item, "oap4_phi") == 0)
     {
-      SCExAO_status[0].oap4_phi = atof(argv[3]);
+      SCExAO_status[0].oap4_phi = atof(value);
     }
     // steering mirror
-    if (strcmp(argv[2], "steering_st") == 0)
+    else if (strcmp(status_item, "steering_st") == 0)
     {
-      strncpy(SCExAO_status[0].steering_st, argv[3], 15);
-      SCExAO_status[0].steering_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].steering_st, value, 15);
+      SCExAO_status[0].steering_co = atoi(color);
     }
-    if (strcmp(argv[2], "steering_theta") == 0)
+    else if (strcmp(status_item, "steering_theta") == 0)
     {
-      SCExAO_status[0].steering_theta = atof(argv[3]);
+      SCExAO_status[0].steering_theta = atof(value);
     }
-    if (strcmp(argv[2], "steering_phi") == 0)
+    else if (strcmp(status_item, "steering_phi") == 0)
     {
-      SCExAO_status[0].steering_phi = atof(argv[3]);
+      SCExAO_status[0].steering_phi = atof(value);
     }
     // charis
-    if (strcmp(argv[2], "charis_pickoff_st") == 0)
+    else if (strcmp(status_item, "charis_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].charis_pickoff_st, argv[3], 15);
-      SCExAO_status[0].charis_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].charis_pickoff_st, value, 15);
+      SCExAO_status[0].charis_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "charis_pickoff_wheel") == 0)
+    else if (strcmp(status_item, "charis_pickoff_wheel") == 0)
     {
-      SCExAO_status[0].charis_pickoff_wheel = atof(argv[3]);
+      SCExAO_status[0].charis_pickoff_wheel = atof(value);
     }
-    if (strcmp(argv[2], "charis_pickoff_theta") == 0)
+    else if (strcmp(status_item, "charis_pickoff_theta") == 0)
     {
-      SCExAO_status[0].charis_pickoff_theta = atof(argv[3]);
+      SCExAO_status[0].charis_pickoff_theta = atof(value);
     }
     // mkids
-    if (strcmp(argv[2], "mkids_pickoff_st") == 0)
+    else if (strcmp(status_item, "mkids_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].mkids_pickoff_st, argv[3], 15);
-      SCExAO_status[0].mkids_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].mkids_pickoff_st, value, 15);
+      SCExAO_status[0].mkids_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "mkids_pickoff_wheel") == 0)
+    else if (strcmp(status_item, "mkids_pickoff_wheel") == 0)
     {
-      SCExAO_status[0].mkids_pickoff_wheel = atof(argv[3]);
+      SCExAO_status[0].mkids_pickoff_wheel = atof(value);
     }
-    if (strcmp(argv[2], "mkids_pickoff_theta") == 0)
+    else if (strcmp(status_item, "mkids_pickoff_theta") == 0)
     {
-      SCExAO_status[0].mkids_pickoff_theta = atof(argv[3]);
+      SCExAO_status[0].mkids_pickoff_theta = atof(value);
     }
     // ircams common
-    if (strcmp(argv[2], "ircam_filter") == 0)
+    else if (strcmp(status_item, "ircam_filter") == 0)
     {
-      strncpy(SCExAO_status[0].ircam_filter, argv[3], 15);
-      SCExAO_status[0].ircam_filter_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].ircam_filter, value, 15);
+      SCExAO_status[0].ircam_filter_co = atoi(color);
     }
-    if (strcmp(argv[2], "ircam_block") == 0)
+    else if (strcmp(status_item, "ircam_block") == 0)
     {
-      strncpy(SCExAO_status[0].ircam_block, argv[3], 15);
-      SCExAO_status[0].ircam_block_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].ircam_block, value, 15);
+      SCExAO_status[0].ircam_block_co = atoi(color);
     }
-    if (strcmp(argv[2], "ircam_fcs_st") == 0)
+    else if (strcmp(status_item, "ircam_fcs_st") == 0)
     {
-      strncpy(SCExAO_status[0].ircam_fcs_st, argv[3], 15);
-      SCExAO_status[0].ircam_fcs_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].ircam_fcs_st, value, 15);
+      SCExAO_status[0].ircam_fcs_co = atoi(color);
     }
-    if (strcmp(argv[2], "ircam_fcs_f1") == 0)
+    else if (strcmp(status_item, "ircam_fcs_f1") == 0)
     {
-      SCExAO_status[0].ircam_fcs_f1 = atoi(argv[3]);
+      SCExAO_status[0].ircam_fcs_f1 = atoi(value);
     }
-    if (strcmp(argv[2], "ircam_fcs_f2") == 0)
+    else if (strcmp(status_item, "ircam_fcs_f2") == 0)
     {
-      SCExAO_status[0].ircam_fcs_f2 = atof(argv[3]);
+      SCExAO_status[0].ircam_fcs_f2 = atof(value);
     }
     // Polarization
-    if (strcmp(argv[2], "ircam_qwp") == 0)
+    else if (strcmp(status_item, "ircam_qwp") == 0)
     {
-      strncpy(SCExAO_status[0].ircam_qwp, argv[3], 15);
-      SCExAO_status[0].ircam_qwp_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].ircam_qwp, value, 15);
+      SCExAO_status[0].ircam_qwp_co = atoi(color);
     }
-    if (strcmp(argv[2], "field_stop_st") == 0)
+    else if (strcmp(status_item, "field_stop_st") == 0)
     {
-      strncpy(SCExAO_status[0].field_stop_st, argv[3], 15);
-      SCExAO_status[0].field_stop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].field_stop_st, value, 15);
+      SCExAO_status[0].field_stop_co = atoi(color);
     }
-    if (strcmp(argv[2], "field_stop_x") == 0)
+    else if (strcmp(status_item, "field_stop_x") == 0)
     {
-      SCExAO_status[0].field_stop_x = atof(argv[3]);
+      SCExAO_status[0].field_stop_x = atof(value);
     }
-    if (strcmp(argv[2], "field_stop_y") == 0)
+    else if (strcmp(status_item, "field_stop_y") == 0)
     {
-      SCExAO_status[0].field_stop_y = atof(argv[3]);
+      SCExAO_status[0].field_stop_y = atof(value);
     }
-    if (strcmp(argv[2], "charis_wollaston") == 0)
+    else if (strcmp(status_item, "charis_wollaston") == 0)
     {
-      strncpy(SCExAO_status[0].charis_wollaston, argv[3], 15);
-      SCExAO_status[0].charis_wollaston_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].charis_wollaston, value, 15);
+      SCExAO_status[0].charis_wollaston_co = atoi(color);
     }
-    if (strcmp(argv[2], "ircam_wollaston") == 0)
+    else if (strcmp(status_item, "ircam_wollaston") == 0)
     {
-      strncpy(SCExAO_status[0].ircam_wollaston, argv[3], 15);
-      SCExAO_status[0].ircam_wollaston_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].ircam_wollaston, value, 15);
+      SCExAO_status[0].ircam_wollaston_co = atoi(color);
     }
-    if (strcmp(argv[2], "ircam_flc_st") == 0)
+    else if (strcmp(status_item, "ircam_flc_st") == 0)
     {
-      strncpy(SCExAO_status[0].ircam_flc_st, argv[3], 15);
-      SCExAO_status[0].ircam_flc_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].ircam_flc_st, value, 15);
+      SCExAO_status[0].ircam_flc_co = atoi(color);
     }
-    if (strcmp(argv[2], "ircam_flc") == 0)
+    else if (strcmp(status_item, "ircam_flc") == 0)
     {
-      SCExAO_status[0].ircam_flc = atof(argv[3]);
+      SCExAO_status[0].ircam_flc = atof(value);
     }
-    if (strcmp(argv[2], "ircam_pupil_st") == 0)
+    else if (strcmp(status_item, "ircam_pupil_st") == 0)
     {
-      strncpy(SCExAO_status[0].ircam_pupil_st, argv[3], 15);
-      SCExAO_status[0].ircam_pupil_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].ircam_pupil_st, value, 15);
+      SCExAO_status[0].ircam_pupil_co = atoi(color);
     }
-    if (strcmp(argv[2], "ircam_pupil_x") == 0)
+    else if (strcmp(status_item, "ircam_pupil_x") == 0)
     {
-      SCExAO_status[0].ircam_pupil_x = atof(argv[3]);
+      SCExAO_status[0].ircam_pupil_x = atof(value);
     }
-    if (strcmp(argv[2], "ircam_pupil_y") == 0)
+    else if (strcmp(status_item, "ircam_pupil_y") == 0)
     {
-      SCExAO_status[0].ircam_pupil_y = atof(argv[3]);
+      SCExAO_status[0].ircam_pupil_y = atof(value);
     }
-    if (strcmp(argv[2], "ircam_hwp") == 0)
+    else if (strcmp(status_item, "ircam_hwp") == 0)
     {
-      strncpy(SCExAO_status[0].ircam_hwp, argv[3], 15);
-      SCExAO_status[0].ircam_hwp_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].ircam_hwp, value, 15);
+      SCExAO_status[0].ircam_hwp_co = atoi(color);
     }
-    if (strcmp(argv[2], "ircam_hwp_theta") == 0)
+    else if (strcmp(status_item, "ircam_hwp_theta") == 0)
     {
-      SCExAO_status[0].ircam_hwp_theta = atof(argv[3]);
+      SCExAO_status[0].ircam_hwp_theta = atof(value);
     }
     // REACH
-    if (strcmp(argv[2], "reach_pickoff_st") == 0)
+    else if (strcmp(status_item, "reach_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].reach_pickoff_st, argv[3], 15);
-      SCExAO_status[0].reach_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].reach_pickoff_st, value, 15);
+      SCExAO_status[0].reach_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "reach_pickoff") == 0)
+    else if (strcmp(status_item, "reach_pickoff") == 0)
     {
-      SCExAO_status[0].reach_pickoff = atof(argv[3]);
+      SCExAO_status[0].reach_pickoff = atof(value);
     }
-    if (strcmp(argv[2], "reach_oap_st") == 0)
+    else if (strcmp(status_item, "reach_oap_st") == 0)
     {
-      strncpy(SCExAO_status[0].reach_oap_st, argv[3], 15);
-      SCExAO_status[0].reach_oap_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].reach_oap_st, value, 15);
+      SCExAO_status[0].reach_oap_co = atoi(color);
     }
-    if (strcmp(argv[2], "reach_oap_theta") == 0)
+    else if (strcmp(status_item, "reach_oap_theta") == 0)
     {
-      SCExAO_status[0].reach_oap_theta = atof(argv[3]);
+      SCExAO_status[0].reach_oap_theta = atof(value);
     }
-    if (strcmp(argv[2], "reach_oap_phi") == 0)
+    else if (strcmp(status_item, "reach_oap_phi") == 0)
     {
-      SCExAO_status[0].reach_oap_phi = atof(argv[3]);
+      SCExAO_status[0].reach_oap_phi = atof(value);
     }
-    if (strcmp(argv[2], "reach_fib_st") == 0)
+    else if (strcmp(status_item, "reach_fib_st") == 0)
     {
-      strncpy(SCExAO_status[0].reach_fib_st, argv[3], 15);
-      SCExAO_status[0].reach_fib_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].reach_fib_st, value, 15);
+      SCExAO_status[0].reach_fib_co = atoi(color);
     }
-    if (strcmp(argv[2], "reach_fib_x") == 0)
+    else if (strcmp(status_item, "reach_fib_x") == 0)
     {
-      SCExAO_status[0].reach_fib_x = atoi(argv[3]);
+      SCExAO_status[0].reach_fib_x = atoi(value);
     }
-    if (strcmp(argv[2], "reach_fib_y") == 0)
+    else if (strcmp(status_item, "reach_fib_y") == 0)
     {
-      SCExAO_status[0].reach_fib_y = atoi(argv[3]);
+      SCExAO_status[0].reach_fib_y = atoi(value);
     }
-    if (strcmp(argv[2], "reach_fib_f") == 0)
+    else if (strcmp(status_item, "reach_fib_f") == 0)
     {
-      SCExAO_status[0].reach_fib_f = atof(argv[3]);
+      SCExAO_status[0].reach_fib_f = atof(value);
     }
-    if (strcmp(argv[2], "reach_fib_theta") == 0)
+    else if (strcmp(status_item, "reach_fib_theta") == 0)
     {
-      SCExAO_status[0].reach_fib_theta = atof(argv[3]);
+      SCExAO_status[0].reach_fib_theta = atof(value);
     }
     // buffy/chuck
-    if (strcmp(argv[2], "buffy_pickoff_st") == 0)
+    else if (strcmp(status_item, "buffy_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].buffy_pickoff_st, argv[3], 15);
-      SCExAO_status[0].buffy_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].buffy_pickoff_st, value, 15);
+      SCExAO_status[0].buffy_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "buffy_pickoff") == 0)
+    else if (strcmp(status_item, "buffy_pickoff") == 0)
     {
-      SCExAO_status[0].buffy_pickoff = atof(argv[3]);
+      SCExAO_status[0].buffy_pickoff = atof(value);
     }
-    if (strcmp(argv[2], "chuck_pup") == 0)
+    else if (strcmp(status_item, "chuck_pup") == 0)
     {
-      strncpy(SCExAO_status[0].chuck_pup, argv[3], 15);
-      SCExAO_status[0].chuck_pup_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].chuck_pup, value, 15);
+      SCExAO_status[0].chuck_pup_co = atoi(color);
     }
-    if (strcmp(argv[2], "chuck_pup_fcs_st") == 0)
+    else if (strcmp(status_item, "chuck_pup_fcs_st") == 0)
     {
-      strncpy(SCExAO_status[0].chuck_pup_fcs_st, argv[3], 15);
-      SCExAO_status[0].chuck_pup_fcs_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].chuck_pup_fcs_st, value, 15);
+      SCExAO_status[0].chuck_pup_fcs_co = atoi(color);
     }
-    if (strcmp(argv[2], "chuck_pup_fcs") == 0)
+    else if (strcmp(status_item, "chuck_pup_fcs") == 0)
     {
-      SCExAO_status[0].chuck_pup_fcs = atof(argv[3]);
+      SCExAO_status[0].chuck_pup_fcs = atof(value);
     }
-    if (strcmp(argv[2], "buffy_pup") == 0)
+    else if (strcmp(status_item, "buffy_pup") == 0)
     {
-      strncpy(SCExAO_status[0].buffy_pup, argv[3], 15);
-      SCExAO_status[0].buffy_pup_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].buffy_pup, value, 15);
+      SCExAO_status[0].buffy_pup_co = atoi(color);
     }
     // rajni
-    if (strcmp(argv[2], "lowfs_block") == 0)
+    else if (strcmp(status_item, "lowfs_block") == 0)
     {
-      strncpy(SCExAO_status[0].lowfs_block, argv[3], 15);
-      SCExAO_status[0].lowfs_block_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].lowfs_block, value, 15);
+      SCExAO_status[0].lowfs_block_co = atoi(color);
     }
-    if (strcmp(argv[2], "lowfs_fcs") == 0)
+    else if (strcmp(status_item, "lowfs_fcs") == 0)
     {
-      SCExAO_status[0].lowfs_fcs = atoi(argv[3]);
+      SCExAO_status[0].lowfs_fcs = atoi(value);
     }
     // fiber injection
-    if (strcmp(argv[2], "fibinj_pickoff_st") == 0)
+    else if (strcmp(status_item, "fibinj_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].fibinj_pickoff_st, argv[3], 15);
-      SCExAO_status[0].fibinj_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].fibinj_pickoff_st, value, 15);
+      SCExAO_status[0].fibinj_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "fibinj_pickoff") == 0)
+    else if (strcmp(status_item, "fibinj_pickoff") == 0)
     {
-      SCExAO_status[0].fibinj_pickoff = atof(argv[3]);
+      SCExAO_status[0].fibinj_pickoff = atof(value);
     }
-    if (strcmp(argv[2], "fibinj_fib_st") == 0)
+    else if (strcmp(status_item, "fibinj_fib_st") == 0)
     {
-      strncpy(SCExAO_status[0].fibinj_fib_st, argv[3], 15);
-      SCExAO_status[0].fibinj_fib_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].fibinj_fib_st, value, 15);
+      SCExAO_status[0].fibinj_fib_co = atoi(color);
     }
-    if (strcmp(argv[2], "fibinj_fib_x") == 0)
+    else if (strcmp(status_item, "fibinj_fib_x") == 0)
     {
-      SCExAO_status[0].fibinj_fib_x = atoi(argv[3]);
+      SCExAO_status[0].fibinj_fib_x = atoi(value);
     }
-    if (strcmp(argv[2], "fibinj_fib_y") == 0)
+    else if (strcmp(status_item, "fibinj_fib_y") == 0)
     {
-      SCExAO_status[0].fibinj_fib_y = atoi(argv[3]);
+      SCExAO_status[0].fibinj_fib_y = atoi(value);
     }
-    if (strcmp(argv[2], "fibinj_fib_f") == 0)
+    else if (strcmp(status_item, "fibinj_fib_f") == 0)
     {
-      SCExAO_status[0].fibinj_fib_f = atoi(argv[3]);
+      SCExAO_status[0].fibinj_fib_f = atoi(value);
     }
-    if (strcmp(argv[2], "fibinj_car") == 0)
+    else if (strcmp(status_item, "fibinj_car") == 0)
     {
-      SCExAO_status[0].fibinj_car = atoi(argv[3]);
+      SCExAO_status[0].fibinj_car = atoi(value);
     }
     // pywfs
-    if (strcmp(argv[2], "pywfs_pickoff_st") == 0)
+    else if (strcmp(status_item, "pywfs_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].pywfs_pickoff_st, argv[3], 15);
-      SCExAO_status[0].pywfs_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pywfs_pickoff_st, value, 15);
+      SCExAO_status[0].pywfs_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "pywfs_pickoff") == 0)
+    else if (strcmp(status_item, "pywfs_pickoff") == 0)
     {
-      SCExAO_status[0].pywfs_pickoff = atof(argv[3]);
+      SCExAO_status[0].pywfs_pickoff = atof(value);
     }
-    if (strcmp(argv[2], "pywfs_fieldstop_st") == 0)
+    else if (strcmp(status_item, "pywfs_fieldstop_st") == 0)
     {
-      strncpy(SCExAO_status[0].pywfs_fieldstop_st, argv[3], 15);
-      SCExAO_status[0].pywfs_fieldstop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pywfs_fieldstop_st, value, 15);
+      SCExAO_status[0].pywfs_fieldstop_co = atoi(color);
     }
-    if (strcmp(argv[2], "pywfs_fieldstop_x") == 0)
+    else if (strcmp(status_item, "pywfs_fieldstop_x") == 0)
     {
-      SCExAO_status[0].pywfs_fieldstop_x = atof(argv[3]);
+      SCExAO_status[0].pywfs_fieldstop_x = atof(value);
     }
-    if (strcmp(argv[2], "pywfs_fieldstop_y") == 0)
+    else if (strcmp(status_item, "pywfs_fieldstop_y") == 0)
     {
-      SCExAO_status[0].pywfs_fieldstop_y = atof(argv[3]);
+      SCExAO_status[0].pywfs_fieldstop_y = atof(value);
     }
-    if (strcmp(argv[2], "pywfs_filter") == 0)
+    else if (strcmp(status_item, "pywfs_filter") == 0)
     {
-      strncpy(SCExAO_status[0].pywfs_filter, argv[3], 15);
-      SCExAO_status[0].pywfs_filter_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pywfs_filter, value, 15);
+      SCExAO_status[0].pywfs_filter_co = atoi(color);
     }
-    if (strcmp(argv[2], "pywfs_col") == 0)
+    else if (strcmp(status_item, "pywfs_col") == 0)
     {
-      SCExAO_status[0].pywfs_col = atoi(argv[3]);
+      SCExAO_status[0].pywfs_col = atoi(value);
     }
-    if (strcmp(argv[2], "pywfs_fcs") == 0)
+    else if (strcmp(status_item, "pywfs_fcs") == 0)
     {
-      SCExAO_status[0].pywfs_fcs = atoi(argv[3]);
+      SCExAO_status[0].pywfs_fcs = atoi(value);
     }
-    if (strcmp(argv[2], "pywfs_fcs_pickoff") == 0)
+    else if (strcmp(status_item, "pywfs_fcs_pickoff") == 0)
     {
-      strncpy(SCExAO_status[0].pywfs_fcs_pickoff, argv[3], 15);
-      SCExAO_status[0].pywfs_fcs_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pywfs_fcs_pickoff, value, 15);
+      SCExAO_status[0].pywfs_fcs_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "pywfs_pup_x") == 0)
+    else if (strcmp(status_item, "pywfs_pup_x") == 0)
     {
-      SCExAO_status[0].pywfs_pup_x = atoi(argv[3]);
+      SCExAO_status[0].pywfs_pup_x = atoi(value);
     }
-    if (strcmp(argv[2], "pywfs_pup_y") == 0)
+    else if (strcmp(status_item, "pywfs_pup_y") == 0)
     {
-      SCExAO_status[0].pywfs_pup_y = atoi(argv[3]);
+      SCExAO_status[0].pywfs_pup_y = atoi(value);
     }
     // vampires
-    if (strcmp(argv[2], "vampires_fieldstop_st") == 0)
+    else if (strcmp(status_item, "vampires_fieldstop_st") == 0)
     {
-      strncpy(SCExAO_status[0].vampires_fieldstop_st, argv[3], 15);
-      SCExAO_status[0].vampires_fieldstop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].vampires_fieldstop_st, value, 15);
+      SCExAO_status[0].vampires_fieldstop_co = atoi(color);
     }
-    if (strcmp(argv[2], "vampires_fieldstop_x") == 0)
+    else if (strcmp(status_item, "vampires_fieldstop_x") == 0)
     {
-      SCExAO_status[0].vampires_fieldstop_x = atof(argv[3]);
+      SCExAO_status[0].vampires_fieldstop_x = atof(value);
     }
-    if (strcmp(argv[2], "vampires_fieldstop_y") == 0)
+    else if (strcmp(status_item, "vampires_fieldstop_y") == 0)
     {
-      SCExAO_status[0].vampires_fieldstop_y = atof(argv[3]);
+      SCExAO_status[0].vampires_fieldstop_y = atof(value);
     }
     // first
-    if (strcmp(argv[2], "first_pickoff_st") == 0)
+    else if (strcmp(status_item, "first_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].first_pickoff_st, argv[3], 15);
-      SCExAO_status[0].first_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].first_pickoff_st, value, 15);
+      SCExAO_status[0].first_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "first_pickoff") == 0)
+    else if (strcmp(status_item, "first_pickoff") == 0)
     {
-      SCExAO_status[0].first_pickoff = atof(argv[3]);
+      SCExAO_status[0].first_pickoff = atof(value);
     }
-    if (strcmp(argv[2], "first_inj_st") == 0)
+    else if (strcmp(status_item, "first_inj_st") == 0)
     {
-      strncpy(SCExAO_status[0].first_inj_st, argv[3], 15);
-      SCExAO_status[0].first_inj_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].first_inj_st, value, 15);
+      SCExAO_status[0].first_inj_co = atoi(color);
     }
-    if (strcmp(argv[2], "first_inj_x") == 0)
+    else if (strcmp(status_item, "first_inj_x") == 0)
     {
-      SCExAO_status[0].first_inj_x = atoi(argv[3]);
+      SCExAO_status[0].first_inj_x = atoi(value);
     }
-    if (strcmp(argv[2], "first_inj_y") == 0)
+    else if (strcmp(status_item, "first_inj_y") == 0)
     {
-      SCExAO_status[0].first_inj_y = atoi(argv[3]);
+      SCExAO_status[0].first_inj_y = atoi(value);
     }
-    if (strcmp(argv[2], "first_inj_f") == 0)
+    else if (strcmp(status_item, "first_inj_f") == 0)
     {
-      SCExAO_status[0].first_inj_f = atof(argv[3]);
+      SCExAO_status[0].first_inj_f = atof(value);
     }
-    if (strcmp(argv[2], "first_src_st") == 0)
+    else if (strcmp(status_item, "first_src_st") == 0)
     {
-      strncpy(SCExAO_status[0].first_src_st, argv[3], 15);
-      SCExAO_status[0].first_src_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].first_src_st, value, 15);
+      SCExAO_status[0].first_src_co = atoi(color);
     }
-    if (strcmp(argv[2], "first_src_x") == 0)
+    else if (strcmp(status_item, "first_src_x") == 0)
     {
-      SCExAO_status[0].first_src_x = atof(argv[3]);
+      SCExAO_status[0].first_src_x = atof(value);
     }
-    if (strcmp(argv[2], "first_src_y") == 0)
+    else if (strcmp(status_item, "first_src_y") == 0)
     {
-      SCExAO_status[0].first_src_y = atof(argv[3]);
-      if (strcmp(argv[2], "first_photometry_st") == 0)
-      {
-        strncpy(SCExAO_status[0].first_photometry_st, argv[3], 15);
-        SCExAO_status[0].first_photometry_co = atoi(argv[4]);
-      }
-      if (strcmp(argv[2], "first_photometry") == 0)
-      {
-        SCExAO_status[0].first_photometry = atof(argv[3]);
-      }
+      SCExAO_status[0].first_src_y = atof(value);
+    }
+    else if (strcmp(status_item, "first_photometry_st") == 0)
+    {
+      strncpy(SCExAO_status[0].first_photometry_st, value, 15);
+      SCExAO_status[0].first_photometry_co = atoi(color);
+    }
+    else if (strcmp(status_item, "first_photometry") == 0)
+    {
+      SCExAO_status[0].first_photometry = atof(value);
     }
     // rhea
-    if (strcmp(argv[2], "rhea_pickoff_st") == 0)
+    else if (strcmp(status_item, "rhea_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].rhea_pickoff_st, argv[3], 15);
-      SCExAO_status[0].rhea_pickoff_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].rhea_pickoff_st, value, 15);
+      SCExAO_status[0].rhea_pickoff_co = atoi(color);
     }
-    if (strcmp(argv[2], "rhea_pickoff") == 0)
+    else if (strcmp(status_item, "rhea_pickoff") == 0)
     {
-      SCExAO_status[0].rhea_pickoff = atof(argv[3]);
+      SCExAO_status[0].rhea_pickoff = atof(value);
     }
     // pywfs
-    if (strcmp(argv[2], "pywfs_loop") == 0)
+    else if (strcmp(status_item, "pywfs_loop") == 0)
     {
-      strncpy(SCExAO_status[0].pywfs_loop, argv[3], 15);
-      SCExAO_status[0].pywfs_loop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pywfs_loop, value, 15);
+      SCExAO_status[0].pywfs_loop_co = atoi(color);
     }
-    if (strcmp(argv[2], "pywfs_cal") == 0)
+    else if (strcmp(status_item, "pywfs_cal") == 0)
     {
-      strncpy(SCExAO_status[0].pywfs_cal, argv[3], 15);
-      SCExAO_status[0].pywfs_cal_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pywfs_cal, value, 15);
+      SCExAO_status[0].pywfs_cal_co = atoi(color);
     }
-    if (strcmp(argv[2], "pywfs_freq") == 0)
+    else if (strcmp(status_item, "pywfs_freq") == 0)
     {
-      SCExAO_status[0].pywfs_freq = atoi(argv[3]);
+      SCExAO_status[0].pywfs_freq = atoi(value);
     }
-    if (strcmp(argv[2], "pywfs_gain") == 0)
+    else if (strcmp(status_item, "pywfs_gain") == 0)
     {
-      SCExAO_status[0].pywfs_gain = atof(argv[3]);
+      SCExAO_status[0].pywfs_gain = atof(value);
     }
-    if (strcmp(argv[2], "pywfs_leak") == 0)
+    else if (strcmp(status_item, "pywfs_leak") == 0)
     {
-      SCExAO_status[0].pywfs_leak = atof(argv[3]);
+      SCExAO_status[0].pywfs_leak = atof(value);
     }
-    if (strcmp(argv[2], "pywfs_rad") == 0)
+    else if (strcmp(status_item, "pywfs_rad") == 0)
     {
-      SCExAO_status[0].pywfs_rad = atof(argv[3]);
+      SCExAO_status[0].pywfs_rad = atof(value);
     }
-    if (strcmp(argv[2], "pywfs_puploop") == 0)
+    else if (strcmp(status_item, "pywfs_puploop") == 0)
     {
-      strncpy(SCExAO_status[0].pywfs_puploop, argv[3], 15);
-      SCExAO_status[0].pywfs_puploop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pywfs_puploop, value, 15);
+      SCExAO_status[0].pywfs_puploop_co = atoi(color);
     }
-    if (strcmp(argv[2], "pywfs_cenloop") == 0)
+    else if (strcmp(status_item, "pywfs_cenloop") == 0)
     {
-      strncpy(SCExAO_status[0].pywfs_cenloop, argv[3], 15);
-      SCExAO_status[0].pywfs_cenloop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].pywfs_cenloop, value, 15);
+      SCExAO_status[0].pywfs_cenloop_co = atoi(color);
     }
-    if (strcmp(argv[2], "dmoffload") == 0)
+    else if (strcmp(status_item, "dmoffload") == 0)
     {
-      strncpy(SCExAO_status[0].dmoffload, argv[3], 15);
-      SCExAO_status[0].dmoffload_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].dmoffload, value, 15);
+      SCExAO_status[0].dmoffload_co = atoi(color);
     }
 
     // lowfs
-    if (strcmp(argv[2], "lowfs_loop") == 0)
+    else if (strcmp(status_item, "lowfs_loop") == 0)
     {
-      strncpy(SCExAO_status[0].lowfs_loop, argv[3], 15);
-      SCExAO_status[0].lowfs_loop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].lowfs_loop, value, 15);
+      SCExAO_status[0].lowfs_loop_co = atoi(color);
     }
-    if (strcmp(argv[2], "lowfs_freq") == 0)
+    else if (strcmp(status_item, "lowfs_freq") == 0)
     {
-      SCExAO_status[0].lowfs_freq = atoi(argv[3]);
+      SCExAO_status[0].lowfs_freq = atoi(value);
     }
-    if (strcmp(argv[2], "lowfs_nmodes") == 0)
+    else if (strcmp(status_item, "lowfs_nmodes") == 0)
     {
-      SCExAO_status[0].lowfs_nmodes = atoi(argv[3]);
+      SCExAO_status[0].lowfs_nmodes = atoi(value);
     }
-    if (strcmp(argv[2], "lowfs_mtype") == 0)
+    else if (strcmp(status_item, "lowfs_mtype") == 0)
     {
-      strncpy(SCExAO_status[0].lowfs_mtype, argv[3], 15);
+      strncpy(SCExAO_status[0].lowfs_mtype, value, 15);
     }
-    if (strcmp(argv[2], "lowfs_gain") == 0)
+    else if (strcmp(status_item, "lowfs_gain") == 0)
     {
-      SCExAO_status[0].lowfs_gain = atof(argv[3]);
+      SCExAO_status[0].lowfs_gain = atof(value);
     }
-    if (strcmp(argv[2], "lowfs_leak") == 0)
+    else if (strcmp(status_item, "lowfs_leak") == 0)
     {
-      SCExAO_status[0].lowfs_leak = atof(argv[3]);
+      SCExAO_status[0].lowfs_leak = atof(value);
     }
 
     // speckle nulling
-    if (strcmp(argv[2], "sn_loop") == 0)
+    else if (strcmp(status_item, "sn_loop") == 0)
     {
-      strncpy(SCExAO_status[0].sn_loop, argv[3], 15);
-      SCExAO_status[0].sn_loop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].sn_loop, value, 15);
+      SCExAO_status[0].sn_loop_co = atoi(color);
     }
-    if (strcmp(argv[2], "sn_freq") == 0)
+    else if (strcmp(status_item, "sn_freq") == 0)
     {
-      SCExAO_status[0].sn_freq = atoi(argv[3]);
+      SCExAO_status[0].sn_freq = atoi(value);
     }
-    if (strcmp(argv[2], "sn_gain") == 0)
+    else if (strcmp(status_item, "sn_gain") == 0)
     {
-      SCExAO_status[0].sn_gain = atof(argv[3]);
+      SCExAO_status[0].sn_gain = atof(value);
     }
 
     // zap
-    if (strcmp(argv[2], "zap_loop") == 0)
+    else if (strcmp(status_item, "zap_loop") == 0)
     {
-      strncpy(SCExAO_status[0].zap_loop, argv[3], 15);
-      SCExAO_status[0].zap_loop_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].zap_loop, value, 15);
+      SCExAO_status[0].zap_loop_co = atoi(color);
     }
-    if (strcmp(argv[2], "zap_freq") == 0)
+    else if (strcmp(status_item, "zap_freq") == 0)
     {
-      SCExAO_status[0].zap_freq = atoi(argv[3]);
+      SCExAO_status[0].zap_freq = atoi(value);
     }
-    if (strcmp(argv[2], "zap_nmodes") == 0)
+    else if (strcmp(status_item, "zap_nmodes") == 0)
     {
-      SCExAO_status[0].zap_nmodes = atoi(argv[3]);
+      SCExAO_status[0].zap_nmodes = atoi(value);
     }
-    if (strcmp(argv[2], "zap_mtype") == 0)
+    else if (strcmp(status_item, "zap_mtype") == 0)
     {
-      strncpy(SCExAO_status[0].zap_mtype, argv[3], 15);
+      strncpy(SCExAO_status[0].zap_mtype, value, 15);
     }
-    if (strcmp(argv[2], "zap_gain") == 0)
+    else if (strcmp(status_item, "zap_gain") == 0)
     {
-      SCExAO_status[0].zap_gain = atof(argv[3]);
+      SCExAO_status[0].zap_gain = atof(value);
     }
 
     // astrogrid
-    if (strcmp(argv[2], "grid_st") == 0)
+    else if (strcmp(status_item, "grid_st") == 0)
     {
-      strncpy(SCExAO_status[0].grid_st, argv[3], 15);
-      SCExAO_status[0].grid_st_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].grid_st, value, 15);
+      SCExAO_status[0].grid_st_co = atoi(color);
     }
-    if (strcmp(argv[2], "grid_sep") == 0)
+    else if (strcmp(status_item, "grid_sep") == 0)
     {
-      SCExAO_status[0].grid_sep = atof(argv[3]);
+      SCExAO_status[0].grid_sep = atof(value);
     }
-    if (strcmp(argv[2], "grid_amp") == 0)
+    else if (strcmp(status_item, "grid_amp") == 0)
     {
-      SCExAO_status[0].grid_amp = atof(argv[3]);
+      SCExAO_status[0].grid_amp = atof(value);
     }
-    if (strcmp(argv[2], "grid_mod") == 0)
+    else if (strcmp(status_item, "grid_mod") == 0)
     {
-      SCExAO_status[0].grid_mod = atoi(argv[3]);
+      SCExAO_status[0].grid_mod = atoi(value);
     }
 
     // logging
-    if (strcmp(argv[2], "logchuck") == 0)
+    else if (strcmp(status_item, "logchuck") == 0)
     {
-      strncpy(SCExAO_status[0].logchuck, argv[3], 15);
-      SCExAO_status[0].logchuck_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].logchuck, value, 15);
+      SCExAO_status[0].logchuck_co = atoi(color);
     }
-    if (strcmp(argv[2], "darkchuck") == 0)
+    else if (strcmp(status_item, "darkchuck") == 0)
     {
-      strncpy(SCExAO_status[0].darkchuck, argv[3], 15);
-      SCExAO_status[0].darkchuck_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].darkchuck, value, 15);
+      SCExAO_status[0].darkchuck_co = atoi(color);
     }
-    if (strcmp(argv[2], "hotspot") == 0)
+    else if (strcmp(status_item, "hotspot") == 0)
     {
-      strncpy(SCExAO_status[0].hotspot, argv[3], 15);
-      SCExAO_status[0].hotspot_co = atoi(argv[4]);
+      strncpy(SCExAO_status[0].hotspot, value, 15);
+      SCExAO_status[0].hotspot_co = atoi(color);
     }
   }
-
-  if (strcmp(argv[1], "disp") == 0)
+  else if (strcmp(command, "disp") == 0)
   {
     read_status_shm();
     status_display();
@@ -1499,7 +1506,7 @@ int main(int argc, char **argv)
 
   if (cmdOK == 0)
   {
-    printf("%d  command %s not recognized\n", cmdOK, argv[1]);
+    printf("%d  command %s not recognized\n", cmdOK, command);
   }
 
   return 0;
