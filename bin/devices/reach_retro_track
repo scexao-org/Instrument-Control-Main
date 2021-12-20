@@ -234,7 +234,7 @@ while True:
                         phi0 -= gain*(posst[1,0]-posst[trackstar+1,0])/500
                         
                 if first >= 3:
-                    conex_tt.move(theta0, phi0, devname, conexid)
+                    conex_tt.move(int(theta0*1000)/1000., int(phi0*1000)/1000., devname, conexid)
                 else:
                     first += 1
                 posst[0,0] = xoff

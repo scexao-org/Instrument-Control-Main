@@ -18,9 +18,11 @@ class conex(object):
         try:
             self.s = serial.Serial(devid, 921600, timeout=0.5)
             dummy = self.s.readlines() # flush the port
+            opened = True
         except:
             print("Conex %s is not connected" %devid)
-            sys.exit()
+            opened = False
+        return opened
 
     def home(self, devname):
         self.s.write("1RS\r\n".encode())

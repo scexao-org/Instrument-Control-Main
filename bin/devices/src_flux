@@ -17,15 +17,20 @@
 
 import os
 import sys
+
 home = os.getenv('HOME')
-sys.path.append(home+'/src/lib/python/')
+sys.path.append(home + '/src/lib/python/')
 from thorlabswheel import thorlabswheel
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
 devname = "src_flux"
 
-whids = ["usb-Thorlabs_FW102C_Filter_Wheel_FWUADG5I-if00-port0", "usb-FTDI_FT232R_USB_UART_A600crkt-if00-port0", "usb-Thorlabs_FW102C_Filter_Wheel_FWV6ODVL-if00-port0"]
+whids = [
+    "usb-Thorlabs_FW102C_Filter_Wheel_FWUADG5I-if00-port0",
+    "usb-FTDI_FT232R_USB_UART_A600crkt-if00-port0",
+    "usb-Thorlabs_FW102C_Filter_Wheel_FWV6ODVL-if00-port0"
+]
 
 whnames = ["irnd", "optnd", "filter"]
 

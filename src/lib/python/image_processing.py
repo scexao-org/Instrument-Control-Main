@@ -21,6 +21,28 @@ sys.path.append(home + '/src/lib/python/')
 
 fitter = fitting.LevMarLSQFitter()
 
+# ========= MODEL PSF FOR FITTING =======================
+# =======================================================
+
+@custom_model
+def SubaruPSF(x, y, amplitude=1.0, x_0=0.0, y_0=0.0):
+    """Simulation of SCExAO PSF"""
+    psf = pf.getdata("%s/src/lib/python/simref.fits" %home)
+    psf_func = interp2d(np.arange(257)-128, np.arange(257)-128, psf, kind='linear')
+    psf_eval = amplitude*psf_func(x[:,0]-x_0,y[0,:]-y_0)
+    return np.reshape(psf_eval, x.shape)
+
+# ========= MODEL RETROINJECTION FOR FITTING ============
+# =======================================================
+
+@custom_model
+def RetroinjPSF(x, y, amplitude=1.0, x_0=0.0, y_0=0.0):
+    """Simulation of Retroinj PSF"""
+    psf = pf.getdata("%s/src/lib/python/REACH_retroinj.fits" %home)
+    psf_func = interp2d(np.arange(129)-64, np.arange(129)-64, psf, kind='linear')
+    psf_eval = amplitude*psf_func(x[:,0]-x_0,y[0,:]-y_0)
+    return np.reshape(psf_eval, x.shape)
+
 # ======= MAKE RAMP =====================================================
 # =======================================================================
 
@@ -162,8 +184,7 @@ def find_outlier_pixels(data,tolerance=3,worry_about_edges=True):
 # ========= CENTROID ====================================
 # =======================================================
 
-def centroid(image,bias=[],subt_bias=True, fact=0.2, method="default"):
-    fitter1 = fitting.LevMarLSQFitter()
+def centroid(image,bias=[],subt_bias=True, fact=0.2, method="default",fixrad=False):
     if not subt_bias:
         image2 = image-bias
     else:
@@ -181,20 +202,22 @@ def centroid(image,bias=[],subt_bias=True, fact=0.2, method="default"):
         cx2 = cx#+0.5
         cy2 = cy#+0.5
     elif method == "gaussian":
-        radc = m.sqrt(np.sum(image2 > (imax / 4.)) / m.pi)
-        se_param = fit_TwoD_Gaussian(image2, cy, cx, radc)
-        cy2 = se_param.x_mean.value
-        cx2 = se_param.y_mean.value
+        image4 = image2[int(cy)-64:int(cy)+64,int(cx)-64:int(cx)+64]
+        radc = m.sqrt(np.sum(image4 > (imax / 4.)) / m.pi)
+        se_param = fit_TwoD_Gaussian(image4, 64, 64, radc,fixrad=fixrad)
+        cy2 = se_param.x_mean.value-64+int(cy)
+        cx2 = se_param.y_mean.value-64+int(cx)
     elif method == "airy":
-        model_init = SubaruPSF(amplitude=imax, x_0=cx+0.5, y_0=cy+0.5, bounds={'x_0':(cx-1,cx+1),'y_0':(cy-1,cy+1)})
-        nx = image2.shape[0]
-        ny = image2.shape[1]
-        x, y = np.mgrid[:nx,:ny]
-        psf_fit = fitter1(model_init,x,y,image2,maxiter=2000)
-        print("default:",imax,cx,cy)
-        cy2 = psf_fit.y_0.value
-        cx2 = psf_fit.x_0.value
-        print("airy:",psf_fit.amplitude.value,cx2,cy2)
+        image4 = image2[int(cy)-64:int(cy)+64,int(cx)-64:int(cx)+64]
+        model_init1 = SubaruPSF(amplitude=imax, x_0=64, y_0=64)
+        nx = image4.shape[0]
+        ny = image4.shape[1]
+        xx, yy = np.mgrid[:nx,:ny]
+        psf_fit = fitter(model_init1,xx,yy,image4,maxiter=2000)
+        #print("default:",imax,cx,cy)
+        cy2 = psf_fit.y_0.value-64+int(cy)
+        cx2 = psf_fit.x_0.value-64+int(cx)
+        #print("airy:",psf_fit.amplitude.value,cx2,cy2)
     else:
         print("wrong centroid method")
     return [cx2, cy2]
@@ -355,13 +378,17 @@ def twoD_Gaussian(coor, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
 # ========= 2D GAUSSIAN FIT =============================
 # =======================================================
 
-def fit_TwoD_Gaussian(img, xc, yc, rad):
-    model_init = models.Gaussian2D(amplitude=np.max(img), x_mean=xc, y_mean=yc, x_stddev=rad, y_stddev=rad, theta = 0)
+def fit_TwoD_Gaussian(img, xc, yc, rad, circ=False, fixrad=False):
+
+    if fixrad:
+        model_init = models.Gaussian2D(amplitude=np.max(img), x_mean=xc, y_mean=yc, x_stddev=rad, y_stddev=rad, theta = 0, fixed={'x_stddev':True,'y_stddev':True})
+    else:
+        model_init = models.Gaussian2D(amplitude=np.max(img), x_mean=xc, y_mean=yc, x_stddev=rad, y_stddev=rad, theta = 0)
     nx = img.shape[0]
     ny = img.shape[1]
     
     x, y = np.mgrid[:nx,:ny]
-
+    
     gauss2_fit = fitter(model_init,x,y,img)
 
     return gauss2_fit
@@ -453,28 +480,6 @@ def get_numerical_PSF(file_aperture = 'pupil.fits', mas_pix = 16.2, rotation_ang
     test_PSF = subsample_field(test_PSF, oversampling_factor)
     test_PSF /= test_PSF.max()
     return(test_PSF)
-
-# ========= MODEL PSF FOR FITTING =======================
-# =======================================================
-
-@custom_model
-def SubaruPSF(x, y, amplitude=1.0, x_0=0.0, y_0=0.0):
-    """Simulation of SCExAO PSF"""
-    psf = pf.getdata("%s/src/lib/python/simref.fits" %home)
-    psf_func = interp2d(np.arange(257)-128, np.arange(257)-128, psf, kind='linear')
-    psf_eval = amplitude*psf_func(x[:,0]-x_0,y[0,:]-y_0)
-    return np.reshape(psf_eval, x.shape)
-
-# ========= MODEL RETROINJECTION FOR FITTING ============
-# =======================================================
-
-@custom_model
-def RetroinjPSF(x, y, amplitude=1.0, x_0=0.0, y_0=0.0):
-    """Simulation of Retroinj PSF"""
-    psf = pf.getdata("%s/src/lib/python/REACH_retroinj.fits" %home)
-    psf_func = interp2d(np.arange(129)-64, np.arange(129)-64, psf, kind='linear')
-    psf_eval = amplitude*psf_func(x[:,0]-x_0,y[0,:]-y_0)
-    return np.reshape(psf_eval, x.shape)
 
 # ========= CALCULATE STREHL ============================
 # =======================================================

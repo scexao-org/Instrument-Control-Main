@@ -18,16 +18,23 @@
 import os
 import sys
 import subprocess
+
 home = os.getenv('HOME')
-sys.path.append(home+'/src/lib/python/')
+sys.path.append(home + '/src/lib/python/')
 import wheel3 as wheel
 
 # =====================================================================
 # =====================================================================
 
-class thorlabswheel:
 
-    def __init__(self, devname, whids=[], whnames=[], args=[], description="no description", color_st=False):
+class thorlabswheel:
+    def __init__(self,
+                 devname,
+                 whids=[],
+                 whnames=[],
+                 args=[],
+                 description="no description",
+                 color_st=False):
 
         self.devname = devname
         self.description = description
@@ -35,7 +42,7 @@ class thorlabswheel:
         if args != [] and "--help1" in args[0].lower():
             self.quickhelp()
             sys.exit()
-          
+
         self.whids = whids
         self.whnames = whnames
         self.args = args
@@ -47,25 +54,26 @@ class thorlabswheel:
             whu = 0
         else:
             if args != []:
-                self.devnamew = devname+'_'+args[0]
+                self.devnamew = devname + '_' + args[0]
                 whu = 1
-            
-        filename = "/home/scexao/bin/devices/conf/conf_"+devname+".txt"
-        
+
+        filename = "/home/scexao/bin/devices/conf/conf_" + devname + ".txt"
+
         slots = [line.rstrip('\n') for line in open(filename)]
         self.nslots = len(slots)
         nparam = len(slots[0].split(';'))
-        self.nend = nparam-1
+        self.nend = nparam - 1
         for i in range(nparam):
-            exec("self.param%d = []" % (i,), globals(), locals())
-            
+            exec("self.param%d = []" % (i, ), globals(), locals())
+
         for j in range(self.nslots):
             sparam = slots[j].split(';')
             for i in range(nparam):
-                exec("self.param%d.append(sparam[i])" % (i,), globals(), locals())
-                
+                exec("self.param%d.append(sparam[i])" % (i, ), globals(),
+                     locals())
+
         na = args.__len__()  # number of arguments
-        
+
         if args == []:
             self.usage()
 
@@ -73,28 +81,28 @@ class thorlabswheel:
             if na > whu:
                 if whu == 0:
                     self.windex = 0
-                    self.whid = "/dev/serial/by-id/"+whids[0]
+                    self.whid = "/dev/serial/by-id/" + whids[0]
                 else:
                     self.windex = whnames.index(args[0].lower())
-                    self.whid = "/dev/serial/by-id/"+whids[self.windex]
+                    self.whid = "/dev/serial/by-id/" + whids[self.windex]
                 if "status" in args[whu].lower():
                     self.wheel_status()
-                    
+
                 elif args[whu].isdigit():
                     slot = args[whu]
                     self.wheel_goto_slot(slot)
-                            
+
                 else:
                     self.usage()
-                        
+
             else:
                 self.usage()
-                
+
         else:
             self.usage()
 
     # =====================================================================
-    
+
     def usage(self):
         if self.whnames != []:
             dev = "<dev> "
@@ -102,11 +110,12 @@ class thorlabswheel:
             dev = ""
         print("""---------------------------------------
 Usage: %s %s <command>
----------------------------------------""" % (self.devname,dev))
+---------------------------------------""" % (self.devname, dev))
         if self.whnames != []:
             print("DEV:")
             for i in range(len(self.whnames)):
-                    print("    %-6s  move %s stage" % (self.whnames[i], self.whnames[i]))
+                print("    %-6s  move %s stage" %
+                      (self.whnames[i], self.whnames[i]))
         print("""COMMAND:
     status  displays status
      1 - 6 defined positions""")
@@ -120,28 +129,35 @@ CONTENT:""")
             for j in range(len(self.whnames)):
                 print("   ", self.whnames[j])
                 for i in range(6):
-                    exec("print('   ', self.param0[i], self.param%d[i])" % (j+1,), globals(), locals())
+                    exec(
+                        "print('   ', self.param0[i], self.param%d[i])" %
+                        (j + 1, ), globals(), locals())
         print("--------------------------------------- ")
 
     # -----------------------------------------------------------------
     def quickhelp(self):
-        print("%20s       %s" % (self.devname,self.description))
-        
+        print("%20s       %s" % (self.devname, self.description))
+
     # -----------------------------------------------------------------
     def wheel_status(self):
         self.wh.open(self.whid)
         slot = self.wh.status()
         self.wh.close()
         d = locals()
-        exec("params = self.param%d[slot-1]" % (self.windex+1,), globals(), d)
+        exec("params = self.param%d[slot-1]" % (self.windex + 1, ), globals(),
+             d)
         params = d['params']
-        print("Position = "+str(slot)+", Conex is in position "+self.param0[slot-1]+", "+params)
+        print("Position = " + str(slot) + ", Conex is in position " +
+              self.param0[slot - 1] + ", " + params)
         if self.color_st:
-            exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[slot-1]])" % (self.nend,), globals(), locals())
+            exec(
+                "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[slot-1]])"
+                % (self.nend, ), globals(), locals())
         else:
-            subprocess.call(["/home/scexao/bin/scexaostatus","set", self.devnamew, params])
-            
-        
+            subprocess.call([
+                "/home/scexao/bin/scexaostatus", "set", self.devnamew, params
+            ])
+
     # -----------------------------------------------------------------
     def wheel_goto_slot(self, slot):
         if (1 <= int(slot) <= 6):
@@ -149,12 +165,18 @@ CONTENT:""")
             self.wh.move(slot, self.devnamew)
             self.wh.close()
             d = locals()
-            exec("params = self.param%d[int(slot)-1]" % (self.windex+1,), globals(), d)
+            exec("params = self.param%d[int(slot)-1]" % (self.windex + 1, ),
+                 globals(), d)
             params = d['params']
             if self.color_st:
-                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[int(slot)-1]])" % (self.nend,), globals(), locals())
+                exec(
+                    "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[int(slot)-1]])"
+                    % (self.nend, ), globals(), locals())
             else:
-                subprocess.call(["/home/scexao/bin/scexaostatus","set", self.devnamew, params])
+                subprocess.call([
+                    "/home/scexao/bin/scexaostatus", "set", self.devnamew,
+                    params
+                ])
 
         else:
             print("Conex only has 6 positions")
