@@ -84,7 +84,7 @@ def find_center(shiftx, shifty):
     if iflux < 200:
         print("Not enough flux, aborting")
         os.system("/home/scexao/bin/log Hotspotalign: Not enough flux, aborting")
-        os.system("scexaostatus set hotspot 'LOW FLUX' 0")
+        os.system("scxkw-setter set hotspot 'LOW FLUX' 0")
         sys.exit()
     #pf.writeto("./temp_chuck.fits",im_chuck,clobber='True')
     total = np.sum(im_chuck)
@@ -145,7 +145,7 @@ gain = 0.2
 precision = 0.2
 
 os.system("/home/scexao/bin/log Hotspotalign: starting alignment")
-os.system("scexaostatus set hotspot 'IN PROGRESS' 3")
+os.system("scxkw-setter set hotspot 'IN PROGRESS' 3")
 
 #reset the steering mirror
 os.system("steering home")
@@ -216,4 +216,4 @@ ttm.close()
 shm_im.close()
 
 os.system("/home/scexao/bin/log Hotspotalign: alignment done")
-os.system("scexaostatus set hotspot 'OFF' 1")
+os.system("scxkw-setter set hotspot 'OFF' 1")

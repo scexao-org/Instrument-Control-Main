@@ -88,7 +88,7 @@ def main():
             zab = zaber_chain.zaber_chain(zabdev, quiet=quiet)
             zab.move(idn, pos, relative=False)
             zab.close()
-            subprocess.call(["scexaostatus","set", "ircam_fcs", str(pos)])
+            subprocess.call(["scxkw-setter","set", "ircam_fcs", str(pos)])
             logit.logit('LOWFS_fcs','moved_to_position_'+str(pos))
         except:
             usage()

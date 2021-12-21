@@ -30,12 +30,12 @@ class conex(object):
         self.s.write("1RS\r\n")
         time.sleep(delay)
         self.s.write("1OR\r\n")
-        subprocess.call(["scexaostatus","set", str(conexname), "-1"])
+        subprocess.call(["scxkw-setter","set", str(conexname), "-1"])
     
     def move(self,POS, conexname):
         self.s.write("1PA"+str(POS)+"\r\n")
         time.sleep(delay)
-        subprocess.call(["scexaostatus","set", str(conexname), str(POS)])
+        subprocess.call(["scxkw-setter","set", str(conexname), str(POS)])
 
     def status(self, conexname, col=2):
         self.s.write("1TP\r\n")
@@ -45,7 +45,7 @@ class conex(object):
         pos=pos[3:]
         pos=pos[:-2]
         pos=round(float(pos),2)
-        subprocess.call(["scexaostatus","set", str(conexname), str(pos)])
+        subprocess.call(["scxkw-setter","set", str(conexname), str(pos)])
         if pos == 0:
             print "Conex is home."
         exec "paramf = map(float, self.param%d)" %(col,)

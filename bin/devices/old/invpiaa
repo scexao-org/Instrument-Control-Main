@@ -156,7 +156,7 @@ def main():
             con.open(WN, cid)
             con.home()
             con.close()
-            subprocess.call(["scexaostatus","set", "inv_piaa"+args[0].lower(), "2"])
+            subprocess.call(["scxkw-setter","set", "inv_piaa"+args[0].lower(), "2"])
             logit.logit('Inv_piaa'+args[0].lower(),'moved_to_position_0')
             sys.exit()
         elif "stat" in args[1].lower():

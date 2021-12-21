@@ -31,7 +31,7 @@ import logit #Custom logging library
 #from scxkw.redisutil.typed_db import Redis
 
 #rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
-#LEGACY_EXEC = '/home/scexao/bin/scexaostatus'
+#LEGACY_EXEC = 'scxkw-setter'
 
 # =====================================================================
 # =====================================================================
@@ -129,13 +129,13 @@ class picomotor:
                 if (np.sum(paramf[1:]) > 0 and np.all(pos == paramf)) or (np.sum(paramf[1:]) == 0 and pos[0] == paramf[0]):
                     print("Device is in position "+self.param0[i]+", "+self.param1[i])
                     #if self.color_st:
-                    #    exec("subprocess.call([home+'/bin/scexaostatus', 'set', self.devname+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                    #    exec("subprocess.call([home+'/bin/scxkw-setter', 'set', self.devname+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                     #else:
-                    #    subprocess.call([home+"/bin/scexaostatus", "set", self.devname+"_st", self.param1[i][:16]])
+                    #    subprocess.call([home+"/bin/scxkw-setter", "set", self.devname+"_st", self.param1[i][:16]])
                     found = True
             if not found:
                 print("Device is not in a defined position. Try homing.")
-                #subprocess.call([home+'/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+                #subprocess.call([home+'/bin/scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         """
         #else:
         #    self.usage()

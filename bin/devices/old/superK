@@ -90,7 +90,7 @@ def main():
                              ("st" in args[1].lower())):
             whl = wheel.wheel(IR_ND_dev)
             print("Last stored position = %c" %(whl.saved(),))
-            subprocess.call(["scexaostatus","set", "supKirpos", str(whl.saved())])
+            subprocess.call(["scxkw-setter","set", "supKirpos", str(whl.saved())])
             whl.close()
             sys.exit()
         elif (na > 1) and args[1].isdigit():
@@ -98,7 +98,7 @@ def main():
                 whl = wheel.wheel(IR_ND_dev)
                 whl.goto(args[1])
                 whl.close()
-                subprocess.call(["scexaostatus","set", "supKirpos", str(args[1])])
+                subprocess.call(["scxkw-setter","set", "supKirpos", str(args[1])])
                 logit.logit('SuperK_irnd','moved_to_slot_'+str(args[1]))
             else:
                 print("Wheel only has 6 positions")
@@ -112,7 +112,7 @@ def main():
                              ("st" in args[1].lower())):
             whl = wheel.wheel(OPT_ND_dev)
             print("Last stored position = %c" %(whl.saved(),))
-            subprocess.call(["scexaostatus","set", "supKoptpos", str(whl.saved())])
+            subprocess.call(["scxkw-setter","set", "supKoptpos", str(whl.saved())])
             whl.close()
             sys.exit()
         elif (na > 1) and args[1].isdigit():
@@ -120,7 +120,7 @@ def main():
                 whl = wheel.wheel(OPT_ND_dev)
                 whl.goto(args[1])
                 whl.close()
-                subprocess.call(["scexaostatus","set", "supKoptpos", str(args[1])])
+                subprocess.call(["scxkw-setter","set", "supKoptpos", str(args[1])])
                 logit.logit('SuperK_optnd','moved_to_slot_'+str(args[1]))
             else:
                 print("Wheel only has 6 positions")
@@ -134,7 +134,7 @@ def main():
                              ("st" in args[1].lower())):
             whl = wheel.wheel(SPF_dev)
             print("Last stored position = %c" %(whl.saved(),))
-            subprocess.call(["scexaostatus","set", "supKfilpos", str(whl.saved())])
+            subprocess.call(["scxkw-setter","set", "supKfilpos", str(whl.saved())])
             whl.close()
             sys.exit()
         elif (na > 1) and args[1].isdigit():
@@ -142,7 +142,7 @@ def main():
                 whl = wheel.wheel(SPF_dev)
                 whl.goto(args[1])
                 whl.close()
-                subprocess.call(["scexaostatus","set", "supKfilpos", str(args[1])])
+                subprocess.call(["scxkw-setter","set", "supKfilpos", str(args[1])])
                 logit.logit('SuperK_filter','moved_to_slot_'+str(args[1]))
             else:
                 print("Wheel only has 6 positions")
@@ -177,7 +177,7 @@ def main():
                         con.close()
                         time.sleep(10.0)
                         os.system("nps_on1 5")
-                        subprocess.call(["scexaostatus","set", "supKsrc", str(args[2])])
+                        subprocess.call(["scxkw-setter","set", "supKsrc", str(args[2])])
                         logit.logit('SuperK_source','moved_to_slot_'+str(args[2]))
                     else:
                         print("Source selector only has 5 positions")
@@ -191,7 +191,7 @@ def main():
                 con.close()
                 time.sleep(10.0)
                 os.system("nps_on1 5")
-                #subprocess.call(["scexaostatus","set", "piaal1pos", str(1)])
+                #subprocess.call(["scxkw-setter","set", "piaal1pos", str(1)])
                 #logit.logit('PIAA1_wheel','moved_to_slot_1')
                 sys.exit()
         else:

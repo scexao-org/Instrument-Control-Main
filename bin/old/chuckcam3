@@ -694,12 +694,12 @@ while True: # the main game loop
                         os.system("tmux new-session -d -s blobcamlog")
                         os.system("tmux send-keys -t blobcamlog \"logshim blobcam %i %s\" C-m"%(nimsave, savepath))
                         os.system("log Chuckcam3: start logging images")
-                        os.system("scexaostatus set logchuck 1")
+                        os.system("scxkw-setter set logchuck 1")
                     else:
                         os.system("tmux send-keys -t blobcamlog \"logshimkill blobcam\"")
                         os.system("tmux kill-session -t blobcamlog")
                         os.system("log Chuckcam3: stop logging images")
-                        os.system("scexaostatus set logchuck 0")
+                        os.system("scxkw-setter set logchuck 0")
 
             # Save an HDR image/Subtract dark
             #--------------------------------

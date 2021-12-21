@@ -57,13 +57,13 @@ def main():
         if (("?" in args[0].lower()) or ("st" in args[0].lower())):
             whl = wheel.wheel(whldev)
             print("Last stored position = %c" %(whl.saved(),))
-            #subprocess.call(["scexaostatus","set", "saphfwpos", str(whl.saved())])
+            #subprocess.call(["scxkw-setter","set", "saphfwpos", str(whl.saved())])
             whl.close()
         elif (args[0].isdigit() and (1 <= int(args[0]) <= 6)):
             whl = wheel.wheel(whldev)
             whl.goto(args[0])
             whl.close()
-            #subprocess.call(["scexaostatus","set", "saphfwpos", str(args[0])])
+            #subprocess.call(["scxkw-setter","set", "saphfwpos", str(args[0])])
             logit.logit('SMI_fwheel','moved_to_slot_'+str(args[0]))
         else:
             print("Wheel only has 6 positions")

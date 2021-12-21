@@ -151,11 +151,11 @@ CONTENT:""")
               self.param0[slot - 1] + ", " + params)
         if self.color_st:
             exec(
-                "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[slot-1]])"
+                "subprocess.call(['scxkw-setter', 'set', self.devnamew, params, self.param%d[slot-1]])"
                 % (self.nend, ), globals(), locals())
         else:
             subprocess.call([
-                "/home/scexao/bin/scexaostatus", "set", self.devnamew, params
+                "scxkw-setter", "set", self.devnamew, params
             ])
 
     # -----------------------------------------------------------------
@@ -170,11 +170,11 @@ CONTENT:""")
             params = d['params']
             if self.color_st:
                 exec(
-                    "subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamew, params, self.param%d[int(slot)-1]])"
+                    "subprocess.call(['scxkw-setter', 'set', self.devnamew, params, self.param%d[int(slot)-1]])"
                     % (self.nend, ), globals(), locals())
             else:
                 subprocess.call([
-                    "/home/scexao/bin/scexaostatus", "set", self.devnamew,
+                    "scxkw-setter", "set", self.devnamew,
                     params
                 ])
 

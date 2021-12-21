@@ -108,8 +108,8 @@ echo "moving filter wheel..."
 if [ $1 = 1 ]
 then
     ircam_block
-    scexaostatus set darkchuck "ALL DARKS       "
-    scexaostatus set darkchuck_co "0"
+    scxkw-setter set darkchuck "ALL DARKS       "
+    scxkw-setter set darkchuck_co "0"
     log "Chuckcam: Saving darks"
     sleep 2
     mkdir -p /media/data/${timestamp}/ircam1log
@@ -178,8 +178,8 @@ badpixmap $1 "${darkpath1}/"
 if [ $1 = 1 ]
 then
     ircam_block
-    scexaostatus set darkchuck "OFF             "
-    scexaostatus set darkchuck_co "1"
+    scxkw-setter set darkchuck "OFF             "
+    scxkw-setter set darkchuck_co "1"
     log "Chuckcam: Done saving darks"
 else
     lowfs_block

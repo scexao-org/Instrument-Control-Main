@@ -180,7 +180,7 @@ class devices:
                     self.zaberid = zaberids[i]
                     self.zaber_goto_slot(inddef+1, 1)
                     self.col += 1
-            subprocess.call(["scexaostatus", "set", devname+"_st", self.param1[inddef]])
+            subprocess.call(["scxkw-setter", "set", devname+"_st", self.param1[inddef]])
                     
         elif ("status" in args[0].lower() && conu*zabu == 1):
             self.col = 2
@@ -200,13 +200,13 @@ class devices:
                     self.zab.open(self.zaberchain)
                     pos[self.col-2] = self.zab.status(self.zaberid, self.devnamez)
                     self.col += 1
-            subprocess.call(["scexaostatus", "set", self.devname+"_st", "UNKNOWN         "])
+            subprocess.call(["scxkw-setter", "set", self.devname+"_st", "UNKNOWN         "])
             for i in range(self.nslots):
                 for j in range(self.nbdev):
                     exec "paramf[j] = float(self.param%d[i])" %(j+2,)
                 if pos == paramf:
                     print "Device is in position "+self.param0[i]+", "+self.param1[i]
-                    subprocess.call(["scexaostatus", "set", self.devname+"_st", self.param1[i]])
+                    subprocess.call(["scxkw-setter", "set", self.devname+"_st", self.param1[i]])
         
         else:
             self.usage()
@@ -268,11 +268,11 @@ CONTENT:"""
                 if pos == paramf[i]:
                     print "Position = "+str(pos)+", Conex is in position "+self.param0[i]+", "+self.param1[i]
                     if conu == 0:
-                        subprocess.call(["scexaostatus", "set", self.devnamec+"_st", self.param1[i]])
+                        subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", self.param1[i]])
         else:
             print "Position = "+str(pos)+", Conex is not in a defined position. Try homing."
             if conu == 0:
-                subprocess.call(["scexaostatus", "set", self.devnamec+"_st", "UNKNOWN         "])
+                subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", "UNKNOWN         "])
               
     # -----------------------------------------------------------------
     def conex_goto(self, pos, conu):
@@ -284,9 +284,9 @@ CONTENT:"""
             if pos in paramf:
                 for i in range(self.nslots):
                     if pos == paramf[i]:
-                        subprocess.call(["scexaostatus", "set", self.devnamec+"_st", self.param1[i]])
+                        subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", self.param1[i]])
             else:
-                subprocess.call(["scexaostatus", "set", self.devnamec+"_st", "UNKNOWN         "])
+                subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", "UNKNOWN         "])
         
     # -----------------------------------------------------------------
     def conex_goto_slot(self, slot, conu):
@@ -297,7 +297,7 @@ CONTENT:"""
             self.con.close()
             logit.logit(self.devnamec,'moved_to_slot_'+str(slot))
             if conu == 0:
-                subprocess.call(["scexaostatus", "set", self.devnamec+"_st", self.param1[slot-1]])
+                subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", self.param1[slot-1]])
         else:
             print("Conex only has "+str(self.nslots)+" positions")
             
@@ -320,11 +320,11 @@ CONTENT:"""
                 if pos == paramf[i]:
                     print "Position = "+str(pos)+", Zaber is in position "+self.param0[i]+", "+self.param1[i]
                     if zabu == 0:
-                        subprocess.call(["scexaostatus", "set", self.devnamez+"_st", self.param1[i]])
+                        subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", self.param1[i]])
         else:
             print "Position = "+str(pos)+", Zaber is not in a defined position. Try homing."
             if zabu == 0:
-                subprocess.call(["scexaostatus", "set", self.devnamez+"_st", "UNKNOWN         "])
+                subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", "UNKNOWN         "])
               
     # -----------------------------------------------------------------
     def zaber_goto(self, pos, zabu):
@@ -335,9 +335,9 @@ CONTENT:"""
             if pos in paramf:
                 for i in range(self.nslots):
                     if pos == paramf[i]:
-                        subprocess.call(["scexaostatus", "set", self.devnamez+"_st", self.param1[i]])
+                        subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", self.param1[i]])
             else:
-                subprocess.call(["scexaostatus", "set", self.devnamez+"_st", "UNKNOWN         "])
+                subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", "UNKNOWN         "])
         
     # -----------------------------------------------------------------
     def zaber_goto_slot(self, slot, zabu):
@@ -348,7 +348,7 @@ CONTENT:"""
             self.zab.close()
             logit.logit(self.devnamez,'moved_to_slot_'+str(slot))
             if zabu == 0:
-                subprocess.call(["scexaostatus", "set", self.devnamez+"_st", self.param1[slot-1]])
+                subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", self.param1[slot-1]])
         else:
             print("Zaber only has "+str(self.nslots)+" positions")
             

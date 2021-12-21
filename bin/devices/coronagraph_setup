@@ -425,7 +425,7 @@ while true; do
 			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm x goto $yf2" C-m
 			sleep 0.1
 			log "CORO: moving the FPM sideways"
-			scexaostatus set fpm_st "FPM SIDEWAYS" 3
+			scxkw-setter set fpm_st "FPM SIDEWAYS" 3
 			state="menuconfmanage";;
 		    11) # moving lyot stop
 			echo "moving lyot wheel to $lyotname"

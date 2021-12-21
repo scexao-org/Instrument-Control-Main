@@ -77,11 +77,11 @@ def move(x, y, devname = 'steering', address='http://localhost:50001', timeout=T
         j = r.json()
         ret = ConexStatus(state=j['state'], pos=(j['xpos'],j['ypos']), conexstatus=j['conexstatus'])
         if devname == "steering":
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_theta", str(j['ypos'])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['xpos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_theta", str(j['ypos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_phi", str(j['xpos'])])
         else:
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_theta", str(j['xpos'])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['ypos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_theta", str(j['xpos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_phi", str(j['ypos'])])
             
     except requests.ConnectionError:
         ret = ConexStatus(state='error: unable to connect')
@@ -95,11 +95,11 @@ def full_status(devname = 'steering', address='http://localhost:50001', timeout=
         j = r.json()
         ret = ConexStatus(state=j['state'], pos=(j['xpos'],j['ypos']), conexstatus=j['conexstatus'])
         if devname == "steering":
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_theta", str(j['ypos'])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['xpos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_theta", str(j['ypos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_phi", str(j['xpos'])])
         else:
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_theta", str(j['xpos'])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['ypos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_theta", str(j['xpos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_phi", str(j['ypos'])])
     
     except requests.ConnectionError:
         ret = ConexStatus(state='error: unable to connect')
@@ -117,11 +117,11 @@ def status(devname = 'steering', address='http://localhost:50001', timeout=TIMEO
             pos=(j['ypos'],j['xpos'])
     
         if devname == "steering":
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_theta", str(j['ypos'])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['xpos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_theta", str(j['ypos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_phi", str(j['xpos'])])
         else:
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_theta", str(j['xpos'])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['ypos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_theta", str(j['xpos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_phi", str(j['ypos'])])
     except requests.ConnectionError:
         ret = ConexStatus(state='error: unable to connect')
     except ValueError:
@@ -136,11 +136,11 @@ def stop(devname = 'steering', address='http://localhost:50001', timeout=TIMEOUT
         j = r.json()
         ret = ConexStatus(state=j['state'], pos=(j['xpos'], j['ypos']), conexstatus=j['conexstatus'])
         if devname == "steering":
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_theta", str(j['ypos'])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['xpos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_theta", str(j['ypos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_phi", str(j['xpos'])])
         else:
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_theta", str(j['xpos'])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['ypos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_theta", str(j['xpos'])])
+            subprocess.call(["scxkw-setter", "set", devname+"_phi", str(j['ypos'])])
 
     except requests.ConnectionError:
         ret = ConexStatus(state='error: unable to connect')

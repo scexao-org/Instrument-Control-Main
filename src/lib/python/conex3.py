@@ -45,7 +45,7 @@ class conex(object):
             pos = pos[3:]
             pos = pos[:-2]
             pos = round(float(pos), 3)
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname, str(pos)])
+            subprocess.call(["scxkw-setter", "set", devname, str(pos)])
         except:
             print(pos)
             print("NO STATUS SENT")

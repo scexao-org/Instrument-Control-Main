@@ -103,7 +103,7 @@ class steering_tt:
             inddef = defpos.index(args[0].lower())
             self.col = 2
             self.conex_goto_slot(inddef+1)
-            exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', devname+'_st', self.param1[inddef], self.param%d[inddef]])" % (self.nend,), globals(), locals())
+            exec("subprocess.call(['scxkw-setter', 'set', devname+'_st', self.param1[inddef], self.param%d[inddef]])" % (self.nend,), globals(), locals())
 
         elif "home" in args[0].lower():   #Home command
             self.conex_home()
@@ -150,14 +150,14 @@ CONTENT:""")
         conex_tt.move(0., 0., self.devname, self.conexid)
         pos0 = (-1000.,-1000.)
         pos = conex_tt.status(self.devname, self.conexid)
-        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+        subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
             pos0 = pos
             pos = conex_tt.status(self.devname, self.conexid)
             time.sleep(0.2)
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devname+"_theta", str(pos[1])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devname+"_phi", str(pos[0])])
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+            subprocess.call(["scxkw-setter", "set", self.devname+"_theta", str(pos[1])])
+            subprocess.call(["scxkw-setter", "set", self.devname+"_phi", str(pos[0])])
+            subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         
     # -----------------------------------------------------------------
     def conex_status(self):
@@ -170,10 +170,10 @@ CONTENT:""")
             for i in range(self.nslots):
                 if pos[1] == paramf1[i] and pos[0] == paramf2[i]:
                     print("Position = "+str(pos[::-1])+", Conex is in position "+self.param0[i]+", "+self.param1[i])
-                    exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                    exec("subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
         else:
             print("Position = "+str(pos[::-1])+", Conex is not in a defined position. Try homing.")
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+            subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
               
     # -----------------------------------------------------------------
     def conex_goto(self, pos):
@@ -193,13 +193,13 @@ CONTENT:""")
         pos0 = (-1000,-1000.)
         paramf1 = list(map(float, self.param2))
         paramf2 = list(map(float, self.param3))
-        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+        subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         while pos0 != posc:
             pos0 = posc
             posc = conex_tt.status(self.devname, self.conexid)
             time.sleep(0.1)           
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devname+"_theta", str(posc[1])])
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devname+"_phi", str(posc[0])])
+            subprocess.call(["scxkw-setter", "set", self.devname+"_theta", str(posc[1])])
+            subprocess.call(["scxkw-setter", "set", self.devname+"_phi", str(posc[0])])
         
     # -----------------------------------------------------------------
     def conex_goto_slot(self, slot):
@@ -216,13 +216,13 @@ CONTENT:""")
                 conex_tt.move(pos1, pos2, self.devname, self.conexid)
             pos0 = (-1000.,-1000.)
             pos = conex_tt.status(self.devname, self.conexid)
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+            subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
             while pos0 != pos:
                 pos0 = pos
                 pos = conex_tt.status(self.devname, self.conexid)
                 time.sleep(0.2)
-                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devname+"_theta", str(pos[1])])
-                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devname+"_phi", str(pos[0])])
+                subprocess.call(["scxkw-setter", "set", self.devname+"_theta", str(pos[1])])
+                subprocess.call(["scxkw-setter", "set", self.devname+"_phi", str(pos[0])])
                     
             logit.logit(self.devname,'moved_to_slot_'+str(slot))
         else:

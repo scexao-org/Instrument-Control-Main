@@ -785,7 +785,7 @@ while True: # the main game loop
                         msg = "  !! Acquiring a dark !!  "
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
-                        os.system("scexaostatus set darkchuck 'NEW INT DARK    ' 0")
+                        os.system("scxkw-setter set darkchuck 'NEW INT DARK    ' 0")
                         os.system("log Chuckcam: Saving current internal dark")
                         
                         print("In the time it takes Chuck Norris to sidekick a")
@@ -810,7 +810,7 @@ while True: # the main game loop
                         time.sleep(0.2)
                         
                         os.system("ircam_block")          # blocking the light
-                        os.system("scexaostatus set darkchuck 'OFF             ' 1")
+                        os.system("scxkw-setter set darkchuck 'OFF             ' 1")
                         os.system("log Chuckcam: Done saving current internal dark")
                         
                     else:
@@ -818,7 +818,7 @@ while True: # the main game loop
                         msg = "  !! Acquiring darks !!   "
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
-                        os.system("scexaostatus set darkchuck 'ALL INT DARKS   ' 0")
+                        os.system("scxkw-setter set darkchuck 'ALL INT DARKS   ' 0")
                         os.system("log Chuckcam: Saving internal darks")
                         
                         print("In the time it takes Chuck Norris to sidekick a")
@@ -845,7 +845,7 @@ while True: # the main game loop
                             time.sleep(0.2)
                     
                         os.system("ircam_block")          # blocking the light
-                        os.system("scexaostatus set darkchuck 'OFF             ' 1")
+                        os.system("scxkw-setter set darkchuck 'OFF             ' 1")
                         os.system("log Chuckcam: Done saving internal darks")
                         
                         cam_cmd("tint %d %d" % (camid, etime), False)
@@ -894,12 +894,12 @@ while True: # the main game loop
                         os.system("tmux new-session -d -s ircam1log")
                         os.system("tmux send-keys -t ircam1log \"logshim ircam1 %i %s\" C-m"%(nimsave, savepath))
                         os.system("log Chuckcam: start logging images")
-                        os.system("scexaostatus set logchuck 'LOGGING         ' 3")
+                        os.system("scxkw-setter set logchuck 'LOGGING         ' 3")
                     else:
                         os.system("tmux send-keys -t ircam1log \"logshimkill ircam1\"")
                         os.system("tmux kill-session -t ircam1log")
                         os.system("log Chuckcam: stop logging images")
-                        os.system("scexaostatus set logchuck 'OFF             ' 1")
+                        os.system("scxkw-setter set logchuck 'OFF             ' 1")
 
             # Save an HDR image/Subtract dark
             #--------------------------------

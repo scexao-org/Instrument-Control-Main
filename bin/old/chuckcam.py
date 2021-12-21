@@ -845,7 +845,7 @@ while True:  # the main game loop
         msg = "  !! Acquiring a dark !!  "
         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
         screen.blit(dinfo2, rct_dinfo2)
-        os.system("scexaostatus set darkchuck 'NEW INT DARK    ' 0")
+        os.system("scxkw-setter set darkchuck 'NEW INT DARK    ' 0")
         os.system("log Chuckcam: Saving current internal dark")
 
         print("In the time it takes Chuck Norris to sidekick a")
@@ -873,7 +873,7 @@ while True:  # the main game loop
         time.sleep(0.2)
 
         os.system("ircam_block")  # blocking the light
-        os.system("scexaostatus set darkchuck 'OFF             ' 1")
+        os.system("scxkw-setter set darkchuck 'OFF             ' 1")
         os.system("log Chuckcam: Done saving current internal dark")
         cam_dark.set_data(bias.astype(np.float32))
         cam_badpixmap.set_data(badpixmap.astype(np.float32))
@@ -1553,7 +1553,7 @@ while True:  # the main game loop
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
                         os.system(
-                            "scexaostatus set darkchuck 'NEW INT DARK    ' 0")
+                            "scxkw-setter set darkchuck 'NEW INT DARK    ' 0")
                         os.system("log Chuckcam: Saving current internal dark")
 
                         print(
@@ -1590,7 +1590,7 @@ while True:  # the main game loop
                         else:
                             os.system("PG1_pickoff")
                         os.system(
-                            "scexaostatus set darkchuck 'OFF             ' 1")
+                            "scxkw-setter set darkchuck 'OFF             ' 1")
                         os.system(
                             "log Chuckcam: Done saving current internal dark")
                         cam_dark.set_data(bias.astype(np.float32))
@@ -1603,7 +1603,7 @@ while True:  # the main game loop
                         dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                         screen.blit(dinfo2, rct_dinfo2)
                         os.system(
-                            "scexaostatus set darkchuck 'ALL INT DARKS   ' 0")
+                            "scxkw-setter set darkchuck 'ALL INT DARKS   ' 0")
                         os.system("log Chuckcam: Saving internal darks")
 
                         print(
@@ -1654,7 +1654,7 @@ while True:  # the main game loop
                             "\nChuck sidekicked the crap out of the poor kid.")
                         os.system("ircam_block")  # opening the shutter
                         os.system(
-                            "scexaostatus set darkchuck 'OFF             ' 1")
+                            "scxkw-setter set darkchuck 'OFF             ' 1")
                         os.system("log Chuckcam: Done saving internal darks")
 
                         if not sync_param[0] and sync_param[1]:
@@ -1723,7 +1723,7 @@ while True:  # the main game loop
                              session="ircam%dlog" % (camid, ))
                         os.system("log Chuckcam: start logging images")
                         os.system(
-                            "scexaostatus set logchuck 'LOGGING         ' 3")
+                            "scxkw-setter set logchuck 'LOGGING         ' 3")
 
                     else:
                         tmux("logshimkill", session="ircam%dlog" % (camid, ))
@@ -1732,7 +1732,7 @@ while True:  # the main game loop
                              command="kill-session")
                         os.system("log Chuckcam: stop logging images")
                         os.system(
-                            "scexaostatus set logchuck 'OFF             ' 1")
+                            "scxkw-setter set logchuck 'OFF             ' 1")
 
             # Save an HDR image/Subtract dark
             #--------------------------------

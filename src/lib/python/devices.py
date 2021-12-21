@@ -185,9 +185,9 @@ class devices:
                     self.zaber_goto_slot(inddef+1, 1)
                     self.col += 1
             if self.color_st:
-                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', devname+'_st', self.param1[inddef], self.param%d[inddef]])" % (self.nend,), globals(), locals())
+                exec("subprocess.call(['scxkw-setter', 'set', devname+'_st', self.param1[inddef], self.param%d[inddef]])" % (self.nend,), globals(), locals())
             else:
-                subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", self.param1[inddef]])
+                subprocess.call(["scxkw-setter", "set", devname+"_st", self.param1[inddef]])
 
                     
         elif ("status" in args[0].lower() and conu*zabu == 1):
@@ -201,7 +201,7 @@ class devices:
                     self.conexid = "/dev/serial/by-id/"+conexids[i]
                     opened = self.con.open(self.conexid)
                     if not opened:
-                        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+                        subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
                         sys.exit()
                     pos[self.col-2] = self.con.status(self.devnamec)
                     self.col += 1
@@ -220,13 +220,13 @@ class devices:
                 if (np.sum(paramf[1:]) > 0 and np.all(pos == paramf)) or (np.sum(paramf[1:]) == 0 and pos[0] == paramf[0]):
                     print("Device is in position "+self.param0[i]+", "+self.param1[i])
                     if self.color_st:
-                        exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                        exec("subprocess.call(['scxkw-setter', 'set', self.devname+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                     else:
-                        subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devname+"_st", self.param1[i][:16]])
+                        subprocess.call(["scxkw-setter", "set", self.devname+"_st", self.param1[i][:16]])
                     found = True
             if not found:
                 print("Device is not in a defined position. Try homing.")
-                subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+                subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         
         else:
             self.usage()
@@ -274,7 +274,7 @@ CONTENT:""")
     def conex_home(self, conu):
         opened = self.con.open(self.conexid)
         if not opened:
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+            subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
             sys.exit()
         self.con.home(self.devnamec)
         pos0 = -1000.
@@ -282,29 +282,29 @@ CONTENT:""")
         exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
         paramf = d['paramf']
         pos = self.con.status(self.devnamec)
-        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+        subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
             pos0 = pos
             pos = self.con.status(self.devnamec)
             time.sleep(0.2)
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec, str(pos)])
+            subprocess.call(["scxkw-setter", "set", self.devnamec, str(pos)])
             if conu == 0:
                 if pos in paramf:
                     for i in range(self.nslots):
                         if pos == paramf[i]:
                             if self.color_st:
-                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                                exec("subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                             else:
-                                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec+"_st", self.param1[i][:16]])
+                                subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", self.param1[i][:16]])
                 else:
-                    subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
+                    subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
         self.con.close()
         
     # -----------------------------------------------------------------
     def conex_status(self, conu):
         opened = self.con.open(self.conexid)
         if not opened:
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+            subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
             sys.exit()
         pos = self.con.status(self.devnamec)
         self.con.close()
@@ -319,19 +319,19 @@ CONTENT:""")
                     print("Position = "+str(pos)+", Conex is in position "+self.param0[i]+", "+self.param1[i])
                     if conu == 0:
                         if self.color_st:
-                            exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                            exec("subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                         else:
-                            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec+"_st", self.param1[i][:16]])
+                            subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", self.param1[i][:16]])
         else:
             print("Position = "+str(pos)+", Conex is not in a defined position. Try homing.")
             if conu == 0:
-                subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
+                subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
               
     # -----------------------------------------------------------------
     def conex_goto(self, pos, conu):
         opened = self.con.open(self.conexid)
         if not opened:
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+            subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
             sys.exit()
         self.con.move(pos, self.devnamec)
         pos0 = -1000.
@@ -339,22 +339,22 @@ CONTENT:""")
         exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
         paramf = d['paramf']
         pos = self.con.status(self.devnamec)
-        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
+        subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
             pos0 = pos
             pos = self.con.status(self.devnamec)
             time.sleep(0.1)
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec, str(pos)])
+            subprocess.call(["scxkw-setter", "set", self.devnamec, str(pos)])
             if conu == 0:
                 if pos in paramf:
                     for i in range(self.nslots):
                         if pos == paramf[i]:
                             if self.color_st:
-                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                                exec("subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                             else:
-                                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec+"_st", self.param1[i][:16]])
+                                subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", self.param1[i][:16]])
                 else:
-                    subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
+                    subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
         self.con.close()
         
     # -----------------------------------------------------------------
@@ -362,7 +362,7 @@ CONTENT:""")
         if (1 <= slot <= self.nslots):
             opened = self.con.open(self.conexid)
             if not opened:
-                subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+                subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
                 sys.exit()
             d = locals()
             exec("pos = self.param%d[slot-1]" %(self.col,), globals(), d)
@@ -373,22 +373,22 @@ CONTENT:""")
             exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
             paramf = d['paramf']
             pos = self.con.status(self.devnamec)
-            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+            subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
             while pos0 != pos:
                 pos0 = pos
                 pos = self.con.status(self.devnamec)
                 time.sleep(0.2)
-                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec, str(pos)])
+                subprocess.call(["scxkw-setter", "set", self.devnamec, str(pos)])
                 if conu == 0:
                     if pos in paramf:
                         for i in range(self.nslots):
                             if pos == paramf[i]:
                                 if self.color_st:
-                                    exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                                    exec("subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                                 else:
-                                    subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamec+"_st", self.param1[i][:16]])
+                                    subprocess.call(["scxkw-setter", "set", self.devnamec+"_st", self.param1[i][:16]])
                     else:
-                        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
+                        subprocess.call(['scxkw-setter', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
             self.con.close()
             logit.logit(self.devnamec,'moved_to_slot_'+str(slot))
         else:
@@ -403,22 +403,22 @@ CONTENT:""")
         exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
         paramf = d['paramf']
         pos = self.zab.status(self.zaberid, self.devnamez)
-        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+        subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
             pos0 = pos
             pos = self.zab.status(self.zaberid, self.devnamez)
             time.sleep(0.2)
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez, str(pos)])
+            subprocess.call(["scxkw-setter", "set", self.devnamez, str(pos)])
             if zabu == 0:
                 if pos in paramf:
                     for i in range(self.nslots):
                         if pos == paramf[i]:
                             if self.color_st:
-                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                                exec("subprocess.call(['scxkw-setter', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                             else:
-                                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez+"_st", self.param1[i][:16]])
+                                subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", self.param1[i][:16]])
                 else:
-                    subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
+                    subprocess.call(['scxkw-setter', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
         self.zab.close()
         
     # -----------------------------------------------------------------
@@ -437,13 +437,13 @@ CONTENT:""")
                     print("Position = "+str(pos)+", Zaber is in position "+self.param0[i]+", "+self.param1[i])
                     if zabu == 0:
                         if self.color_st:
-                            exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                            exec("subprocess.call(['scxkw-setter', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                         else:
-                            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez+"_st", self.param1[i][:16]])
+                            subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", self.param1[i][:16]])
         else:
             print("Position = "+str(pos)+", Zaber is not in a defined position. Try homing.")
             if zabu == 0:
-                subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
+                subprocess.call(['scxkw-setter', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
               
     # -----------------------------------------------------------------
     def zaber_goto(self, pos, zabu):
@@ -454,22 +454,22 @@ CONTENT:""")
         exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
         paramf = d['paramf']
         pos = self.zab.status(self.zaberid, self.devnamez)
-        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+        subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
         while pos0 != pos:
             pos0 = pos
             pos = self.zab.status(self.zaberid, self.devnamez)
             time.sleep(0.2)
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez, str(pos)])
+            subprocess.call(["scxkw-setter", "set", self.devnamez, str(pos)])
             if zabu == 0:
                 if pos in paramf:
                     for i in range(self.nslots):
                         if pos == paramf[i]:
                             if self.color_st:
-                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                                exec("subprocess.call(['scxkw-setter', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                             else:
-                                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez+"_st", self.param1[i][:16]])
+                                subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", self.param1[i][:16]])
                 else:
-                    subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
+                    subprocess.call(['scxkw-setter', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
         self.zab.close()
         
     # -----------------------------------------------------------------
@@ -486,22 +486,22 @@ CONTENT:""")
                 exec("paramf = list(map(float, self.param%d))" %(self.col,), globals(), d)
                 paramf = d['paramf']
                 pos = self.zab.status(self.zaberid, self.devnamez)
-                subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
+                subprocess.call(['scxkw-setter', 'set', self.devname+'_st', 'UNKNOWN', '3'])
                 while pos0 != pos:
                     pos0 = pos
                     pos = self.zab.status(self.zaberid, self.devnamez)
                     time.sleep(0.2)
-                    subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez, str(pos)])
+                    subprocess.call(["scxkw-setter", "set", self.devnamez, str(pos)])
                     if zabu == 0:
                         if pos in paramf:
                             for i in range(self.nslots):
                                 if pos == paramf[i]:
                                     if self.color_st:
-                                        exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
+                                        exec("subprocess.call(['scxkw-setter', 'set', self.devnamez+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
                                     else:
-                                        subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.devnamez+"_st", self.param1[i][:16]])
+                                        subprocess.call(["scxkw-setter", "set", self.devnamez+"_st", self.param1[i][:16]])
                         else:
-                            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
+                            subprocess.call(['scxkw-setter', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
                 self.zab.close()
                 logit.logit(self.devnamez,'moved_to_slot_'+str(slot))
         else:

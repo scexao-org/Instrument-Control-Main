@@ -92,7 +92,7 @@ class wheel:
             current = sdir + self.id + '.txt'
             open(current, 'w').write(slot+'\n')
             touch(sdir+'updt')
-            subprocess.call(["scexaostatus","set", str(wheelname), str(slot)])
+            subprocess.call(["scxkw-setter","set", str(wheelname), str(slot)])
         else:
             print("can't do that")
 
@@ -101,7 +101,7 @@ class wheel:
         self.ser.write("pos?\r")
         time.sleep(0.1)
         dummy = self.ser.readline()
-        subprocess.call(["scexaostatus","set", str(wheelname), str(dummy[5])])
+        subprocess.call(["scxkw-setter","set", str(wheelname), str(dummy[5])])
         print "Wheel is in position "+str(dummy[5])
         return(dummy[5])
 

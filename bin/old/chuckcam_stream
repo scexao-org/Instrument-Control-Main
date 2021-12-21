@@ -551,7 +551,7 @@ while True: # the main game loop
                     dinfo2 = font3.render(msg, True, BGCOL, SACOL)
                     screen.blit(dinfo2, rct_dinfo2)
                     pygame.display.update([rct_dinfo2])
-                    os.system("scexaostatus set darkchuck 1")
+                    os.system("scxkw-setter set darkchuck 1")
                     os.system("log Chuckcam: Saving internal darks")
                     
                     
@@ -586,7 +586,7 @@ while True: # the main game loop
                     whl.goto(slot)         # back to previous state
                     time.sleep(2.0)        # safety
                     whl.close()            # closing wheel connection
-                    os.system("scexaostatus set darkchuck 0")
+                    os.system("scxkw-setter set darkchuck 0")
                     os.system("log Chuckcam: Done saving internal darks")
                         
                     cam_cmd("tint %d %d" % (camid, etime), False)
@@ -663,12 +663,12 @@ while True: # the main game loop
                         os.system("tmux new-session -d -s ircam1log")
                         os.system("tmux send-keys -t ircam1log \"logshim ircam1 %i %s\" C-m"%(nimsave, savepath))
                         os.system("log Chuckcam: start logging images")
-                        os.system("scexaostatus set logchuck 1")
+                        os.system("scxkw-setter set logchuck 1")
                     else:
                         os.system("tmux send-keys -t ircam1log \"logshimkill ircam1\"")
                         os.system("tmux kill-session -t ircam1log")
                         os.system("log Chuckcam: stop logging images")
-                        os.system("scexaostatus set logchuck 0")
+                        os.system("scxkw-setter set logchuck 0")
 
     pygame.display.update(rects)
 

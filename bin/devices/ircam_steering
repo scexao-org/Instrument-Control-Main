@@ -137,5 +137,5 @@ os.system("steering phi goto %.3f" % (stphi,))
 os.system("oap4 theta goto %.3f" % (oaptheta,))
 os.system("oap4 phi goto %.3f" % (oapphi,))
 
-subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
-subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
+subprocess.call(['scxkw-setter', 'set', 'oap4_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
+subprocess.call(['scxkw-setter', 'set', 'steering_st', '(%.1f, %.1f) as' % (posx,posy), '2'])

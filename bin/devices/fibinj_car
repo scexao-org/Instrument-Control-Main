@@ -86,13 +86,13 @@ def main():
             pos0 = pos
             pos = ttm.current_pos(idn)
             time.sleep(0.2)
-            subprocess.call(["scexaostatus", "set", stagename, str(pos)])
+            subprocess.call(["scxkw-setter", "set", stagename, str(pos)])
         ttm.close()
         
     elif "status" in args[0].lower():
         ttm = ezstep_chain.ezstep_chain(ttmdev)
         position = ttm.current_pos(idn)
-        subprocess.call(["scexaostatus", "set", stagename, str(position)])
+        subprocess.call(["scxkw-setter", "set", stagename, str(position)])
         ttm.close()
         print(position)
         
@@ -114,7 +114,7 @@ def main():
                 pos0 = pos
                 pos = ttm.current_pos(idn)
                 time.sleep(0.2)
-                subprocess.call(["scexaostatus", "set", stagename, str(pos)])
+                subprocess.call(["scxkw-setter", "set", stagename, str(pos)])
             ttm.close()
             logit.logit('SMI_car_axis','moved_to_position_'+str(pos))
         else:

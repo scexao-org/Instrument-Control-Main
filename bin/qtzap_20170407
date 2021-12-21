@@ -55,7 +55,7 @@ else:
     cam = shm('/tmp/ircam1.im.shm',      verbose=False)
     drk = shm('/tmp/ircam1_dark.im.shm', verbose=False)
     dmc = shm('/tmp/dm00disp04.im.shm',  verbose=False)
-    os.system("scexaostatus set zap_loop OPEN 1")
+    os.system("scxkw-setter set zap_loop OPEN 1")
     # ----------------------------------------------------------------------
 
 mycmap     = cm.jet
@@ -318,7 +318,7 @@ class MyWindow(QtGui.QMainWindow):
         - Inform the user of current status
         --------------------------------------------------- '''
         self.nm = self.bank_dm_modes.shape[0]
-        os.system("scexaostatus set zap_nmodes %d" % (self.nm,))
+        os.system("scxkw-setter set zap_nmodes %d" % (self.nm,))
         self.gains = np.ones(self.nm).astype('float32')
         self.cva   = np.zeros((self.nsamp, self.nm))
         self.cvlog = np.zeros((self.nlog,  self.nm))
@@ -348,7 +348,7 @@ class MyWindow(QtGui.QMainWindow):
         Use Olivier's LWE modes optimized for the pyramid
         --------------------------------------------------- '''
         self.bank_type = "HYBRID1"
-        os.system("scexaostatus set zap_mtype %s" % (self.bank_type,))
+        os.system("scxkw-setter set zap_mtype %s" % (self.bank_type,))
         self.bank_dm_modes = pf.getdata(conf_dir +
                                         'hybrid1.fits').astype('float32') 
         self.complete_basis_config()
@@ -359,7 +359,7 @@ class MyWindow(QtGui.QMainWindow):
         Use Olivier's LWE modes optimized for the pyramid
         --------------------------------------------------- '''
         self.bank_type = "HYBRID2"
-        os.system("scexaostatus set zap_mtype %s" % (self.bank_type,))
+        os.system("scxkw-setter set zap_mtype %s" % (self.bank_type,))
         self.bank_dm_modes = pf.getdata(conf_dir +
                                         'hybrid2.fits').astype('float32') 
         self.complete_basis_config()
@@ -370,7 +370,7 @@ class MyWindow(QtGui.QMainWindow):
         Use Olivier's LWE modes optimized for the pyramid
         --------------------------------------------------- '''
         self.bank_type = "LWE"
-        os.system("scexaostatus set zap_mtype %s" % (self.bank_type,))
+        os.system("scxkw-setter set zap_mtype %s" % (self.bank_type,))
         self.bank_dm_modes = pf.getdata(conf_dir +
                                         'fmodes1_06.fits').astype('float32') 
         #for i in xrange(11):
@@ -401,7 +401,7 @@ class MyWindow(QtGui.QMainWindow):
         Use a set of ZERNIKE modes centered on the DM/pupil
         --------------------------------------------------- '''
         self.bank_type = "Zernike"
-        os.system("scexaostatus set zap_mtype %s" % (self.bank_type,))
+        os.system("scxkw-setter set zap_mtype %s" % (self.bank_type,))
         i0, i1 = 4, 14
         nzer = i1-i0
         dmpz = 46 # pupil size in dm actuators
@@ -710,7 +710,7 @@ Don't you just love it when a plan comes together?
         the bank of modes *bank_dm_modes*, and records
         the corresponding signature.
         ------------------------------------------------ ''' 
-        os.system("scexaostatus set zap_loop CALIBRATION 0")
+        os.system("scxkw-setter set zap_loop CALIBRATION 0")
         self.atest = self.dspinB_cal_amp.value()
         self.pB_cloop.setEnabled(False)
         self.pB_recal.setEnabled(False)
@@ -759,7 +759,7 @@ Don't you just love it when a plan comes together?
         self.LTL = np.dot(self.LL, self.LL.T)
         
         self.log("Calibration over.")
-        os.system("scexaostatus set zap_loop OPEN 1")
+        os.system("scxkw-setter set zap_loop OPEN 1")
         fname = "RESP_%s_wvl_%3.1f_neig_%03d.fits" % (
             self.bank_type, self.wavel, self.neig,)
 
@@ -779,7 +779,7 @@ Don't you just love it when a plan comes together?
         if not self.abort_flag:
             self.abort_flag = True
             self.log("<font color='red'>Abort!</font> ")
-            os.system("scexaostatus set zap_loop OPEN 1")
+            os.system("scxkw-setter set zap_loop OPEN 1")
 
     # =========================================================
     def refresh_dark(self):
@@ -836,7 +836,7 @@ Don't you just love it when a plan comes together?
         Passed to a separate thread: repeats wavefont control
         iteration until the "Abort" button is pressed.
         -------------------------------------------------- '''
-        os.system("scexaostatus set zap_loop CLOSED 3")
+        os.system("scxkw-setter set zap_loop CLOSED 3")
         if self.LL == None:
             self.log("<font color='orange'>No calibration available!</font>")
             return(None)
@@ -866,7 +866,7 @@ Don't you just love it when a plan comes together?
         Parameter: delay (in seconds)
         -------------------------------------------------- '''
         self.gain   = self.dspinB_loop_gain.value() # gain updated on the fly?
-        os.system("scexaostatus set zap_gain %6.3f" % (self.gain,))
+        os.system("scxkw-setter set zap_gain %6.3f" % (self.gain,))
 
         img         = (cam.get_data(False, True) - self.bias)[dysz:dysz+sz,dxsz:dxsz+sz]
         wft         = self.get_pupil_vect(image=img)

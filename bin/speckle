@@ -71,7 +71,7 @@ XW, YW = 990, 800               # window size
 screen = pygame.display.set_mode((XW, YW), 0, 32)
 pygame.display.set_caption('Speckle Massacre GUI')
 
-os.system("scexaostatus set sn_loop OPEN 1")
+os.system("scxkw-setter set sn_loop OPEN 1")
     
 # ------------------------------------------------------------------
 #                       global variables
@@ -391,7 +391,7 @@ def origin():                      # redetermine origin
     global ROI_xr
     global loop_mesg
 
-    os.system("scexaostatus set sn_loop 'CALIB ORIGIN' 0")
+    os.system("scxkw-setter set sn_loop 'CALIB ORIGIN' 0")
     im0 = getimg(False, True) # first image
 
     (x0, y0) = find_psf_center(im0, verbose=False)
@@ -440,7 +440,7 @@ def find_pix2spf():
     etime = get_etime()
     delay = np.max((etime*1e-6, 0.01))
 
-    os.system("scexaostatus set sn_loop 'CALIB PIX2SPF' 0")
+    os.system("scxkw-setter set sn_loop 'CALIB PIX2SPF' 0")
 
     # test-speckles characteristics
     nphi = 20
@@ -635,7 +635,7 @@ def calib_contrast():
     global xs, ys
     global loop_mesg
 
-    os.system("scexaostatus set sn_loop 'CALIB CONTRAST' 0")
+    os.system("scxkw-setter set sn_loop 'CALIB CONTRAST' 0")
     nphi       = 20
     test_phase = 2*np.pi * np.arange(nphi) / float(nphi)
     irad       = 3.0 # TB optimized !!!
@@ -709,11 +709,11 @@ def sloop():                      # speckle nulling loop
     global abort_loop
     global loop_mesg
     loop_mesg = "      Loop closed!      "
-    os.system("scexaostatus set sn_loop 'CLOSED ON %s' 3" % (conf.orient,))
+    os.system("scxkw-setter set sn_loop 'CLOSED ON %s' 3" % (conf.orient,))
     while not abort_loop:
         siter()
     loop_mesg = "          idle          "
-    os.system("scexaostatus set sn_loop 'OPEN' 1")
+    os.system("scxkw-setter set sn_loop 'OPEN' 1")
     abort_loop = False
     exit(0)
 
@@ -723,7 +723,7 @@ def sabort():                     # abort the speckle loop
     global loop_mesg
     abort_loop = True
     loop_mesg = "    Aborting loop !     "
-    os.system("scexaostatus set sn_loop 'OPEN' 1")
+    os.system("scxkw-setter set sn_loop 'OPEN' 1")
     exit(0)
 
 # ============================================================
@@ -1319,14 +1319,14 @@ while True: # the main game loop
             if event.key == K_e:
                 if conf.lpgain < 0.5:
                     conf.lpgain += 0.05
-                    os.system("scexaostatus set sn_gain %6.3f" % (conf.lpgain,))
+                    os.system("scxkw-setter set sn_gain %6.3f" % (conf.lpgain,))
             # ------
             if event.key == K_d:
                 if conf.lpgain > 0.05:
                     conf.lpgain -= 0.05
                 else:
                     conf.lpgain = 0.0
-                os.system("scexaostatus set sn_gain %6.3f" % (conf.lpgain,))
+                os.system("scxkw-setter set sn_gain %6.3f" % (conf.lpgain,))
             # ------
             if event.key == K_r:
                 if conf.nphi < 50:

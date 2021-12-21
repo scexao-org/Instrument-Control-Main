@@ -80,7 +80,7 @@ class zaber:
         
     def status(self, idn, devname):
         pos = self.command(idn, 60, 0)
-        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname, str(pos)])
+        subprocess.call(["scxkw-setter", "set", devname, str(pos)])
         return pos
 
     def command(self, idn, cmd, arg, quiet=True):

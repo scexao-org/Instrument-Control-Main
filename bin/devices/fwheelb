@@ -99,7 +99,7 @@ def main():
                 elif int(args[1])==8:
                     con.move(315.00)  #Needs to be se
                 con.close()
-                subprocess.call(["scexaostatus","set", "scibspos", str(args[1])])
+                subprocess.call(["scxkw-setter","set", "scibspos", str(args[1])])
                 logit.logit('Fwheelb','moved_to_slot_'+str(args[1]))
             else:
                 print("Wheel only has 8 positions")
@@ -111,7 +111,7 @@ def main():
         con.open(WN, cid)
         con.home()
         con.close()
-        subprocess.call(["scexaostatus","set", "scibspos", str(args[0])])
+        subprocess.call(["scxkw-setter","set", "scibspos", str(args[0])])
         logit.logit('Fwheelb','moved_to_slot_1')
         sys.exit()
     

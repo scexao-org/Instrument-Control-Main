@@ -98,8 +98,8 @@ print(oap0, steering0)
 
 cnt0 = telescope_status.get_counter()
 
-subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '%.1f as, %d deg' % (sep,pa), '2'])
-subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '%.1f as, %d deg' % (sep, pa), '2'])
+subprocess.call(['scxkw-setter', 'set', 'oap4_st', '%.1f as, %d deg' % (sep,pa), '2'])
+subprocess.call(['scxkw-setter', 'set', 'steering_st', '%.1f as, %d deg' % (sep, pa), '2'])
 
 try:
     while True:

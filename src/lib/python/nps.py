@@ -91,7 +91,7 @@ COMMAND:
             sock.send(cmd)
             time.sleep(1)
             temp = sock.recv(1024)
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", "nps%d_%d" %(self.npsid,self.portid), 'ON', '1'])
+            subprocess.call(["scxkw-setter", "set", "nps%d_%d" %(self.npsid,self.portid), 'ON', '1'])
             time.sleep(0.1)
             sock.close()
             time.sleep(0.1)
@@ -116,7 +116,7 @@ check that environment variable NPS_IP is correctly set
             sock.send(cmd)
             time.sleep(1)
             temp = sock.recv(1024)
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", "nps%d_%d" %(self.npsid,self.portid), 'OFF', '0'])
+            subprocess.call(["scxkw-setter", "set", "nps%d_%d" %(self.npsid,self.portid), 'OFF', '0'])
             time.sleep(0.1)
             sock.close()
             time.sleep(0.1)
@@ -149,7 +149,7 @@ check that environment variable NPS_IP is correctly set
                 col = '0'
             else:
                 col = '3'
-            subprocess.call(["/home/scexao/bin/scexaostatus", "set", "nps%d_%d" %(self.npsid,self.portid), npsstatus3, col])
+            subprocess.call(["scxkw-setter", "set", "nps%d_%d" %(self.npsid,self.portid), npsstatus3, col])
             time.sleep(0.1)
             sock.close()
             time.sleep(0.1)

@@ -95,7 +95,7 @@ def main():
                              ("st" in args[1].lower())):
             whl = wheel.wheel(whldev)
             print("Last stored position = %c" %(whl.saved(),))
-            subprocess.call(["scexaostatus","set", "pywfsfwpos", str(whl.saved())])
+            subprocess.call(["scxkw-setter","set", "pywfsfwpos", str(whl.saved())])
             whl.close()
             sys.exit()
         elif (na > 1) and args[1].isdigit():
@@ -103,7 +103,7 @@ def main():
                 whl = wheel.wheel(whldev)
                 whl.goto(args[1])
                 whl.close()
-                subprocess.call(["scexaostatus","set", "pywfsfwpos", str(args[1])])
+                subprocess.call(["scxkw-setter","set", "pywfsfwpos", str(args[1])])
                 logit.logit('PyWFS_filters','moved_to_slot_'+str(args[1]))
             else:
                 print("Wheel only has 6 positions")
