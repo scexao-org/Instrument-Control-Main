@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+#waeE7124Nf
+# ------------------------------------------------------------------- #
+#    _               _                 ___       _               _    #
+#   /_\  _ __   __ _| | ___   __ _    /___\_   _| |_ _ __  _   _| |_  #
+#  //_\\| '_ \ / _` | |/ _ \ / _` |  //  // | | | __| '_ \| | | | __| #
+# /  _  \ | | | (_| | | (_) | (_| | / \_//| |_| | |_| |_) | |_| | |_  #
+# \_/ \_/_| |_|\__,_|_|\___/ \__, | \___/  \__,_|\__| .__/ \__,_|\__| #
+#                            |___/                  |_|               #
+# ------------------------------------------------------------------- #
+
+import serial
+import os
+import time
+import binascii
+import sys
+import numpy as np
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+import logit #Custom logging library
+
+aoname = "/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0"
+
+brate = 115200 # baud rate for Weeder AI board
+tout  = 1  # time out for serial connection (in sec)
+delay = 0.5  # safety delay between send - receive 
+
+class aoutput(object):
+    def __init__(self, devname, brate):
+        self.s=serial.Serial(devname,brate,timeout=tout)
+    
+    def temp(self,temp):
+        if (float(temp)>=20) and (float(temp)<=50):
+            text="tset "+str(float(temp))+"\r\n"
+            print(text.encode())
+            self.s.write(text.encode())
+            time.sleep(delay)
+            print(self.s.readlines())
+        else:
+            print("Temperature must be between 20 and 50C")
+            
+    def command(self,com):
+        text=str(com)+"\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        time.sleep(delay)
+        print(self.s.readlines())
+         
+    def status(self):
+        text="*idn?\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        time.sleep(delay)
+        print(self.s.readlines())
+        text="temps?\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        time.sleep(delay)
+        print(self.s.readlines())
+        text="stat?\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        time.sleep(delay)
+        print(self.s.readlines())
+        
+    def enable(self):
+        text="ens\r\n"
+        print(text.encode())
+        self.s.write(text.encode())
+        time.sleep(delay)
+        print(self.s.readlines())
+
+    def close(self):
+        self.s.close()
+
+
+def usage():
+    print("""---------------------------------------
+Usage: flc_temp <command> <arg>
+---------------------------------------
+command:\n-------
+    temp     allows the set temperature
+             to be changed \n
+    status   check status\n
+    enable   toggle enable/disable
+
+
+arg 1:\n-----
+    temp     (20 and 50C)
+    
+examples:\n--------
+    flc_temp temp 40
+--------------------------------------- """)
+    sys.exit()
+
+def main():
+    args = sys.argv[1:]  # list of read arguments
+    na = args.__len__()  # number of arguments
+
+    if args == []: usage()
+
+    if "temp" == args[0].lower():
+        if na < 2:
+            usage()
+        if isinstance(float(args[1]),float):
+            if (float(args[1])>=20) and (float(args[1])<=50):
+                ao = aoutput(aoname, brate)
+                ao.temp(args[1])
+                ao.close()
+            else:
+                print("Please enter a temp between 20 and 50C")
+        else:
+            print("Please enter a number between 20 and 50C")
+
+    elif "status" == args[0].lower():
+        ao = aoutput(aoname, brate)
+        ao.status()
+
+    elif "enable" == args[0].lower():
+        ao = aoutput(aoname, brate)
+        ao.enable()
+        
+    else:
+        ao = aoutput(aoname, brate)
+        ao.command(args[0])
+    
+if __name__ == "__main__":
+    main()
