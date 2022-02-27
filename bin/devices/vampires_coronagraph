@@ -7,6 +7,7 @@ trap 'rm -f $tempfile' 0 1 2 5 15
 # DEFAULTS
 step_size="0.05" # 50 um
 fpm=5 # open mask TODO: read current value from redis DB
+fpm_selected=5 # this is current selected mask, different from actual inserted mask
 vfcmd="/home/scexao/bin/devices/vampires_fieldstop"
 
 # ===============================================================
@@ -14,7 +15,7 @@ vfcmd="/home/scexao/bin/devices/vampires_fieldstop"
 
 echo "reading FPM positions"
 fpm_conf_file="/home/scexao/bin/devices/conf/conf_vampires_fieldstop.txt"
-nmasks=$(cat $fpm_conf_file | wc -l)
+nmasks=$(wc -l $fpm_conf_file)
 declare -a fpm_number
 declare -a fpm_description
 declare -a fpm_x
@@ -56,7 +57,9 @@ while true; do
     # ============================================================
     if [ $state = "menuhome" ]; then
 	stateok=1
-	fpmname=${fpm_description[$fpm]}
+	name=$(echo "${fpm_description[$fpm]}" | xargs)
+	name_selected=$(echo "${fpm_description[$fpm_selected]}" | xargs)
+	menuname=$(printf "Current mask: %s\nSelected mask: %s" "$name" "$name_selected")
 
 	menuitems=( "s" "[s]elect focal plane mask")
 	menuitems+=( "m" "[m]ove the selected FPM in")
@@ -65,8 +68,8 @@ while true; do
 	dialog --title "VAMPiRES Coronagraph" \
 	    --ok-label "Select" \
 	    --cancel-label "Exit" \
-	    --menu "Current mask: $fpmname" \
-	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	    --menu "$menuname" \
+	    50 80 50 "${menuitems[@]}"  2> $tempfile
 	
 	retval=$?
 	choiceval=$(cat $tempfile)
@@ -74,10 +77,9 @@ while true; do
 	    0)  # button 1:
 		case $choiceval in
   		    s) state="fpm_select";;
-		    m) # moving FPM
-			log "CORO: moving fpm wheel to $fpmname"
-			tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[$fpm]} &" C-m
-			state="menuhome";;
+		    m) fpm=$fpm_selected 
+		       tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[$fpm_selected]} &" C-m
+		       state="menuhome";;
 		    a) state="fpm_align";;
 		esac;;
 	    1) state="menuexit";; # "Exit" button
@@ -94,18 +96,19 @@ while true; do
             menuitems+=( "${fpm_number[i]}" "${fpm_description[i]}" )
 	done
 
+	menuname="Select coronagraphic mask. Note: this will not move the mask into position. To move mask into position, use 'move the selected FPM in' from the main menu."
 	dialog --title "Select Coronagraph" \
 	    --ok-label "Select" \
             --cancel-label "Exit" \
 	    --extra-button --extra-label "Return" \
-            --default-item ${fpm} \
-	    --menu "Select coronagraphic mask" \
-            50 80 100 "${menuitems[@]}"  2> $tempfile
+            --default-item ${fpm_selected} \
+	    --menu "$menuname" \
+            50 80 50 "${menuitems[@]}"  2> $tempfile
 
 	retval=$?
 
 	case $retval in
-	    0) fpm=$(cat $tempfile)
+	    0) fpm_selected=$(cat $tempfile)
                state="menuhome";;
 	    1) state="menuexit";; 
 	    3) state="menuhome";;
@@ -134,7 +137,7 @@ while true; do
 	    --extra-button --extra-label "Return" \
 	    --default-item $fpm_align_choice \
 	    --menu "$menuname" \
-	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	    50 80 50 "${menuitems[@]}"  2> $tempfile
 
 	retval=$?
 	choiceval=$(cat $tempfile)
