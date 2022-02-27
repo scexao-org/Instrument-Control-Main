@@ -207,22 +207,22 @@ int status_display()
     printw("\n");
     // NPS2
     printw("NPS2 ports 1-4  : ");
-    print_status("SCExAO4 POWER 1", SCExAO_status[0].nps2_1_co);
+    print_status("    ???        ", SCExAO_status[0].nps2_1_co);
     printw(" | ");
-    print_status("SCExAO2 POWER 2", SCExAO_status[0].nps2_2_co);
+    print_status("    ???        ", SCExAO_status[0].nps2_2_co);
     printw(" | ");
-    print_status("RAJNICAM POWER ", SCExAO_status[0].nps2_3_co);
+    print_status("    ???        ", SCExAO_status[0].nps2_3_co);
     printw(" | ");
-    print_status("  OCAM POWER   ", SCExAO_status[0].nps2_4_co);
+    print_status("    ???        ", SCExAO_status[0].nps2_4_co);
     printw("\n");
     printw("NPS2 ports 5-8  : ");
-    print_status(" TT MODULATOR  ", SCExAO_status[0].nps2_5_co);
+    print_status("    ???        ", SCExAO_status[0].nps2_5_co);
     printw(" | ");
-    print_status(" FIRST SCI CAM ", SCExAO_status[0].nps2_6_co);
+    print_status("    ???        ", SCExAO_status[0].nps2_6_co);
     printw(" | ");
-    print_status("DM VACUUM PUMP ", SCExAO_status[0].nps2_7_co);
+    print_status("    ???        ", SCExAO_status[0].nps2_7_co);
     printw(" | ");
-    print_status("               ", SCExAO_status[0].nps2_8_co);
+    print_status("    ???        ", SCExAO_status[0].nps2_8_co);
     printw("\n");
     // NPS3
     printw("NPS3 ports 1-4  : ");
@@ -373,9 +373,9 @@ int status_display()
     print_header(" IR BENCH POLARIZATION ", '-');
 
     // Polarizer
-    //printw("Polarizer       : ");
-    //print_status(SCExAO_status[0].polarizer, SCExAO_status[0].polarizer_co);
-    //printw(" (t: %6.2f deg )\n", SCExAO_status[0].polarizer_theta);
+    // printw("Polarizer       : ");
+    // print_status(SCExAO_status[0].polarizer, SCExAO_status[0].polarizer_co);
+    // printw(" (t: %6.2f deg )\n", SCExAO_status[0].polarizer_theta);
     // IR Cams QWPs
     printw("IR Cam QWP      : ");
     print_status(SCExAO_status[0].ircam_qwp, SCExAO_status[0].ircam_qwp_co);
@@ -475,9 +475,9 @@ int status_display()
     print_status(SCExAO_status[0].first_inj_st, SCExAO_status[0].first_inj_co);
     printw(" (x: %6d stp,y: %6d stp,f: %6.2f mm)\n", SCExAO_status[0].first_inj_x, SCExAO_status[0].first_inj_y, SCExAO_status[0].first_inj_f);
     // FIRST Calibration source
-    //printw("FIRST Cal Source: ");
-    //print_status(SCExAO_status[0].first_src_st, SCExAO_status[0].first_src_co);
-    //printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].first_src_x, SCExAO_status[0].first_src_y);
+    // printw("FIRST Cal Source: ");
+    // print_status(SCExAO_status[0].first_src_st, SCExAO_status[0].first_src_co);
+    // printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].first_src_x, SCExAO_status[0].first_src_y);
     // FIRST Photometry
     printw("FIRST Photometry: ");
     print_status(SCExAO_status[0].first_photometry_st, SCExAO_status[0].first_photometry_co);
@@ -877,7 +877,7 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].piaa1_y = atoi(value);
     }
-    //piaa2
+    // piaa2
     else if (strcmp(status_item, "piaa2_st") == 0)
     {
       strncpy(SCExAO_status[0].piaa2_st, value, 15);
@@ -899,7 +899,7 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].piaa2_f = atoi(value);
     }
-    //nuller
+    // nuller
     else if (strcmp(status_item, "nuller_pickoff_st") == 0)
     {
       strncpy(SCExAO_status[0].nuller_pickoff_st, value, 15);

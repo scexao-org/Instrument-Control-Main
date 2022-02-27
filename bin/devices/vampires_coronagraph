@@ -1,0 +1,224 @@
+#!/bin/bash
+
+tempfile=$(mktemp 2>/dev/null) || tempfile=/tmp/vampres_coronagraph_aux$$
+trap 'rm -f $tempfile' 0 1 2 5 15
+
+# ===============================================================
+# DEFAULTS
+step_size="0.05" # 50 um
+fpm=5 # open mask TODO: read current value from redis DB
+vfcmd="/home/scexao/bin/devices/vampires_fieldstop"
+
+# ===============================================================
+# READ POSITIONS
+
+echo "reading FPM positions"
+fpm_conf_file="/home/scexao/bin/devices/conf/conf_vampires_fieldstop.txt"
+nmasks=$(cat $fpm_conf_file | wc -l)
+declare -a fpm_number
+declare -a fpm_description
+declare -a fpm_x
+declare -a fpm_y
+declare -a fpm_color
+i=1
+IFS=$'\n'
+for line in $(<$fpm_conf_file)
+do
+    fpm_number[$i]=$(echo "$line" | cut -d\; -f 1)
+    fpm_description[$i]=$(echo "$line" | cut -d\; -f 2)
+    fpm_x[$i]=$(echo "$line" | cut -d\; -f 3)
+    fpm_y[$i]=$(echo "$line" | cut -d\; -f 4)
+    fpm_color[$i]=$(echo "$line" | cut -d\; -f 5)
+    i=$i+1
+done
+tmux new-session -d -s vampires_coronagraph
+
+#=======================================================================
+# =================== STATE MACHINE ====================================
+
+# states:
+# menuhome
+# menuexit
+# save_config
+# fpm_select
+# fpm_align 
+# step_size_menu
+state="menuhome"
+
+tmux send-keys -t vampires_coronagraph "echo 'START STATE MACHINE'" C-m
+
+while true; do
+    
+    stateok=0
+    
+    # ================================================================
+    # Home Menu 
+    # ============================================================
+    if [ $state = "menuhome" ]; then
+	stateok=1
+	fpmname=${fpm_description[$fpm]}
+
+	menuitems=( "1" "Select focal plane mask")
+	menuitems+=( "2" "Move the selected FPM in")
+	menuitems+=( "3" "Manual FPM alignment")
+	
+	dialog --title "VAMPiRES Coronagraph" \
+	    --ok-label "Select" \
+	    --cancel-label "Exit" \
+	    --menu "Current mask: $fpmname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	case $retval in
+	    0)  # button 1:
+		case $choiceval in
+  		    1) state="fpm_select";;
+		    2) # moving FPM
+			log "CORO: moving fpm wheel to $fpmname"
+			tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[$fpm]} &" C-m
+			state="menuhome";;
+		    3) state="fpm_align";;
+		esac;;
+	    1) state="menuexit";; # "Exit" button
+	esac
+    fi
+
+    # ==========================================================
+    #  SELECT FPM 
+    if [ $state = "fpm_select" ]; then
+	stateok=1
+	menuitems=()
+	for i in $(seq 1 "$nmasks");
+	do
+            menuitems+=( "${fpm_number[i]}" "${fpm_description[i]}" )
+	done
+
+	dialog --title "Select Coronagraph" \
+	    --ok-label "Select" \
+            --cancel-label "Exit" \
+	    --extra-button --extra-label "Return" \
+            --default-item ${fpm} \
+	    --menu "Select coronagraphic mask" \
+            50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+
+	case $retval in
+	    0) fpm=$(cat $tempfile)
+               state="menuhome";;
+	    1) state="menuexit";; 
+	    3) state="menuhome";;
+	esac
+	
+    fi
+
+    # ==========================================================
+    #  MANUAL ALIGNMENT FPM 
+    if [ $state = "fpm_align" ]; then
+	stateok=1
+	fpm_align_choice="S"
+
+	menuitems=(  "S" "Step size : $step_size mm")
+        menuitems+=( "C" "Save position to configuration file")
+	menuitems+=( "1" "Move left")
+	menuitems+=( "2" "Move up")
+	menuitems+=( "3" "Move down")
+	menuitems+=( "4" "Move right")
+
+        menuname="Current position    x: ${fpm_x[$fpm]} y: ${fpm_y[$fpm]}"
+
+	dialog --title "FPM manual alignment" \
+	    --ok-label "Select" \
+            --cancel-label "Exit" \
+	    --extra-button --extra-label "Return" \
+	    --default-item $fpm_align_choice \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+
+	retval=$?
+	choiceval=$(cat $tempfile)
+
+	case $retval in
+	    0) 	fpm_align_choice=$choiceval
+		case $choiceval in
+  		    S)  state="step_size_menu";;
+	 	    C)  state="save_config";;
+		    1)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[$fpm]}-${step_size}")
+			tmux send-keys -t vampires_coronagraph "$vfcmd x goto ${fpm_x[$fpm]}" C-m
+			sleep 0.1
+			state="fpm_align";;
+		    2)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[$fpm]}+${step_size}")
+			tmux send-keys -t vampires_coronagraph "$vfcmd x goto ${fpm_x[$fpm]}" C-m
+			sleep 0.1
+			state="fpm_align";;
+		    3)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[$fpm]}-${step_size}")
+			tmux send-keys -t vampires_coronagraph "$vfcmd y goto ${fpm_y[$fpm]}" C-m
+			sleep 0.1
+			state="fpm_align";;
+		    4)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[$fpm]}+${step_size}")
+			tmux send-keys -t vampires_coronagraph "$vfcmd y goto ${fpm_y[$fpm]}" C-m
+			sleep 0.1
+			state="fpm_align";;
+		esac
+		;;
+	    1) state="menuexit";;
+	    3) state="menuhome";;
+	esac
+
+    fi
+
+    # ==========================================================
+    # AMPLITUDE ALIGNMENT FPM
+    if [ $state = "step_size_menu" ]; then
+	stateok=1
+
+	dialog --title "FPM Alignment Amplitude" \
+	    --ok-label "Select" \
+            --cancel-label "Exit" \
+            --extra-button --extra-label "Return" \
+            --inputbox "Enter step size (mm). Values below 0.001 mm are not recognized." \
+            50 80 $step_size 2> $tempfile
+	retval=$?
+
+	case $retval in
+	    0) step_size=$(cat $tempfile)
+               state="fpm_align";;
+	    1) state="menuexit";;
+	    3) state="fpm_align";;
+	esac
+
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION FPM
+    if [ $state = "save_config" ]; then
+	stateok=1
+
+	cp $fpm_conf_file /home/scexao/bin/devices/conf/archive/
+	rm $fpm_conf_file
+	for i in $(seq 1 "$nmasks")
+	do
+	    printf '%s;%s;%-6s;%-6s;%s\n' "${fpm_number[$i]}" "${fpm_description[$i]}" "${fpm_x[$i]}" "${fpm_y[$i]}" "${fpm_color[$i]}" >> $fpm_conf_file
+	done
+
+	tmux send-keys -t vampires_coronagraph "echo 'saving FPM position'" C-m
+	tmux send-keys -t vampires_coronagraph "$vfcmd &" C-m
+
+	state="menuhome"
+    fi
+    
+    # ==========================================================
+    # EXIT MODE
+    if [ $state = "menuexit" ]; then
+	stateok=1
+	exit
+    fi
+    
+    # ==========================================================
+    #  ERROR MODE
+    if [ $stateok = 0 ]; then
+	tmux send-keys -t vampires_coronagraph "echo 'state \"$state\" not recognized ... exit'" C-m
+	exit
+    fi
+done
