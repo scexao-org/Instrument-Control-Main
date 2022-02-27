@@ -6,7 +6,7 @@ trap 'rm -f $tempfile' 0 1 2 5 15
 # ===============================================================
 # DEFAULTS
 step_size="0.05" # 50 um
-fpm=5 # open mask TODO: read current value from redis DB
+#fpm=5 # open mask TODO: read current value from redis DB
 fpm_selected=5 # this is current selected mask, different from actual inserted mask
 vfcmd="/home/scexao/bin/devices/vampires_fieldstop"
 
@@ -15,7 +15,7 @@ vfcmd="/home/scexao/bin/devices/vampires_fieldstop"
 
 echo "reading FPM positions"
 fpm_conf_file="/home/scexao/bin/devices/conf/conf_vampires_fieldstop.txt"
-nmasks=$(wc -l $fpm_conf_file)
+nmasks=$(wc -l < $fpm_conf_file)
 declare -a fpm_number
 declare -a fpm_description
 declare -a fpm_x
@@ -46,6 +46,13 @@ tmux new-session -d -s vampires_coronagraph
 # step_size_menu
 state="menuhome"
 
+# dialog escape codes
+OK=0
+CANCEL=1
+HELP=2
+EXTRA=3
+ESC=255
+
 tmux send-keys -t vampires_coronagraph "echo 'START STATE MACHINE'" C-m
 
 while true; do
@@ -74,15 +81,14 @@ while true; do
 	retval=$?
 	choiceval=$(cat $tempfile)
 	case $retval in
-	    0)  # button 1:
-		case $choiceval in
+	    $OK) case $choiceval in
   		    s) state="fpm_select";;
 		    m) fpm=$fpm_selected 
 		       tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[$fpm_selected]} &" C-m
 		       state="menuhome";;
 		    a) state="fpm_align";;
 		esac;;
-	    1) state="menuexit";; # "Exit" button
+	    $CANCEL) state="menuexit";;
 	esac
     fi
 
@@ -108,10 +114,11 @@ while true; do
 	retval=$?
 
 	case $retval in
-	    0) fpm_selected=$(cat $tempfile)
+	    $OK) fpm_selected=$(cat $tempfile)
                state="menuhome";;
-	    1) state="menuexit";; 
-	    3) state="menuhome";;
+	    $CANCEL) state="menuexit";; 
+	    $EXTRA) state="menuhome";;
+            $ESC) state="menuhome";;
 	esac
 	
     fi
@@ -129,7 +136,7 @@ while true; do
 	menuitems+=( "d" "Move down")
 	menuitems+=( "f" "Move right")
 
-        menuname="Current position    x: ${fpm_x[$fpm]} y: ${fpm_y[$fpm]}"
+        menuname=$(printf "Current position\tx: %s y: %s" "${fpm_x[$fpm]}" "${fpm_y[$fpm]}")
 
 	dialog --title "FPM manual alignment" \
 	    --ok-label "Select" \
@@ -143,7 +150,7 @@ while true; do
 	choiceval=$(cat $tempfile)
 
 	case $retval in
-	    0) 	fpm_align_choice=$choiceval
+	    $OK) 	fpm_align_choice=$choiceval
 		case $choiceval in
   		    z)  state="step_size_menu";;
 	 	    c)  state="save_config";;
@@ -165,8 +172,9 @@ while true; do
 			state="fpm_align";;
 		esac
 		;;
-	    1) state="menuexit";;
-	    3) state="menuhome";;
+	    $CANCEL) state="menuexit";;
+	    $EXTRA) state="menuhome";;
+	    $ESC) state="menuhome";;
 	esac
 
     fi
@@ -185,10 +193,11 @@ while true; do
 	retval=$?
 
 	case $retval in
-	    0) step_size=$(cat $tempfile)
+	    $OK) step_size=$(cat $tempfile)
                state="fpm_align";;
-	    1) state="menuexit";;
-	    3) state="fpm_align";;
+	    $CANCEL) state="menuexit";;
+	    $EXTRA) state="fpm_align";;
+	    $ESC) state="fpm_align";;
 	esac
 
     fi
