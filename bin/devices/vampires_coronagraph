@@ -23,7 +23,7 @@ declare -a fpm_y
 declare -a fpm_color
 i=1
 IFS=$'\n'
-for line in $(<$fpm_conf_file)
+for line in $(<$fpm_conf_file);
 do
     fpm_number[$i]=$(echo "$line" | cut -d\; -f 1)
     fpm_description[$i]=$(echo "$line" | cut -d\; -f 2)
@@ -42,6 +42,7 @@ tmux new-session -d -s vampires_coronagraph
 # menuexit
 # save_config
 # fpm_select
+# fpm_rename
 # fpm_align 
 # step_size_menu
 state="menuhome"
@@ -49,7 +50,6 @@ state="menuhome"
 # dialog escape codes
 OK=0
 CANCEL=1
-HELP=2
 EXTRA=3
 ESC=255
 
@@ -62,10 +62,10 @@ while true; do
     # ================================================================
     # Home Menu 
     # ============================================================
-    if [ $state = "menuhome" ]; then
+    if [ $state == "menuhome" ]; then
 	stateok=1
-	name=$(echo "${fpm_description[$fpm]}" | xargs)
-	name_selected=$(echo "${fpm_description[$fpm_selected]}" | xargs)
+	name=$(echo "${fpm_description[fpm]}" | xargs)
+	name_selected=$(echo "${fpm_description[fpm_selected]}" | xargs)
 	menuname=$(printf "Current mask: %s\nSelected mask: %s" "$name" "$name_selected")
 
 	menuitems=( "s" "[s]elect focal plane mask")
@@ -84,7 +84,7 @@ while true; do
 	    $OK) case $choiceval in
   		    s) state="fpm_select";;
 		    m) fpm=$fpm_selected 
-		       tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[$fpm_selected]} &" C-m
+		       tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[fpm_selected]} &" C-m
 		       state="menuhome";;
 		    a) state="fpm_align";;
 		esac;;
@@ -94,7 +94,7 @@ while true; do
 
     # ==========================================================
     #  SELECT FPM 
-    if [ $state = "fpm_select" ]; then
+    if [ $state == "fpm_select" ]; then
 	stateok=1
 	menuitems=()
 	for i in $(seq 1 "$nmasks");
@@ -103,10 +103,11 @@ while true; do
 	done
 
 	menuname="Select coronagraphic mask. Note: this will not move the mask into position. To move mask into position, use 'move the selected FPM in' from the main menu."
+
 	dialog --title "Select Coronagraph" \
 	    --ok-label "Select" \
-            --cancel-label "Exit" \
-	    --extra-button --extra-label "Return" \
+            --cancel-label "Return" \
+	    --extra-button --extra-label "Rename" \
             --default-item ${fpm_selected} \
 	    --menu "$menuname" \
             50 80 50 "${menuitems[@]}"  2> $tempfile
@@ -116,16 +117,49 @@ while true; do
 	case $retval in
 	    $OK) fpm_selected=$(cat $tempfile)
                state="menuhome";;
-	    $CANCEL) state="menuexit";; 
-	    $EXTRA) state="menuhome";;
+	    $EXTRA) fpm_selected=$(cat $tempfile)
+               state="fpm_rename";; 
+	    $CANCEL) state="menuhome";;
             $ESC) state="menuhome";;
 	esac
 	
     fi
 
     # ==========================================================
+    # RENAME FPM 
+    if [ $state == "fpm_rename" ]; then
+	stateok=1
+        	
+	menuname="Enter new name for FPM #${fpm_number[fpm_selected]}"
+
+        dialog --title "Rename FPM" \
+	    --ok-label "Select" \
+            --cancel-label "Return" \
+	    --inputbox "$menuname" \
+	    50 80 "${fpm_description[fpm_selected]}" 2> $tempfile
+	
+	retval=$?
+
+	if [ $retval -eq $OK ]; then
+            fpm_description[$fpm_selected]=$(cat $tempfile)
+	    cp $fpm_conf_file /home/scexao/bin/devices/conf/archive/
+	    rm $fpm_conf_file
+	    for i in $(seq 1 "$nmasks");
+	    do
+	        printf '%s;%s;%-6s;%-6s;%s\n' "${fpm_number[$i]}" "${fpm_description[$i]}" "${fpm_x[$i]}" "${fpm_y[$i]}" "${fpm_color[$i]}" >> $fpm_conf_file
+	    done
+
+	    tmux send-keys -t vampires_coronagraph "echo 'saving FPM configuration'" C-m
+	    tmux send-keys -t vampires_coronagraph "$vfcmd &" C-m
+	fi
+
+	state="fpm_select"
+    fi
+
+
+    # ==========================================================
     #  MANUAL ALIGNMENT FPM 
-    if [ $state = "fpm_align" ]; then
+    if [ $state == "fpm_align" ]; then
 	stateok=1
 	fpm_align_choice="S"
 
@@ -181,30 +215,26 @@ while true; do
 
     # ==========================================================
     # AMPLITUDE ALIGNMENT FPM
-    if [ $state = "step_size_menu" ]; then
+    if [ $state == "step_size_menu" ]; then
 	stateok=1
 
 	dialog --title "FPM Alignment Amplitude" \
 	    --ok-label "Select" \
-            --cancel-label "Exit" \
-            --extra-button --extra-label "Return" \
+            --cancel-label "Return" \
             --inputbox "Enter step size (mm). Values below 0.001 mm are not recognized." \
             50 80 $step_size 2> $tempfile
 	retval=$?
 
-	case $retval in
-	    $OK) step_size=$(cat $tempfile)
-               state="fpm_align";;
-	    $CANCEL) state="menuexit";;
-	    $EXTRA) state="fpm_align";;
-	    $ESC) state="fpm_align";;
-	esac
+	if [ $retval -eq $OK ]; then
+            step_size=$(cat $tempfile)
+	fi
+	state="fpm_align"
 
     fi
 
     # ==========================================================
     #  SAVE POSITION FPM
-    if [ $state = "save_config" ]; then
+    if [ $state == "save_config" ]; then
 	stateok=1
 
 	cp $fpm_conf_file /home/scexao/bin/devices/conf/archive/
@@ -214,7 +244,7 @@ while true; do
 	    printf '%s;%s;%-6s;%-6s;%s\n' "${fpm_number[$i]}" "${fpm_description[$i]}" "${fpm_x[$i]}" "${fpm_y[$i]}" "${fpm_color[$i]}" >> $fpm_conf_file
 	done
 
-	tmux send-keys -t vampires_coronagraph "echo 'saving FPM position'" C-m
+	tmux send-keys -t vampires_coronagraph "echo 'saving FPM configuration'" C-m
 	tmux send-keys -t vampires_coronagraph "$vfcmd &" C-m
 
 	state="menuhome"
@@ -222,7 +252,7 @@ while true; do
     
     # ==========================================================
     # EXIT MODE
-    if [ $state = "menuexit" ]; then
+    if [ $state == "menuexit" ]; then
 	stateok=1
 	exit
     fi
