@@ -58,9 +58,9 @@ while true; do
 	stateok=1
 	fpmname=${fpm_description[$fpm]}
 
-	menuitems=( "1" "Select focal plane mask")
-	menuitems+=( "2" "Move the selected FPM in")
-	menuitems+=( "3" "Manual FPM alignment")
+	menuitems=( "s" "[s]elect focal plane mask")
+	menuitems+=( "m" "[m]ove the selected FPM in")
+	menuitems+=( "a" "manual FPM [a]lignment")
 	
 	dialog --title "VAMPiRES Coronagraph" \
 	    --ok-label "Select" \
@@ -73,12 +73,12 @@ while true; do
 	case $retval in
 	    0)  # button 1:
 		case $choiceval in
-  		    1) state="fpm_select";;
-		    2) # moving FPM
+  		    s) state="fpm_select";;
+		    m) # moving FPM
 			log "CORO: moving fpm wheel to $fpmname"
 			tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[$fpm]} &" C-m
 			state="menuhome";;
-		    3) state="fpm_align";;
+		    a) state="fpm_align";;
 		esac;;
 	    1) state="menuexit";; # "Exit" button
 	esac
@@ -119,12 +119,12 @@ while true; do
 	stateok=1
 	fpm_align_choice="S"
 
-	menuitems=(  "S" "Step size : $step_size mm")
-        menuitems+=( "C" "Save position to configuration file")
-	menuitems+=( "1" "Move left")
-	menuitems+=( "2" "Move up")
-	menuitems+=( "3" "Move down")
-	menuitems+=( "4" "Move right")
+	menuitems=(  "z" "Step si[z]e : $step_size mm")
+        menuitems+=( "c" "Save position to [c]onfiguration file")
+	menuitems+=( "a" "Move left")
+	menuitems+=( "s" "Move up")
+	menuitems+=( "d" "Move down")
+	menuitems+=( "f" "Move right")
 
         menuname="Current position    x: ${fpm_x[$fpm]} y: ${fpm_y[$fpm]}"
 
@@ -142,21 +142,21 @@ while true; do
 	case $retval in
 	    0) 	fpm_align_choice=$choiceval
 		case $choiceval in
-  		    S)  state="step_size_menu";;
-	 	    C)  state="save_config";;
-		    1)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[$fpm]}-${step_size}")
+  		    z)  state="step_size_menu";;
+	 	    c)  state="save_config";;
+		    a)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[$fpm]}-${step_size}")
 			tmux send-keys -t vampires_coronagraph "$vfcmd x goto ${fpm_x[$fpm]}" C-m
 			sleep 0.1
 			state="fpm_align";;
-		    2)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[$fpm]}+${step_size}")
+		    s)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[$fpm]}+${step_size}")
 			tmux send-keys -t vampires_coronagraph "$vfcmd x goto ${fpm_x[$fpm]}" C-m
 			sleep 0.1
 			state="fpm_align";;
-		    3)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[$fpm]}-${step_size}")
+		    d)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[$fpm]}-${step_size}")
 			tmux send-keys -t vampires_coronagraph "$vfcmd y goto ${fpm_y[$fpm]}" C-m
 			sleep 0.1
 			state="fpm_align";;
-		    4)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[$fpm]}+${step_size}")
+		    f)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[$fpm]}+${step_size}")
 			tmux send-keys -t vampires_coronagraph "$vfcmd y goto ${fpm_y[$fpm]}" C-m
 			sleep 0.1
 			state="fpm_align";;
