@@ -5,11 +5,11 @@ trap 'rm -f $tempfile' 0 1 2 5 15
 
 # ===============================================================
 # DEFAULTS
-step_size="0.01" # 10 um
-#fpm=5 # open mask TODO: read current value from redis DB
-fpm_selected=5 # this is current selected mask, different from actual inserted mask
-fpm_align_choice="z"
 vfcmd="/home/scexao/bin/devices/vampires_fieldstop"
+step_size="0.01" # 10 um
+fpm=$($vfcmd status | awk -F '[ ,]+' '{print $5}') # read current value from device status 
+fpm_selected=5 # this is the selected mask ('Open' by default), may be different from current mask
+fpm_align_choice="z" # keep this outside of loop for scoping
 
 # ===============================================================
 # READ POSITIONS
@@ -43,6 +43,7 @@ tmux new-session -d -s vampires_coronagraph
 # menuexit
 # save_config
 # fpm_select
+# fpm_move
 # fpm_rename
 # fpm_align 
 # step_size_menu
@@ -67,11 +68,11 @@ while true; do
 	stateok=1
 	name=$(echo "${fpm_description[fpm]}" | xargs)
 	name_selected=$(echo "${fpm_description[fpm_selected]}" | xargs)
-	menuname=$(printf "Current mask: %s\nSelected mask: %s" "$name" "$name_selected")
+	menuname=$(printf "Current mask: %s\nSelected mask: %s\n\nWARNING: make sure to check the EM gain in VAMPIRES before changing focal plane masks. If you are removing a mask you are likely to saturate the EM-CCDs." "$name" "$name_selected")
 
-	menuitems=( "s" "[s]elect focal plane mask")
-	menuitems+=( "m" "[m]ove the selected FPM in")
-	menuitems+=( "a" "manual FPM [a]lignment")
+	menuitems=( "s" "[S]elect focal plane mask")
+	menuitems+=( "m" "[M]ove the selected FPM in")
+	menuitems+=( "a" "Manual FPM [a]lignment")
 	
 	dialog --title "VAMPiRES Coronagraph" \
 	    --ok-label "Select" \
@@ -84,9 +85,7 @@ while true; do
 	case $retval in
 	    $OK) case $choiceval in
   		    s) state="fpm_select";;
-		    m) fpm=$fpm_selected 
-		       tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[fpm_selected]} &" C-m
-		       state="menuhome";;
+		    m) state="fpm_move";;
 		    a) state="fpm_align";;
 		esac;;
 	    $CANCEL) state="menuexit";;
@@ -147,7 +146,7 @@ while true; do
 	    rm $fpm_conf_file
 	    for i in $(seq 1 "$nmasks");
 	    do
-	        printf '%s;%s;%-6s;%-6s;%s\n' "${fpm_number[$i]}" "${fpm_description[$i]}" "${fpm_x[$i]}" "${fpm_y[$i]}" "${fpm_color[$i]}" >> $fpm_conf_file
+	        printf '%s;%s;%-6s;%-6s;%s\n' "${fpm_number[i]}" "${fpm_description[i]}" "${fpm_x[i]}" "${fpm_y[i]}" "${fpm_color[i]}" >> $fpm_conf_file
 	    done
 
 	    tmux send-keys -t vampires_coronagraph "echo 'saving FPM configuration'" C-m
@@ -157,6 +156,27 @@ while true; do
 	state="fpm_select"
     fi
 
+    # ==========================================================
+    #  FPM MOVE DIALOG
+    if [ $state == "fpm_move" ]; then
+	stateok=1
+	menuname="Waiting for mask to move..."
+	# if selected mask is the same, move will be short
+	if [ $fpm -eq $fpm_selected ]; then
+	    wait_time=0 # seconds
+	else
+            wait_time=10 # seconds
+	fi
+	fpm=$fpm_selected
+
+        tmux send-keys -t vampires_coronagraph "$vfcmd ${fpm_number[fpm_selected]}" C-m
+
+        dialog --title "Move FPM" \
+	    --pause "$menuname" \
+            50 80 "$wait_time"
+
+	state="menuhome"
+    fi 
 
     # ==========================================================
     #  MANUAL ALIGNMENT FPM 
