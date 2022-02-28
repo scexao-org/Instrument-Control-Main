@@ -5,9 +5,10 @@ trap 'rm -f $tempfile' 0 1 2 5 15
 
 # ===============================================================
 # DEFAULTS
-step_size="0.05" # 50 um
+step_size="0.01" # 10 um
 #fpm=5 # open mask TODO: read current value from redis DB
 fpm_selected=5 # this is current selected mask, different from actual inserted mask
+fpm_align_choice="z"
 vfcmd="/home/scexao/bin/devices/vampires_fieldstop"
 
 # ===============================================================
@@ -161,7 +162,6 @@ while true; do
     #  MANUAL ALIGNMENT FPM 
     if [ $state == "fpm_align" ]; then
 	stateok=1
-	fpm_align_choice="S"
 
 	menuitems=(  "z" "Step si[z]e : $step_size mm")
         menuitems+=( "c" "Save position to [c]onfiguration file")
@@ -170,13 +170,13 @@ while true; do
 	menuitems+=( "d" "Move down")
 	menuitems+=( "f" "Move right")
 
-        menuname=$(printf "Current position\tx: %s y: %s" "${fpm_x[$fpm]}" "${fpm_y[$fpm]}")
+        menuname=$(printf "Current position\tx: %s [mm] y: %s [mm]\nNote: nudge directions are relative to 'vcamim1' (which is the left camera in vControl)." "${fpm_x[$fpm]}" "${fpm_y[$fpm]}")
 
 	dialog --title "FPM manual alignment" \
 	    --ok-label "Select" \
             --cancel-label "Exit" \
 	    --extra-button --extra-label "Return" \
-	    --default-item $fpm_align_choice \
+	    --default-item "$fpm_align_choice" \
 	    --menu "$menuname" \
 	    50 80 50 "${menuitems[@]}"  2> $tempfile
 
@@ -184,28 +184,27 @@ while true; do
 	choiceval=$(cat $tempfile)
 
 	case $retval in
-	    $OK) 	fpm_align_choice=$choiceval
+	    $OK) fpm_align_choice=$choiceval
 		case $choiceval in
   		    z)  state="step_size_menu";;
 	 	    c)  state="save_config";;
-		    a)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[$fpm]}-${step_size}")
-			tmux send-keys -t vampires_coronagraph "$vfcmd x goto ${fpm_x[$fpm]}" C-m
+		    a)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[fpm]}-$step_size")
+			tmux send-keys -t vampires_coronagraph "$vfcmd y goto ${fpm_y[fpm]}" C-m
 			sleep 0.1
 			state="fpm_align";;
-		    s)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[$fpm]}+${step_size}")
-			tmux send-keys -t vampires_coronagraph "$vfcmd x goto ${fpm_x[$fpm]}" C-m
+		    s)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[fpm]}-$step_size")
+			tmux send-keys -t vampires_coronagraph "$vfcmd x goto ${fpm_x[fpm]}" C-m
 			sleep 0.1
 			state="fpm_align";;
-		    d)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[$fpm]}-${step_size}")
-			tmux send-keys -t vampires_coronagraph "$vfcmd y goto ${fpm_y[$fpm]}" C-m
+		    d)  fpm_x[$fpm]=$(bc -l <<< "scale=3; ${fpm_x[fpm]}+$step_size")
+			tmux send-keys -t vampires_coronagraph "$vfcmd x goto ${fpm_x[fpm]}" C-m
 			sleep 0.1
 			state="fpm_align";;
-		    f)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[$fpm]}+${step_size}")
-			tmux send-keys -t vampires_coronagraph "$vfcmd y goto ${fpm_y[$fpm]}" C-m
+		    f)  fpm_y[$fpm]=$(bc -l <<< "scale=3; ${fpm_y[fpm]}+$step_size")
+			tmux send-keys -t vampires_coronagraph "$vfcmd y goto ${fpm_y[fpm]}" C-m
 			sleep 0.1
 			state="fpm_align";;
-		esac
-		;;
+		esac;;
 	    $CANCEL) state="menuexit";;
 	    $EXTRA) state="menuhome";;
 	    $ESC) state="menuhome";;
