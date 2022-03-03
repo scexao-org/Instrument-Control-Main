@@ -16,7 +16,6 @@ fpm_align_choice="z" # keep this outside of loop for scoping
 
 echo "reading FPM positions"
 fpm_conf_file="/home/scexao/bin/devices/conf/conf_vampires_fieldstop.txt"
-nmasks=$(wc -l < $fpm_conf_file)
 declare -a fpm_number
 declare -a fpm_description
 declare -a fpm_x
@@ -33,6 +32,7 @@ do
     fpm_color[$i]=$(echo "$line" | cut -d\; -f 5)
     i=$i+1
 done
+nmasks=${#fpm_number[@]}
 tmux new-session -d -s vampires_coronagraph
 
 #=======================================================================
@@ -56,6 +56,9 @@ EXTRA=3
 ESC=255
 
 tmux send-keys -t vampires_coronagraph "echo 'START STATE MACHINE'" C-m
+
+# switch to "alternate screen"
+tput smcup
 
 while true; do
     
@@ -273,13 +276,17 @@ while true; do
     # EXIT MODE
     if [ $state == "menuexit" ]; then
 	stateok=1
-	exit
+	# put original screen back
+	tput rmcup
+	exit 0
     fi
     
     # ==========================================================
     #  ERROR MODE
     if [ $stateok = 0 ]; then
 	tmux send-keys -t vampires_coronagraph "echo 'state \"$state\" not recognized ... exit'" C-m
-	exit
+	# put original screen back
+	tput rmcup
+	exit 1
     fi
 done
