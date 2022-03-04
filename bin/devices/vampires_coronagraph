@@ -47,6 +47,7 @@ tmux new-session -d -s vampires_coronagraph
 # fpm_rename
 # fpm_align 
 # step_size_menu
+# focus_stage
 state="menuhome"
 
 # dialog escape codes
@@ -76,6 +77,7 @@ while true; do
 	menuitems=( "s" "[S]elect focal plane mask")
 	menuitems+=( "m" "[M]ove the selected FPM in")
 	menuitems+=( "a" "Manual FPM [a]lignment")
+	menuitems+=( "f" "Move the [f]ocus stage")
 	
 	dialog --title "VAMPiRES Coronagraph" \
 	    --ok-label "Select" \
@@ -90,6 +92,7 @@ while true; do
   		    s) state="fpm_select";;
 		    m) state="fpm_move";;
 		    a) state="fpm_align";;
+		    f) state="focus_stage";;
 		esac;;
 	    $CANCEL) state="menuexit";;
 	esac
@@ -228,6 +231,35 @@ while true; do
 			sleep 0.1
 			state="fpm_align";;
 		esac;;
+	    $CANCEL) state="menuexit";;
+	    $EXTRA) state="menuhome";;
+	    $ESC) state="menuhome";;
+	esac
+
+    fi
+
+    # ==========================================================
+    #  MANUAL FOCUS ALIGNMENT 
+    if [ $state == "focus_stage" ]; then
+	stateok=1
+	curpos=$(ssh lestat@vampires conex 5 TP | sed "s/\r//")
+        menuname=$(printf "Current position: %s mm\n\nMove the focus stage on VAMPIRES (note this runs commands over ssh). Input will be truncated to the nearest 0.01 mm" "$curpos")
+
+	dialog --title "Focus alignment" \
+	    --ok-label "Select" \
+            --cancel-label "Exit" \
+	    --extra-button --extra-label "Return" \
+	    --inputbox "$menuname" \
+	    50 80 "$curpos" 2> $tempfile
+
+	retval=$?
+	choiceval=$(cat $tempfile)
+
+	case $retval in
+	    $OK) curpos=$(bc -l <<< "scale=2; $choiceval")
+		curpos="$choiceval"
+		tmux send-keys -t vampires_coronagraph "ssh lestat@vampires conex 5 PA $curpos" C-m
+		state="menuhome";;
 	    $CANCEL) state="menuexit";;
 	    $EXTRA) state="menuhome";;
 	    $ESC) state="menuhome";;
