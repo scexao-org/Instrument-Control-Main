@@ -243,7 +243,7 @@ while true; do
     if [ $state == "focus_stage" ]; then
 	stateok=1
 	curpos=$(ssh lestat@vampires conex 5 TP | sed "s/\r//")
-        menuname=$(printf "Current position: %s mm\n\nMove the focus stage on VAMPIRES (note this runs commands over ssh). Input will be truncated to the nearest 0.01 mm" "$curpos")
+        menuname=$(printf "Current position: %s mm\n\nMove the focus stage on VAMPIRES (note this runs commands over ssh). Input will be truncated to the nearest 0.01 mm\n\nNominal focus without Lyot or FPM: 13.77 mm\nNominal focus with Lyot and FPM in: 6.90 mm" "$curpos")
 
 	dialog --title "Focus alignment" \
 	    --ok-label "Select" \

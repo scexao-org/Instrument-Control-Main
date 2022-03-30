@@ -1,0 +1,4 @@
+1;Focusing lenses  ;0
+2;Open             ;45
+3;Halpha pair (1)  ;135
+4;Halpha pair (2)  ;315

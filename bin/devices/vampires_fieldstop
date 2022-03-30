@@ -27,7 +27,6 @@ devname = "vampires_fieldstop"
 
 conexids = ["usb-Newport_CONEX-AGP_A60MCHL5-if00-port0", "usb-Newport_CONEX-AGP_A60MCIFA-if00-port0"]
 conexnames = ["x", "y"]
-
 description = "VAMPIRES field stop"
 
 
