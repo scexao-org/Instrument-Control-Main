@@ -28,9 +28,10 @@ devname = "vampires_fieldstop"
 conexids = ["usb-Newport_CONEX-AGP_A60MCHL5-if00-port0", "usb-Newport_CONEX-AGP_A60MCIFA-if00-port0"]
 conexnames = ["x", "y"]
 description = "VAMPIRES field stop"
+defpos = [str(i) for i in range(1, 9)]
 
 
 # GENERIC CODE
 
 args = sys.argv[1:]
-devices(devname, conexids, conexnames, args=args, description=description, color_st=True)
+devices(devname, conexids, conexnames, args=args, defpos=defpos, description=description, color_st=True)
