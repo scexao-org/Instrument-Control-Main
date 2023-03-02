@@ -36,6 +36,11 @@ whnames = ["irnd", "optnd", "filter"]
 
 description = "Filter and density wheels for the calibration source"
 
+# WARNING:
+print('--------')
+print('Warning: src_flux requires "src_power on" - or you will get a thorlabs wheel error.')
+print('--------')
+
 # GENERIC CODE
 
 args = sys.argv[1:]

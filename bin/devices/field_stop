@@ -18,8 +18,8 @@ sys.path.append(home+'/src/lib/python/')
 from devices import devices
 
 # SCALE: 5.3 arcsec/mm
-# +X motion with source fiber -> move to the left on chuck -> -X motion with pcfi fiber
-# +Y motion with source fiber -> move to the top on chuck -> -Y motion with pcfi fiber
+# +X motion with source fiber -> move to the left on Palila -> -X motion with REACH fiber
+# +Y motion with source fiber -> move to the top on Palila -> -Y motion with REACH fiber
 
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE

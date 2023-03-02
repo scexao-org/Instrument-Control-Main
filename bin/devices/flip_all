@@ -9,18 +9,15 @@ sleep 0.1
 echo "IR cams block:"
 ircam_block
 sleep 0.1
-echo "Chuckcam Pupil lens:"
-chuck_pup
-sleep 0.1
-echo "Buffycam Pupil lens:"
-buffy_pup
+echo "Palila Pupil lens:"
+palila_pup
 sleep 0.1
 echo "LLOWFS block:"
 lowfs_block
 sleep 0.1
-echo "Pt Grey 2 pickoff:"
-PG2_pickoff
-sleep 0.1
 echo "Compensating plate:"
 compplate
+sleep 0.1
+echo "PyWFS focus pickoff:"
+pywfs_fcs_pickoff
 sleep 0.1

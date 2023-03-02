@@ -120,23 +120,18 @@ sleep 0.1
 ircam_block
 sleep 0.1
 echo "IR cams focus:"
-ircam_fcs chuck
+ircam_fcs palila
 sleep 0.1
-echo "Chuck pupil lens:"
-chuck_pup
+echo "Palila pupil lens:"
+palila_pup
 sleep 0.1
-chuck_pup
+palila_pup
 sleep 0.1
-echo "Chuck pupil lens focus:"
-chuck_pup_fcs pupil &
+echo "Palila pupil lens focus:"
+palila_pup_fcs pupil &
 sleep 0.1
-echo "Buffycam pickoff:"
-buffy_pickoff out &
-sleep 0.1
-echo "Buffycam pupil lens:"
-buffy_pup
-sleep 0.1
-buffy_pup
+echo "Apapane pickoff:"
+apapane_pickoff out &
 sleep 0.1
 echo "LLOWFS block:"
 lowfs_block
@@ -159,12 +154,28 @@ charis_wollaston
 sleep 0.1
 charis_wollaston
 sleep 0.1
-echo "GLINT pickoff:"
-nuller_pickoff out &
+echo "IR spectro mode:"
+irspectro_mode out &
 sleep 0.1
-#echo "Fiber injection pickoff:"
-#fibinj_pickoff out &
-#sleep 0.1
+echo "Photonics pickoff:"
+photonics_pickoff out &
+sleep 0.1
+echo "Photonics pickoff type:"
+photonics_pickoff_type
+sleep 0.1
+photonics_pickoff_type
+sleep 0.1
+echo "Photonics compensating plate:"
+photonics_compplate
+sleep 0.1
+photonics_compplate
+sleep 0.1
+echo "Fiber injection pickoff:"
+fibinj_pickoff out &
+sleep 0.1
+echo "Fiber injection lens:"
+fibinj_len pl
+sleep 0.1
 echo "Fiber injection fiber:"
 fibinj_fib smi
 sleep 0.1

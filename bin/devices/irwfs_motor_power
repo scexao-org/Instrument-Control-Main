@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import time
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from nps import NewNPS 
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+npsname = "irwfs_motor_power"
+npsid = 2
+portid = 6
+
+description = "power switch for the NIR WFS Zabers and filter wheel"
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+NewNPS(npsname, npsid, portid, args=args, description=description)
+

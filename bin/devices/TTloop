@@ -75,8 +75,8 @@ shm_im_dark = shm("ircam0_dark")
 shm_im_badpixmap = shm("ircam0_badpixmap")
 dm = shm("dm00disp08")
 
-dark_chuck = shm_im_dark.get_data()
-badpixmap_chuck = shm_im_badpixmap.get_data()
+dark_palila = shm_im_dark.get_data()
+badpixmap_palila = shm_im_badpixmap.get_data()
 
 
 args = sys.argv[1:]
@@ -117,12 +117,12 @@ else:
 # Find center of image
 #------------------------
 
-def find_center(im_chuck, shiftx, shifty, timeout, c0):
-    imax = np.max(im_chuck)
+def find_center(im_palila, shiftx, shifty, timeout, c0):
+    imax = np.max(im_palila)
     imin = imax*0.05
-    im_chuck -= imin
-    mask = im_chuck > 0
-    im_chuck *= mask
+    im_palila -= imin
+    mask = im_palila > 0
+    im_palila *= mask
     #print(imax)
     if imax < 100:
         timeout += 1
@@ -135,10 +135,10 @@ def find_center(im_chuck, shiftx, shifty, timeout, c0):
             sys.exit()
     else:
         timeout = 0
-        total = np.sum(im_chuck)
-        X, Y = np.indices(np.shape(im_chuck)) 
-        cx = np.sum(Y*im_chuck)/total
-        cy = np.sum(X*im_chuck)/total
+        total = np.sum(im_palila)
+        X, Y = np.indices(np.shape(im_palila)) 
+        cx = np.sum(Y*im_palila)/total
+        cy = np.sum(X*im_palila)/total
         cx = cx-shiftx
         cy = cy-shifty
     return([cx, cy],timeout)
@@ -164,7 +164,7 @@ timeout0 = 0
 with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
     pos = np.array([[float(digit) for digit in line.split()] for line in file])
 
-pscale = 16.2 #mas per pixel in Chuckcam
+pscale = 16.2 #mas per pixel in Palila
 
 filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
@@ -179,18 +179,18 @@ cor = np.array([0,0])
 if gpin:
     cor = cort[:,0]
 
-im_chuck = shm_im.get_data()
-(ysize,xsize) = im_chuck.shape
-mask = np.zeros_like(im_chuck)
+im_palila = shm_im.get_data()
+(ysize,xsize) = im_palila.shape
+mask = np.zeros_like(im_palila)
 mask[ysize//2-a:ysize//2+a,xsize//2-a:xsize//2+a] = 1.
 crop = shm_im.get_crop().astype(int)
 #crop = np.array([128,128,160,160])
 shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5-x0/pscale
 shifty = pos[0,1]-crop[2]+256+cor[1]-0.5-y0/pscale
 # Try to find the center a first time, to check the flux
-im_chuck = shm_im.get_data().astype('float64')
-im_chuck *= mask
-c0,timeout = find_center(im_chuck, shiftx, shifty, timeout0, [0,0])
+im_palila = shm_im.get_data().astype('float64')
+im_palila *= mask
+c0,timeout = find_center(im_palila, shiftx, shifty, timeout0, [0,0])
 cnt = 0
 cnt1 = 0
 i = 0
@@ -205,17 +205,17 @@ while True:
         if i < nim:
             if i == 0:
                 #print(read_shm().shape)
-                im_chuck = shm_im.get_data()/float(nim)
+                im_palila = shm_im.get_data()/float(nim)
             else:
-                im_chuck += shm_im.get_data()/float(nim)
+                im_palila += shm_im.get_data()/float(nim)
             i += 1
         else:
             i = 0
-            im_chuck -= dark_chuck
-            im_chuck *= badpixmap_chuck
-            im_chuck *= mask
+            im_palila -= dark_palila
+            im_palila *= badpixmap_palila
+            im_palila *= mask
             
-            c0, timeout = find_center(im_chuck, shiftx, shifty, timeout0, c0)
+            c0, timeout = find_center(im_palila, shiftx, shifty, timeout0, c0)
             sys.stdout.write('\r tip: %.4f, tilt: %.4f' % (c0[0], c0[1]))
             sys.stdout.flush()
             

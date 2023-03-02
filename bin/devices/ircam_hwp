@@ -20,7 +20,7 @@ from flipmount import flipmount
 
 stagename = "ircam_hwp"
 flipid = "M"
-description = "HWP for Chuck and Buffy"
+description = "HWP for Palila and Apapane"
 
 # GENERIC CODE
 

@@ -22,7 +22,7 @@ import time
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-from nps import nps
+from nps import NPS
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
@@ -46,4 +46,4 @@ description = "power switch for the scexaoCTRL computer"
 
 # GENERIC CODE
 
-nps(npsname, npsid, portid, args=args2, description=description)
+NPS(npsname, npsid, portid, args=args2, description=description)

@@ -39,12 +39,12 @@ shm_im_badpixmap = shm("ircam0_badpixmap")
 #------------------------
 
 def read_shm():
-    im_chuck = shm_im.get_data().astype('float32')
-    dark_chuck = shm_im_dark.get_data()
-    badpixmap_chuck = shm_im_badpixmap.get_data()
-    im_chuck -= dark_chuck
-    im_chuck *= badpixmap_chuck
-    return im_chuck
+    im_palila = shm_im.get_data().astype('float32')
+    dark_palila = shm_im_dark.get_data()
+    badpixmap_palila = shm_im_badpixmap.get_data()
+    im_palila -= dark_palila
+    im_palila *= badpixmap_palila
+    return im_palila
 
 # ------------------------------------------------------------------
 #  Read database for some stage status
@@ -71,10 +71,10 @@ def RDB_pull(rdb):
 def find_center(shiftx, shifty):
     for i in range(100):
         if i == 0:
-            im_chuck = read_shm()/100.
+            im_palila = read_shm()/100.
         else:
-            im_chuck += read_shm()/100.
-    [cx,cy] = impro.centroid(im_chuck,method="airy")
+            im_palila += read_shm()/100.
+    [cx,cy] = impro.centroid(im_palila,method="gaussian")
     cx -= shiftx
     cy -= shifty
     return [cx, cy]
@@ -103,7 +103,7 @@ os.system('cp %s/src/lib/python/%s_PSF_%s.fits %s/src/lib/python/simref.fits' %(
 with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
     pos = np.array([[float(digit) for digit in line.split()] for line in file])
 
-pscale = 15.3 #mas per pixel in Chuckcam
+pscale = 15.3 #mas per pixel in Palila
 
 filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
@@ -118,8 +118,8 @@ cor = np.array([0,0])
 if gpin:
     cor = cort[:,0]
 
-im_chuck = read_shm()
-(ysize,xsize) = im_chuck.shape
+im_palila = read_shm()
+(ysize,xsize) = im_palila.shape
 print(xsize, ysize)
 crop = shm_im.get_crop().astype(int)
 #crop = np.array([128,128,160,160])

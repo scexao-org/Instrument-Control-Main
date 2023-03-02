@@ -29,7 +29,7 @@ devname = "ircam_filter"
 
 whids = ["usb-FTDI_FT232R_USB_UART_A600crjy-if00-port0"]
 
-description = "Filter wheel for Chuck and Saphira"
+description = "Filter wheel for Palila and Apapane"
 
 # GENERIC CODE
 args = sys.argv[1:]

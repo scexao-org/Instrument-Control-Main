@@ -1,3 +1,4 @@
-1;Single-Mode Fib ;256370;7230  ;545790;1
-2;Multi-Mode Fib  ;82000 ;235000;375000;3
-3;Photonic Lantrn ;250000;210000;215000;0
+1;Single-Mode Fib ;36000 ;225000;150000;1
+2;Multi-Mode Fib  ;253000;6000  ;250000;3
+3;Photonic Lantrn ;257825;235189;250000;0
+4;K-band REACH    ;37723 ;9452  ;282000;0

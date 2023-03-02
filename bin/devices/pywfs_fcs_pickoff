@@ -27,7 +27,7 @@ from flipmount import flipmount
 
 stagename = "pywfs_fcs_pickoff"
 flipid = "H"
-description = "Pickoff mirror for the PyWFS Nuller Point Grey"
+description = "Pickoff mirror for the PyWFS Point Grey"
 
 # GENERIC CODE
 

@@ -33,18 +33,18 @@ def isfloat(value):
         return True
     except ValueError:
         return False
-        
+
 class devices:
-    
+
     def __init__(self, devname, conexids=[], conexnames=[], zaberchain="", zaberids=[], zabernames=[], args=[], description="no description", defpos=[], color_st=False):
-        
+
         self.devname = devname
         self.description = description
-        
+
         if args != [] and "--help1" in args[0].lower():
             self.quickhelp()
             sys.exit()
-          
+
         self.conexids = conexids
         self.conexnames = conexnames
         self.zaberchain = zaberchain
@@ -54,7 +54,7 @@ class devices:
         self.defpos = defpos
         self.color_st = color_st
         self.nbdev = len(conexnames)+len(zabernames)
-        
+
         if conexnames != []:
             import conex3 as conex
             self.con = conex.conex()
@@ -67,7 +67,7 @@ class devices:
                     self.devnamec = devname+'_'+args[0]
                 conu = 1
                 zabu = 1
-            
+
         if zabernames != []:
             import zaber_chain3 as zaber
             self.zab = zaber.zaber()
@@ -80,21 +80,21 @@ class devices:
                     self.devnamez = devname+'_'+args[0]
                 zabu = 1
                 conu = 1
-                
+
         filename = "/home/scexao/bin/devices/conf/conf_"+devname+".txt"
-        
+
         slots = [line.rstrip('\n') for line in open(filename)]
         self.nslots = len(slots)
         nparam = len(slots[0].split(';'))
         self.nend = nparam-1
         for i in range(nparam):
             exec("self.param%d = []" % (i,), globals(), locals())
-            
+
         for j in range(self.nslots):
             sparam = slots[j].split(';')
             for i in range(nparam):
                 exec("self.param%d.append(sparam[i])" % (i,), globals(), locals())
-                
+
         if self.nbdev == 1:
             self.col = 2
         else:
@@ -103,12 +103,12 @@ class devices:
                     self.col = (conexnames+zabernames).index(args[0])+2
                 except:
                     self.col = 2
-              
+
         na = args.__len__()  # number of arguments
-        
+
         if args == []:
             self.usage()
-            
+
         elif (args[0].lower() in conexnames) or (conu == 0) and args[0].lower() not in defpos:
             if na > conu:
                 if conu == 0:
@@ -121,23 +121,23 @@ class devices:
 
                 elif "status" in args[conu].lower():
                     self.conex_status(conu)
-                    
+
                 elif "goto" in args[conu].lower():  #Goto commands
                     if (na > conu+1) and isfloat(args[conu+1]):
                         self.conex_goto(float(args[conu+1]), conu)
                     else:
                         self.usage()
-                        
+
                 elif args[conu].isdigit():
                     slot = int(args[conu])
                     self.conex_goto_slot(slot, conu)
-                    
+
                 else:
                     self.usage()
-                  
+
             else:
                 self.usage()
-                
+
         elif ((args[0].lower() in zabernames) or (zabu == 0)) and (zaberchain != "") and args[0].lower() not in defpos:
             if na > zabu:
                 if zabu == 0:
@@ -147,26 +147,26 @@ class devices:
                     self.zaberid = zaberids[zindex]
                 if "home" in args[zabu].lower():   #Home command
                     self.zaber_home(zabu)
-                    
+
                 elif "status" in args[zabu].lower():
                     self.zaber_status(zabu)
-                    
+
                 elif "goto" in args[zabu].lower():  #Goto commands
                     if (na > zabu+1) and (args[zabu+1].isdigit()):
                         self.zaber_goto(int(args[zabu+1]), zabu)
                     else:
                         self.usage()
-                        
+
                 elif args[zabu].isdigit():
                     slot = int(args[zabu])
                     self.zaber_goto_slot(slot, zabu)
-                    
+
                 else:
                     self.usage()
-                  
+
             else:
                 self.usage()
-              
+
         elif args[0].lower() in defpos:
             inddef = defpos.index(args[0].lower())
             self.col = 2
@@ -189,7 +189,7 @@ class devices:
             else:
                 subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", self.param1[inddef]])
 
-                    
+
         elif ("status" in args[0].lower() and conu*zabu == 1):
             self.col = 2
             pos = np.zeros(self.nbdev)
@@ -227,12 +227,12 @@ class devices:
             if not found:
                 print("Device is not in a defined position. Try homing.")
                 subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
-        
+
         else:
             self.usage()
 
     # =====================================================================
-    
+
     def usage(self):
         if self.nbdev > 1:
             dev = "<dev> "
@@ -263,7 +263,7 @@ Usage: %s %s <command> <arg>
 CONTENT:""")
         for i in range(self.nslots):
             print("   ", self.param0[i], self.param1[i])
-                        
+
         print("--------------------------------------- ")
 
     # -----------------------------------------------------------------
@@ -299,7 +299,7 @@ CONTENT:""")
                 else:
                     subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
         self.con.close()
-        
+
     # -----------------------------------------------------------------
     def conex_status(self, conu):
         opened = self.con.open(self.conexid)
@@ -326,7 +326,7 @@ CONTENT:""")
             print("Position = "+str(pos)+", Conex is not in a defined position. Try homing.")
             if conu == 0:
                 subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
-              
+
     # -----------------------------------------------------------------
     def conex_goto(self, pos, conu):
         opened = self.con.open(self.conexid)
@@ -356,7 +356,7 @@ CONTENT:""")
                 else:
                     subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamec+'_st', 'UNKNOWN', '3'])
         self.con.close()
-        
+
     # -----------------------------------------------------------------
     def conex_goto_slot(self, slot, conu):
         if (1 <= slot <= self.nslots):
@@ -393,7 +393,7 @@ CONTENT:""")
             logit.logit(self.devnamec,'moved_to_slot_'+str(slot))
         else:
             print("Conex only has "+str(self.nslots)+" positions")
-            
+
     # -----------------------------------------------------------------
     def zaber_home(self, zabu):
         self.zab.open(self.zaberchain)
@@ -420,7 +420,7 @@ CONTENT:""")
                 else:
                     subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
         self.zab.close()
-        
+
     # -----------------------------------------------------------------
     def zaber_status(self, zabu):
         self.zab.open(self.zaberchain)
@@ -444,7 +444,7 @@ CONTENT:""")
             print("Position = "+str(pos)+", Zaber is not in a defined position. Try homing.")
             if zabu == 0:
                 subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
-              
+
     # -----------------------------------------------------------------
     def zaber_goto(self, pos, zabu):
         self.zab.open(self.zaberchain)
@@ -471,7 +471,7 @@ CONTENT:""")
                 else:
                     subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devnamez+'_st', 'UNKNOWN', '3'])
         self.zab.close()
-        
+
     # -----------------------------------------------------------------
     def zaber_goto_slot(self, slot, zabu):
         if (1 <= slot <= self.nslots):
@@ -506,4 +506,4 @@ CONTENT:""")
                 logit.logit(self.devnamez,'moved_to_slot_'+str(slot))
         else:
             print("Zaber only has "+str(self.nslots)+" positions")
-            
+

@@ -29,7 +29,7 @@ class conex(object):
         time.sleep(delay)
         self.s.write("1OR\r\n".encode())
         logit.logit(devname,'Homed')
-    
+
     def move(self, pos, devname, log=True):
         self.s.write(str.encode("1PA"+str(pos)+"\r\n"))
         time.sleep(delay)

@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+# ======================================================================== #
+#   _____  __   __    __  ___  __         _                 _              #
+#   \_   \/__\ / / /\ \ \/ __\/ _\    ___| |_ ___  ___ _ __(_)_ __   __ _  #
+#    / /\/ \// \ \/  \/ / _\  \ \    / __| __/ _ \/ _ \ '__| | '_ \ / _` | #
+# /\/ /_/ _  \  \  /\  / /    _\ \   \__ \ ||  __/  __/ |  | | | | | (_| | #
+# \____/\/ \_/   \/  \/\/     \__/   |___/\__\___|\___|_|  |_|_| |_|\__, | #
+#                                                                   |___/  #
+#                                                                          #
+# ======================================================================== #
+
+import os
+import sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from micronix import micronix
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+micname = "irspectro_fib"
+
+micid = "usb-FTDI_FT232R_USB_UART_MMC-100-V102-if00-port0"
+axesids = [1, 2]
+axesnames = ["x", "y"]
+
+description = "IR spectrometer fiber stage"
+
+defpos = ["port1","port2","port3","port4","port5","port6"]
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+micronix(micname, micid, axesids, axesnames, args, description, defpos, color_st=True)

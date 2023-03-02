@@ -38,20 +38,15 @@ class aoutput(object):
                 volts=int(float(voltage)*100)
                 text="AV"+str(channel)+str(volts)+"\r\n"
                 self.s.write(text.encode())
+                return True # Success
             else:
                 print("DC offsets must be between -1.0 and -9.0 V")
+                return False # Failure
         else:
             volts=int(float(voltage)*100)
             text="AV"+str(channel)+str(volts)+"\r\n"
             self.s.write(text.encode())
-            #if (float(volts>-1000)) and (float(volts<1000)):
-            #else:
-            #    print("Please enter a value between -10 and 10 V")
-        #else:
-        #    volts=float(voltage)
-        #    text=':CHAN2:VOLT '+str(volts)+'; \r\n'
-        #    self.s.write(text)
-            
+            return True # Success
     
     def close(self):
         self.s.close()
@@ -92,15 +87,20 @@ def main():
         if na < 2:
             usage()
         elif (args[1]=="A") or (args[1]=="B") or (args[1]=="C") or (args[1]=="D"):
-            # CHANNEL SWITCHER TEMP !!
-            args[1] = {'A':'A', 'B':'B', 'C':'D', 'D':'C'}[args[1]]
+            key = 'X_ANALG' + args[1]
+            # CHANNEL SWITCHER TEMP !! FIXED
+            # args[1] = {'A':'A', 'B':'B', 'C':'D', 'D':'C'}[args[1]]
             if isinstance(float(args[2]),float):
                 if (float(args[2])>-10) and (float(args[2])<10):
                     ao = aoutput(aoname)
-                    ao.voltage(args[1],args[2])
+                    stat = ao.voltage(args[1],args[2])
                     ao.close()
-
-                    logit.logit('Analog_output','Channel [C-D SWITCHED]:'+str(args[1])+' Amplitude: '+str(args[2]))
+                    if stat:
+                        logit.logit('Analog_output','Channel [C-D SWITCHED]:'+str(args[1])+' Amplitude: '+str(args[2]))
+                        # Call scexaostatus to have the value piped to redis DB
+                        os.system(f"scexaostatus set {key} {args[2]}")
+                    else:
+                        logit.logit('Analog_output','Channel [C-D SWITCHED] - FAILED:'+str(args[1])+' Amplitude: '+str(args[2]))
 
                 else:
                     print("Please enter a voltage between -10 and 10")

@@ -16,8 +16,14 @@
 int SM_fd;
 char SM_fname[200];
 SCEXAOSTATUS *SCExAO_status;
+
+int SME_fd;
+char SME_fname[200];
+SCEXAOSTATUS_EXTENSION *SCExAO_status_ext;
 long cnt;
 int wcol, wrow; // window size
+
+int create_extended_status_shm(); // Forward
 
 int create_status_shm()
 {
@@ -59,6 +65,52 @@ int create_status_shm()
     exit(0);
   }
 
+  // Create the extended SHM !
+  create_extended_status_shm();
+
+  return 0;
+}
+
+int create_extended_status_shm()
+{
+
+  int result;
+
+  // CREATING SHARED MEMORY
+
+  sprintf(SME_fname, "%s/SCExAO_status_ext.shm", SHAREDMEMDIR);
+  SME_fd = open(SME_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+
+  if (SME_fd == -1)
+  {
+    perror("Error opening file for writing");
+    exit(0);
+  }
+
+  result = lseek(SME_fd, sizeof(SCEXAOSTATUS_EXTENSION) - 1, SEEK_SET);
+  if (result == -1)
+  {
+    close(SME_fd);
+    perror("Error calling lseek() to 'stretch' the file");
+    exit(0);
+  }
+
+  result = write(SME_fd, "", 1);
+  if (result != 1)
+  {
+    close(SME_fd);
+    perror("Error writing last byte of the file");
+    exit(0);
+  }
+
+  SCExAO_status_ext = (SCEXAOSTATUS_EXTENSION *)mmap(0, sizeof(SCEXAOSTATUS_EXTENSION), PROT_READ | PROT_WRITE, MAP_SHARED, SME_fd, 0);
+  if (SCExAO_status_ext == MAP_FAILED)
+  {
+    close(SME_fd);
+    perror("Error mmapping the file");
+    exit(0);
+  }
+
   return 0;
 }
 
@@ -68,7 +120,7 @@ int read_status_shm()
   SM_fd = open(SM_fname, O_RDWR);
   if (SM_fd == -1)
   {
-    printf("Cannot import file - continuing\n");
+    printf("Cannot import file - continuing (Orig.)\n");
   }
   else
   {
@@ -80,6 +132,23 @@ int read_status_shm()
       exit(0);
     }
   }
+
+  SME_fd = open(SME_fname, O_RDWR);
+  if (SME_fd == -1)
+  {
+    printf("Cannot import file - continuing (Ext.)\n");
+  }
+  else
+  {
+    SCExAO_status_ext = (SCEXAOSTATUS_EXTENSION *)mmap(0, sizeof(SCEXAOSTATUS_EXTENSION), PROT_READ | PROT_WRITE, MAP_SHARED, SME_fd, 0);
+    if (SCExAO_status_ext == MAP_FAILED)
+    {
+      close(SME_fd);
+      perror("Error mmapping the file");
+      exit(0);
+    }
+  }
+
   return 0;
 }
 
@@ -185,12 +254,12 @@ int status_display()
     usleep(100000); // in us
     erase();
 
-    print_header(" NETWORK POWER SWTICHES ", '-');
+    print_header(" NETWORK POWER SWITCHES ", '-');
     // NPS1
     printw("NPS1 ports 1-4  : ");
-    print_status("SCExAO4 POWER 2", SCExAO_status[0].nps1_1_co);
+    print_status("VAMPIRES CAMERA", SCExAO_status[0].nps1_1_co);
     printw(" | ");
-    print_status("SCExAO2 POWER 1", SCExAO_status[0].nps1_2_co);
+    print_status("SCExAO2 POWER ?", SCExAO_status[0].nps1_2_co);
     printw(" | ");
     print_status("HIGH-VOLTAGE TT", SCExAO_status[0].nps1_3_co);
     printw(" | ");
@@ -203,26 +272,44 @@ int status_display()
     printw(" | ");
     print_status(" VAMPIRES SYNC ", SCExAO_status[0].nps1_7_co);
     printw(" | ");
-    print_status("VAMP DIFF WHEEL", SCExAO_status[0].nps1_8_co);
+    print_status("   ?UNKNOWN?   ", SCExAO_status[0].nps1_8_co);
     printw("\n");
     // NPS2
     printw("NPS2 ports 1-4  : ");
-    print_status("    ???        ", SCExAO_status[0].nps2_1_co);
+    print_status("   FIRST MEMS  ", SCExAO_status[0].nps2_1_co);
     printw(" | ");
-    print_status("    ???        ", SCExAO_status[0].nps2_2_co);
+    print_status(" QUEST (temp)  ", SCExAO_status[0].nps2_2_co);
     printw(" | ");
-    print_status("    ???        ", SCExAO_status[0].nps2_3_co);
+    print_status("               ", SCExAO_status[0].nps2_3_co);
     printw(" | ");
-    print_status("    ???        ", SCExAO_status[0].nps2_4_co);
+    print_status("               ", SCExAO_status[0].nps2_4_co);
     printw("\n");
     printw("NPS2 ports 5-8  : ");
-    print_status("    ???        ", SCExAO_status[0].nps2_5_co);
+    print_status("  GLINT CRED2  ", SCExAO_status[0].nps2_5_co);
     printw(" | ");
-    print_status("    ???        ", SCExAO_status[0].nps2_6_co);
+    print_status("               ", SCExAO_status[0].nps2_6_co);
     printw(" | ");
-    print_status("    ???        ", SCExAO_status[0].nps2_7_co);
+    print_status("               ", SCExAO_status[0].nps2_7_co);
     printw(" | ");
-    print_status("    ???        ", SCExAO_status[0].nps2_8_co);
+    print_status("FIRST NEON SRC ", SCExAO_status[0].nps2_8_co);
+    printw("\n");
+    printw("NPS2 ports 9-12 : ");
+    print_status("VAMP DIFFWHEEL?", SCExAO_status_ext[0].nps2_9_co);
+    printw(" | ");
+    print_status("DM VACUUM PUMP ", SCExAO_status_ext[0].nps2_10_co);
+    printw(" | ");
+    print_status(" FIRST SCI CAM ", SCExAO_status_ext[0].nps2_11_co);
+    printw(" | ");
+    print_status(" TT MODULATOR  ", SCExAO_status_ext[0].nps2_12_co);
+    printw("\n");
+    printw("NPS2 ports 13-16: ");
+    print_status("  OCAM POWER   ", SCExAO_status_ext[0].nps2_13_co);
+    printw(" | ");
+    print_status("RAJNICAM POWER ", SCExAO_status_ext[0].nps2_14_co);
+    printw(" | ");
+    print_status("SCExAO2 POWER ?", SCExAO_status_ext[0].nps2_15_co);
+    printw(" | ");
+    print_status("  UNKNOWN  ?   ", SCExAO_status_ext[0].nps2_16_co);
     printw("\n");
     // NPS3
     printw("NPS3 ports 1-4  : ");
@@ -373,9 +460,9 @@ int status_display()
     print_header(" IR BENCH POLARIZATION ", '-');
 
     // Polarizer
-    // printw("Polarizer       : ");
-    // print_status(SCExAO_status[0].polarizer, SCExAO_status[0].polarizer_co);
-    // printw(" (t: %6.2f deg )\n", SCExAO_status[0].polarizer_theta);
+    printw("Polarizer       : ");
+    print_status(SCExAO_status[0].polarizer, SCExAO_status[0].polarizer_co);
+    printw(" (t: %6.2f deg )\n", SCExAO_status[0].polarizer_theta);
     // IR Cams QWPs
     printw("IR Cam QWP      : ");
     print_status(SCExAO_status[0].ircam_qwp, SCExAO_status[0].ircam_qwp_co);
@@ -601,10 +688,13 @@ int status_display()
     printw("Acquiring Chuckcam darks   : ");
     print_status(SCExAO_status[0].darkchuck, SCExAO_status[0].darkchuck_co);
     printw("\n");
+    // Buffy log
+    printw("Logging BuffyCam images    : ");
+    print_status(SCExAO_status_ext[0].logbuffy, SCExAO_status_ext[0].logbuffy_co);
+    printw(" | ");
     // Hotspotalign
     printw("Aligning PSF on the hotspot: ");
     print_status(SCExAO_status[0].hotspot, SCExAO_status[0].hotspot_co);
-    printw(" | ");
     printw("\n");
 
     refresh();
@@ -619,6 +709,7 @@ int main(int argc, char **argv)
   int cmdOK;
 
   sprintf(SM_fname, "%s/SCExAO_status.shm", SHAREDMEMDIR);
+  sprintf(SME_fname, "%s/SCExAO_status_ext.shm", SHAREDMEMDIR);
 
   if (argc == 1)
   {
@@ -649,8 +740,14 @@ int main(int argc, char **argv)
 
   if (strcmp(command, "create") == 0)
   {
-    printf("create status shared memory structure\n");
+    printf("create status shared memory structure (legacy and extension)\n");
     create_status_shm();
+    cmdOK = 1;
+  }
+  else if (strcmp(command, "create_ext") == 0)
+  {
+    printf("create status shared memory structure (extension only)\n");
+    create_extended_status_shm();
     cmdOK = 1;
   }
   else if (strcmp(command, "set") == 0)
@@ -722,6 +819,39 @@ int main(int argc, char **argv)
     else if (strcmp(status_item, "nps2_8") == 0)
     {
       SCExAO_status[0].nps2_8_co = atoi(color);
+    }
+    // NPS2 EXTENSION (new 16 port)
+    else if (strcmp(status_item, "nps2_9") == 0)
+    {
+      SCExAO_status_ext[0].nps2_9_co = atoi(color);
+    }
+    else if (strcmp(status_item, "nps2_10") == 0)
+    {
+      SCExAO_status_ext[0].nps2_10_co = atoi(color);
+    }
+    else if (strcmp(status_item, "nps2_11") == 0)
+    {
+      SCExAO_status_ext[0].nps2_11_co = atoi(color);
+    }
+    else if (strcmp(status_item, "nps2_12") == 0)
+    {
+      SCExAO_status_ext[0].nps2_12_co = atoi(color);
+    }
+    else if (strcmp(status_item, "nps2_13") == 0)
+    {
+      SCExAO_status_ext[0].nps2_13_co = atoi(color);
+    }
+    else if (strcmp(status_item, "nps2_14") == 0)
+    {
+      SCExAO_status_ext[0].nps2_14_co = atoi(color);
+    }
+    else if (strcmp(status_item, "nps2_15") == 0)
+    {
+      SCExAO_status_ext[0].nps2_15_co = atoi(color);
+    }
+    else if (strcmp(status_item, "nps2_16") == 0)
+    {
+      SCExAO_status_ext[0].nps2_16_co = atoi(color);
     }
     // NPS3
     else if (strcmp(status_item, "nps3_1") == 0)
@@ -1485,6 +1615,11 @@ int main(int argc, char **argv)
     {
       strncpy(SCExAO_status[0].logchuck, value, 15);
       SCExAO_status[0].logchuck_co = atoi(color);
+    }
+    else if (strcmp(status_item, "logbuffy") == 0)
+    {
+      strncpy(SCExAO_status_ext[0].logbuffy, value, 15);
+      SCExAO_status_ext[0].logbuffy_co = atoi(color);
     }
     else if (strcmp(status_item, "darkchuck") == 0)
     {

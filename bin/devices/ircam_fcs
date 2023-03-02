@@ -27,9 +27,9 @@ zaberchain = "irback"
 zaberids = [8]
 zabernames = ["f1"]
 
-description = "Focusing stage for Chuck and Saphira"
+description = "Focusing stage for Palila and Apapane"
 
-defpos = ["chuck", "buffy", "chuck_pup", "buffy_pup", "piaacmc", "dm", "pup_wheel"]
+defpos = ["palila", "apapane", "palila_pup", "piaacmc", "dm", "pup_wheel"]
 
 # GENERIC CODE
 

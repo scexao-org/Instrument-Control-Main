@@ -84,13 +84,13 @@ class picomotor:
 
                 if "status" in args[1].lower():
                     loop.run_until_complete(self.status())
-
+                    """
                 elif "goto" in args[1].lower():
                     if (na > 2) and (args[2].lstrip('+-').isdigit()):
                         loop.run_until_complete(self.goto(int(args[2])))
-                    else:
+                else:
                         self.usage()
-
+                    """
                 elif "push" in args[1].lower():
                     if (na > 2) and (args[2].lstrip('+-').isdigit()):
                         loop.run_until_complete(self.push(int(args[2])))
@@ -177,12 +177,14 @@ CONTENT:""")
         print(pos)
         await dev.finish(self.picoid)
 
+    """
     async def goto(self,pos):
         dev = await USB.connect()
         dev.set_position(self.picoid,pos)
         pos = await dev.get_position(self.picoid)
         print(pos)
         await dev.finish(self.picoid)
+    """
 
     async def push(self,motion):
         dev = await USB.connect()

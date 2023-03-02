@@ -22,9 +22,9 @@ import numpy as np
 import subprocess
 
 home = os.getenv('HOME')
-sys.path.append(home+'/src/lib/python/')
+sys.path.append(home + '/src/lib/python/')
 import dio
-import logit #Custom logging library
+import logit  #Custom logging library
 
 from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
 from scxkw.redisutil.typed_db import Redis
@@ -35,21 +35,25 @@ LEGACY_EXEC = '/home/scexao/bin/scexaostatus'
 # =====================================================================
 # =====================================================================
 
-class flipmount:
 
-    def __init__(self, flipname, flipid, args=[], description="no description"):
-        
+class flipmount:
+    def __init__(self,
+                 flipname,
+                 flipid,
+                 args=[],
+                 description="no description"):
+
         self.flipname = flipname
         self.description = description
 
         if args != [] and "--help1" in args[0]:
             self.quickhelp()
             sys.exit()
-            
+
         self.flipid = flipid
         filename = "/home/scexao/bin/devices/conf/path_dio.txt"
         filep = open(filename, 'r')
-        self.diodev  = "/dev/serial/by-path/"
+        self.diodev = "/dev/serial/by-path/"
         self.diodev += filep.read().rstrip('\n')
 
         na = args.__len__()
@@ -57,7 +61,7 @@ class flipmount:
         if args == []:
             self.flipit()
             self.savestate()
-            
+
         elif "reset" in args[0]:
             self.savestate()
 
@@ -66,10 +70,11 @@ class flipmount:
 
         elif "status" in args[0]:
             self.status()
-            
+
         else:
             self.usage()
-        
+
+
 # =====================================================================
 
     def usage(self):
@@ -80,17 +85,17 @@ COMMAND:
     status  displays status
      reset  reset status
        set  set status to out
----------------------------------------""") % (self.flipname,)
-    
+---------------------------------------""") % (self.flipname, )
+
     # -----------------------------------------------------------------
     def quickhelp(self):
-        print("%20s       %s" % (self.flipname,self.description))
-    
+        print("%20s       %s" % (self.flipname, self.description))
+
     # -----------------------------------------------------------------
     def flipit(self):
         a = dio.dio(self.diodev)
         a.flip(self.flipid)
-        logit.logit(self.flipname,'flipped')
+        logit.logit(self.flipname, 'flipped')
         a.close()
 
     # -----------------------------------------------------------------
@@ -107,7 +112,7 @@ COMMAND:
         else:
             value = 'UNKNOWN'
             color = '3'
-            
+
         command = LEGACY_EXEC + ' set ' + self.flipname + ' "' + value + '" ' + color
         os.system(command)
 

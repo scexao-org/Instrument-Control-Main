@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import time
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from nps import NewNPS 
+
+def locate_redis_db():
+    from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+    from scxkw.redisutil.typed_db import Redis
+    rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+    # Is the server alive ?
+    try:
+        rdb_alive = rdb.ping()
+        if not rdb_alive:
+            raise ConnectionError
+    except:
+        print('Error: can\'t ping redis DB.')
+        rdb = None
+        rdb_alive = False
+
+    return rdb, rdb_alive
+# ------------------------------------------------------------------
+#  Read database for some stage status
+# ------------------------------------------------------------------
+def RDB_pull(rdb, rdb_alive: bool, do_defaults=True):
+    '''
+        do_defaults: if rdb_alive is False, fallback to defaults
+                     ortherwise raise a ConnectionError
+                    This Error can be caught in order for a call to just "do nothing" and keep prev. values
+                    rather than all of a sudden overwrite with all the defaults.
+    '''
+
+    if rdb_alive:
+        try:
+            rdb.ping()
+        except TimeoutError:
+            rdb_alive = False
+
+    if not rdb_alive and not do_defaults:
+        raise ConnectionError("Redis unavailable and not skipping defaults")
+
+    if rdb_alive:  # Fetch from RDB
+        fits_keys_to_pull = {'D_FCONV'}
+        # Now Getting the keys
+        with rdb.pipeline() as pipe:
+            for key in fits_keys_to_pull:
+                pipe.hget(key, 'value')
+            values = pipe.execute()
+        status = {k: v for k, v in zip(fits_keys_to_pull, values)}
+        fconv = status['D_FCONV'].strip() == 'OUT'
+    else:  # Sensible defaults?
+        fconv = False
+
+    return fconv
+
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+npsname = "irwfs_pickoff_power"
+npsid = 2
+portid = 4
+
+description = "power switch for the NIR WFS pickoff mount"
+
+rdb, rdb_alive = locate_redis_db()
+
+fconv = RDB_pull(rdb, rdb_alive, do_defaults=True)
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+if (len(args) >=1):
+    if args[0] == "off" and not fconv:
+        print("Cannot turn off power, IRD FIM is not out")
+    else:
+        NewNPS(npsname, npsid, portid, args=args, description=description)
+else:
+    NewNPS(npsname, npsid, portid, args=args, description=description)
+

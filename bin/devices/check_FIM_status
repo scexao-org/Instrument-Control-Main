@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import time
+
+def locate_redis_db():
+    from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+    from scxkw.redisutil.typed_db import Redis
+    rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+    # Is the server alive ?
+    try:
+        rdb_alive = rdb.ping()
+        if not rdb_alive:
+            raise ConnectionError
+    except:
+        print('Error: can\'t ping redis DB.')
+        rdb = None
+        rdb_alive = False
+
+    return rdb, rdb_alive
+# ------------------------------------------------------------------
+#  Read database for some stage status
+# ------------------------------------------------------------------
+def RDB_pull(rdb, rdb_alive, do_defaults=True):
+    '''
+        cam_apapane: False for Palila, True for Apapane
+        do_defaults: if rdb_alive is False, fallback to defaults
+                     ortherwise raise a ConnectionError
+                    This Error can be caught in order for a call to just "do nothing" and keep prev. values
+                    rather than all of a sudden overwrite with all the defaults.
+    '''
+
+    if rdb_alive:
+        try:
+            rdb.ping()
+        except TimeoutError:
+            rdb_alive = False
+
+    if not rdb_alive and not do_defaults:
+        raise ConnectionError("Redis unavailable and not skipping defaults")
+
+    if rdb_alive:  # Fetch from RDB
+        fits_keys_to_pull = {'D_FCONV'}
+        # Now Getting the keys
+        with rdb.pipeline() as pipe:
+            for key in fits_keys_to_pull:
+                pipe.hget(key, 'value')
+            values = pipe.execute()
+        status = {k: v for k, v in zip(fits_keys_to_pull, values)}
+        fconv = status['D_FCONV'].strip()
+    else:  # Sensible defaults?
+        fconv = 'UNKNOWN'
+
+    return fconv
+
+rdb, rdb_alive = locate_redis_db()
+
+fconv = RDB_pull(rdb, rdb_alive, do_defaults=True)
+print(fconv)

@@ -21,7 +21,7 @@ from devices import devices
 
 devname = "charis_pickoff"
 
-conexids = ["usb-Newport_CONEX-AGP_A6WVRW4W-if00-port0","usb-Newport_CONEX-AGP_A62X7MON-if00-port0"]
+conexids = ["usb-Newport_CONEX-AGP_A64MV6OB-if00-port0","usb-Newport_CONEX-AGP_A62X7MON-if00-port0"]
 conexnames = ["wheel","theta"]
 
 description = "CHARIS pickoff mirror"

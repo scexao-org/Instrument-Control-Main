@@ -21,8 +21,8 @@ g2proxy.executeCmd('SCEXAO', 'foo', 'get_frames', camcode, dict(num=nfrmids))
 
 # frames will be stored one per line in /tmp/frames.txt
 sleep(0.1)
-with open("/tmp/frames_%s.txt" %(camcode,), 'r') as in_f:
+with open("/tmp/frames_%s.txt" % (camcode, ), 'r') as in_f:
     frames = in_f.read().split('\n')
 assert len(frames) > 0, Exception("Frames file is empty!")
 print(frames)
-print(time.time()-t0)
+print(time.time() - t0)

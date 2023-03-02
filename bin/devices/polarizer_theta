@@ -21,7 +21,7 @@ from devices import devices
 
 devname = "polarizer_theta"
 
-conexids = ["usb-Newport_CONEX-AGP_A6WMSQ3G-if00-port0"]
+conexids = ["usb-Newport_CONEX-AGP_A64YHWXZ-if00-port0"]
 conexnames = ["theta"]
 
 description = "Polarizer angle"

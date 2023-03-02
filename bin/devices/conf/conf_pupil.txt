@@ -5,4 +5,4 @@
 5;vAPP mask       ;179.5;71000 ;40500 ;2
 6;Apodizing coro  ;228.0;66000 ;93500 ;2
 7;Block           ;270.0;0     ;0     ;0
-8;Shaped pup mask ;317.0;73400 ;68500 ;2
+8;Shaped pup mask ;317.0;73400 ;67100 ;2

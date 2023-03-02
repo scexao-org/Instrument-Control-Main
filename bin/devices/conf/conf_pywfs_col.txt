@@ -1,1 +1,1 @@
-1;Collimation     ;100000
+1;Collimation     ;140000

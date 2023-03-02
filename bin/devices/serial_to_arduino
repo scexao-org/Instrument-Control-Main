@@ -31,17 +31,19 @@ arduino = "/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Due_Prog._Port
 
 class ser2arduino(object):
     def __init__(self,arduino):
-        self.s=serial.Serial(arduino, 115200, timeout=0.5)
+        self.s=serial.Serial(arduino, 115200, timeout=1.0)
         self.s.setDTR(False)
-        time.sleep(1)
+        time.sleep(0.1)
         self.s.flushInput()
+        self.s.flushOutput()
+        time.sleep(1.0)
         
     def command(self,command):
-        self.s.write(str.encode(str(command[0]+" "+command[1]+" "+command[2]+" "+command[3]+"\r\n")))
+        self.s.write(str.encode(str(command[0]+"\n"+command[1]+"\n"+command[2]+"\n"+command[3]+"\n")))
         time.sleep(0.5)
         print('Arduino answers: ')
-        print(self.s.readlines())
-        time.sleep(0.5)
+        [print(x.decode().rstrip()) for x in self.s.readlines()]
+        time.sleep(0.1)
         
 
     def close(self):

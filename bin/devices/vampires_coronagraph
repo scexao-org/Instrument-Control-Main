@@ -79,7 +79,7 @@ while true; do
 	menuitems+=( "a" "Manual FPM [a]lignment")
 	menuitems+=( "f" "Move the [f]ocus stage")
 	
-	dialog --title "VAMPiRES Coronagraph" \
+	dialog --title "VAMPIRES Coronagraph" \
 	    --ok-label "Select" \
 	    --cancel-label "Exit" \
 	    --menu "$menuname" \

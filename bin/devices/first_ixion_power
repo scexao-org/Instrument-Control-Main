@@ -22,18 +22,18 @@ import time
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-from nps import nps
+from nps import NewNPS
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
 npsname = "first_ixion_power"
 npsid = 2
-portid = 6
+portid = 11
 
 description = "power switch for the FIRSTIxion camera (science)"
 
 # GENERIC CODE
 
 args = sys.argv[1:]
-nps(npsname, npsid, portid, args=args, description=description)
+NewNPS(npsname, npsid, portid, args=args, description=description)
 

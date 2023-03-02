@@ -67,9 +67,9 @@ sleep 0.1
 echo "MKIDS pickoff:"
 mkids_pickoff status
 sleep 0.1
-#echo "IR cams pupil masks:"
-#ircam_pupil status
-#sleep 0.1
+echo "IR cams pupil masks:"
+ircam_pupil status
+sleep 0.1
 echo "IR cams filter:"
 ircam_filter status
 sleep 0.1
@@ -79,17 +79,14 @@ sleep 0.1
 echo "IR cams focus:"
 ircam_fcs status
 sleep 0.1
-echo "Buffycam pickoff:"
-buffycam_pickoff status
+echo "Apapane pickoff:"
+apapane_pickoff status
 sleep 0.1
-echo "Chuck pupil lens focus:"
-chuck_pup_fcs status
+echo "Palila pupil lens focus:"
+palila_pup_fcs status
 sleep 0.1
-echo "Chuckcam Pupil lens:"
-chuck_pup status
-sleep 0.1
-echo "BuffyCam pupil lens:"
-buffy_pup status
+echo "Palila Pupil lens:"
+palila_pup status
 sleep 0.1
 echo "LLOWFS block:"
 lowfs_block status
@@ -100,8 +97,8 @@ sleep 0.1
 echo "Polarizer:"
 polarizer status
 sleep 0.1
-#polarizer_theta status
-#sleep 0.1
+polarizer_theta status
+sleep 0.1
 echo "Field stop:"
 field_stop status
 sleep 0.1
@@ -111,27 +108,36 @@ sleep 0.1
 echo "IR cams FLC:"
 ircam_flc status
 sleep 0.1
-#echo "IR cams QWPs:"
+#echo "IR cams QWP:"
 #ircam_qwp status
 #sleep 0.1
-echo "IR cams QWPs:"
-ircam_hwp status
-sleep 0.1
+#echo "IR cams HWP:"
+#ircam_hwp status
+#sleep 0.1
 #ircam_hwp_theta status
 #sleep 0.1
 echo "IR cams Wollaston:"
 ircam_wollaston status
 sleep 0.1
-echo "GLINT pickoff:"
-nuller_pickoff status
+echo "Photonics pickoff:"
+photonics_pickoff status
+sleep 0.1
+echo "Photonics pickoff type:"
+photonics_pickoff_type status
+sleep 0.1
+echo "Photonics compensating plate:"
+photonics_compplate status
 sleep 0.1
 echo "Fiber injection pickoff:"
 fibinj_pickoff status
 sleep 0.1
-echo "Fiber injection  position:"
+echo "Fiber injection lens:"
+fibinj_len status
+sleep 0.1
+echo "Fiber injection position:"
 fibinj_fib status
 sleep 0.1
-echo "Fiber injection  carriage:"
+echo "Fiber injection carriage:"
 fibinj_car status
 sleep 0.1
 echo "REACH pickoff:"
@@ -142,6 +148,15 @@ reach_oap status
 sleep 0.1
 echo "REACH fiber:"
 reach_fib status
+sleep 0.1
+echo "IR Spectro mode:"
+irspectro_mode status
+sleep 0.1
+echo "IR Spectro collimator:"
+irspectro_col status
+sleep 0.1
+echo "IR Spectro Fiber:"
+irspectro_fib status
 sleep 0.1
 echo "PyWFS pickoff:"
 pywfs_pickoff status
@@ -179,5 +194,5 @@ sleep 0.1
 echo "FIRST photometry:"
 first_photometry status
 sleep 0.1
-echo "RHEA pickoff:"
-rhea_pickoff status
+#echo "RHEA pickoff:"
+#rhea_pickoff status

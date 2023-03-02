@@ -1,3 +1,38 @@
+#!/usr/bin/env python
+'''
+    charis_filter
+
+Usage:
+    charis_filter (j|h|k|out)
+'''
+
+from docopt import docopt
+import subprocess
+
+if __name__ == "__main__":
+    args = docopt(__doc__)
+
+    # args e.g. = {'j': False, 'h': True, 'k': False}
+
+    if args['j']:
+        pos = (6, 7)
+    elif args['h']:
+        pos = (8, 7)
+    elif args['k']:
+        pos = (7, 8)
+    elif args['out']:
+        pos = (7, 7)
+
+    print(f'Move PIAA1 {pos[0]}, PIAA2 {pos[1]}')
+
+    piaa1_proc = subprocess.Popen(['piaa1', str(pos[0])])
+    piaa2_proc = subprocess.Popen(['piaa2', str(pos[1])])
+
+    # Note: if we want a waited exit, we'd just add:
+    # piaa1_proc.wait()
+    # piaa2_proc.wait()
+
+''' LEGACY
 #!/bin/bash
 
 # number of arguments to script
@@ -20,6 +55,4 @@ for arg in "$@"; do
     piaa2 7 & ;;
   esac
 done
-
-
-
+'''

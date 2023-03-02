@@ -1,9 +1,12 @@
 #ifndef _SCExAO_status
 #define _SCExAO_status
 
+int main(int argc, char **argv);
 
-typedef struct {
-  
+
+typedef struct
+{
+
   // DOFs
   char src_fib_st[16];
   int src_fib_co;
@@ -241,7 +244,7 @@ typedef struct {
   float zap_gain;
   int zap_nmodes;
   char zap_mtype[16];
-  
+
   // LOGGING STATUS
   char logchuck[16];
   int logchuck_co;
@@ -249,15 +252,15 @@ typedef struct {
   int darkchuck_co;
   char hotspot[16];
   int hotspot_co;
-  
-  //ASTROGRID
+
+  // ASTROGRID
   char grid_st[16];
   int grid_st_co;
   float grid_sep;
   float grid_amp;
   int grid_mod;
 
-  //NPS
+  // NPS
   char nps1_1[16];
   int nps1_1_co;
   char nps1_2[16];
@@ -306,7 +309,29 @@ typedef struct {
   int nps3_7_co;
   char nps3_8[16];
   int nps3_8_co;
-
 } SCEXAOSTATUS;
 
-#endif
+// EXTENSION (Jan 2022) in another struct not to break legacy
+typedef struct
+{
+  char nps2_9[16];
+  int nps2_9_co;
+  char nps2_10[16];
+  int nps2_10_co;
+  char nps2_11[16];
+  int nps2_11_co;
+  char nps2_12[16];
+  int nps2_12_co;
+  char nps2_13[16];
+  int nps2_13_co;
+  char nps2_14[16];
+  int nps2_14_co;
+  char nps2_15[16];
+  int nps2_15_co;
+  char nps2_16[16];
+  int nps2_16_co;
+  char logbuffy[16];
+  int logbuffy_co;
+} SCEXAOSTATUS_EXTENSION;
+
+#endif // _SCExAO_status

@@ -20,7 +20,7 @@ from flipmount import flipmount
 
 stagename = "ircam_block"
 flipid = "D"
-description = "Block for Chuck and Saphira"
+description = "Block for Palila and Apapane"
 
 # GENERIC CODE
 

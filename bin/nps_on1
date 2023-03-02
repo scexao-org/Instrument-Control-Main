@@ -1,52 +1,9 @@
-#!/usr/bin/python
+#!/bin/bash
 
-import os
-import sys
-import time
+# Shorthand for ON a port of NPS 1
+if [ "$#" -ne 1 ]; then
+    echo "nps_on1"
+    echo "Usage: nps_on1 <port>"
+fi
 
-home = os.getenv('HOME')
-sys.path.append(home+'/src/lib/python/')
-from nps import nps
-
-# SPECIFIC PARAMETERS FOR THIS DEVICE
-
-def message():
-    print "------------------------------------"
-    print "          NPS1 contents             "
-    print "------------------------------------"
-    print "Port 1: SCExAO comp 4 redundant"
-    print "Port 2: SCExAO comp 2 primary"
-    print "Port 3: High voltage tip/tilt driver"
-    print "Port 4: VAMPIRES camera"
-    print "Port 5: SuperK"
-    print "Port 6: DM electronics"
-    print "Port 7: Nuller dove prism"
-    print "Port 8: FIRST stages"
-    print "------------------------------------"
-    print "Example of use of the command nps_on"
-    print "------------------------------------"
-    print "\n>>nps_off 3"
-    print "turns on the outlet 3 on the NPS"
-    print "outlet number is 1 <= # <= 8"
-    print "\nSee also: nps_off"
-    print "------------------------------------"
-    exit()
-
-args = sys.argv[1:]
-
-npsid = 1
-if len(args) == 1:
-    portid = int(args[0])
-    if 1 <= portid <= 8:
-        args2 = ['on']
-    else:
-        message()
-else:
-    message()
-npsname = "mps1 port%d" %(portid,)
-
-description = "turn on port on power switch #1"
-
-# GENERIC CODE
-
-nps(npsname, npsid, portid, args=args2, description=description)
+nps 1 $1 on

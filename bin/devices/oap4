@@ -28,7 +28,7 @@ conexnames = ["theta", "phi"]
 
 description = "OAP4 orientation"
 
-defpos = ["onaxis", "vapp1w", "reach"]
+defpos = ["onaxis", "vapp1w", "reach","bl","tr"]
 
 # GENERIC CODE
 

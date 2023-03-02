@@ -1,17 +1,30 @@
 #!/usr/bin/python
+'''
+NPS control - Use "nps help" for full info
+
+Usage:
+    nps help
+    nps <dev> status
+    nps <dev> <port> (status|on|off)
+
+Options:
+    <dev>     NPS device number (1-3)
+    <port>    NPS port (1-8 for NPS 1 & 3, 1-16 for NPS 2)
+'''
 
 import os
 import sys
 import time
 
 home = os.getenv('HOME')
-sys.path.append(home+'/src/lib/python/')
-from nps import nps
+sys.path.append(home + '/src/lib/python/')
+from nps import NPS, NewNPS
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
-def message(npsid=0):
-    if npsid == 1:
+
+def message(nps_id=0):
+    if nps_id == 1:
         print("------------------------------------")
         print("          NPS1 contents             ")
         print("------------------------------------")
@@ -24,7 +37,7 @@ def message(npsid=0):
         print("Port 7: VAMPIRES synchro & FLC")
         print("Port 8: VAMPIRES differential wheel")
         print("------------------------------------")
-    elif npsid == 2:
+    elif nps_id == 2:
         print("------------------------------------")
         print("          NPS2 contents             ")
         print("------------------------------------")
@@ -37,7 +50,7 @@ def message(npsid=0):
         print("Port 7: DM Vacuum Pump")
         print("Port 8: --")
         print("------------------------------------")
-    elif npsid == 3:
+    elif nps_id == 3:
         print("------------------------------------")
         print("          NPS3 contents             ")
         print("------------------------------------")
@@ -54,6 +67,7 @@ def message(npsid=0):
         print("------------------------------------")
         print("There are only 3 NPSs!")
         print("------------------------------------")
+
     print("Usage: nps <dev> <port> <command>")
     print("------------------------------------")
     print("DEV:")
@@ -65,50 +79,70 @@ def message(npsid=0):
     print("    status  status of port #N")
     print("    on      turn on port #N")
     print("    off     turn off port #N")
-    print("------------------------------------")        
+    print("------------------------------------")
     exit()
+
 
 # -----------------------------------------------------------------
 def quickhelp(name, description):
     print("%20s       %s" % (name, description))
     exit()
 
+
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
 
 name = "nps"
-description = "turn on/off/status port on a power switch"
+description = "Turn on/off/status port on a power switch"
 
-args = sys.argv[1:]
+if __name__ == "__main__":
+    import docopt
 
-if args[0] == "--help1":
-    quickhelp(name, description)
+    args = docopt.docopt(__doc__)
 
+    if args["help"]:
+        quickhelp(name, description)
+        print()
+        message()
 
-try:
-    npsid = int(args[0])
-except:
-    message()
+    # Sanitize dev
+    NPS_CLASS = {1: NPS, 2: NewNPS, 3: NPS}
+    PORT_MAX = {1: 8, 2: 16, 3: 8}
 
-if 1 <= npsid <= 3:
-    if len(args) >= 2:
-        if args[1] == "status":
-            for i in range(8):
-                portid = i+1
-                npsname = "mps %d port %d" %(npsid, portid)
-                args2 = ["status"]
-                nps(npsname, npsid, portid, args=args2, description=description)
-        else:
-            portid = int(args[1])
-            if 1 <= portid <= 8:
-                args2 = args[2:]
-                npsname = "mps %d port %d" %(npsid, portid)
-                nps(npsname, npsid, portid, args=args2, description=description)
-            else:
-                message(npsid)
+    try:
+        nps_id = int(args["<dev>"])
+        if not nps_id in [1, 2, 3]:
+            raise ValueError
+        Nps_class = NPS_CLASS[nps_id]
+    except ValueError:
+        message()
+        sys.exit(1)
+
+    # Fetch status for full NPS
+    if args["status"] and args["<port>"] is None:
+        for port_id in range(1, PORT_MAX[nps_id]+1):
+            nps_name = "nps %d port %d" % (nps_id, port_id)
+            Nps_class(nps_name, nps_id, port_id, args=["status"], description=description)
+        sys.exit(0)
+
+    # Sanitize port
+    try:
+        port_id = int(args["<port>"])
+        if not port_id in range(1, PORT_MAX[nps_id]+1):
+            raise ValueError
+    except ValueError:
+        message()
+        sys.exit(1)
+
+    # On / off / status for a single port
+    nps_name = "nps %d port %d" % (nps_id, port_id)
+    if args["on"]:
+        command = "on"
+    elif args["off"]:
+        command = "off"
     else:
-        message(npsid)
-else:
-    message(npsid)
+        command = "status"
 
+    Nps_class(nps_name, nps_id, port_id, args=[command], description=description)
 
+    sys.exit(0)

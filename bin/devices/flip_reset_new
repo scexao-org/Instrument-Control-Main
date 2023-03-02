@@ -1,5 +1,4 @@
-h#!/bin/bash
-
+#!/bin/bash
 
 echo "IR cams Wollaston:"
 ircam_wollaston reset
@@ -7,9 +6,18 @@ sleep 0.1
 echo "CHARIS Wollaston:"
 charis_wollaston reset
 sleep 0.1
-echo "IR cams QWPs:"
-ircam_qwp reset
-sleep 0.1
+#echo "IR cams QWP:"
+#ircam_qwp reset
+#sleep 0.1
+#echo "IR cams HWP:"
+#ircam_hwp reset
+#sleep 0.1
 echo "Polarizer:"
 polarizer reset
+sleep 0.1
+echo "Photonics pickoff type:"
+photonics_pickoff_type reset
+sleep 0.1
+echo "Photonics compensating plate:"
+photonics_compplate reset
 sleep 0.1

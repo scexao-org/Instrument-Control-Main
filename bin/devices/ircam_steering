@@ -32,7 +32,7 @@ rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
 
 def RDB_pull(rdb):
 
-    fits_keys_to_pull = {'D_IMRPAD'}
+    fits_keys_to_pull = {'D_IMRPAD','X_OAP4TH','X_OAP4PH','X_STRTHE','X_STRPHI'}
     # Now Getting the keys
     with rdb.pipeline() as pipe:
         for key in fits_keys_to_pull:
@@ -42,8 +42,12 @@ def RDB_pull(rdb):
     status = {k: v for k,v in zip(values[::2], values[1::2])}
 
     pad = float(status['D_IMRPAD'])
+    oap4th = float(status['X_OAP4TH'])
+    oap4ph = float(status['X_OAP4PH'])
+    strth = float(status['X_STRTHE'])
+    strph = float(status['X_STRPHI'])
 
-    return(pad)
+    return(pad,oap4th,oap4ph,strth,strph)
 
 hmsg = """------------------------------------------------------------------
 Usage: ircam_steering <mode> <param1> <param2>
@@ -65,6 +69,8 @@ PARAM2:
 args = sys.argv[1:]
 
 if args != []:
+    pad,oap4th,oap4ph,strth,strph = RDB_pull(rdb)
+    print(pad)
     if args[0] == "onaxis":
         os.system("oap4 onaxis")
         os.system("steering onaxis")
@@ -73,6 +79,7 @@ if args != []:
         try:
             posx = float(args[1])
             posy = float(args[2])
+            readfile = int(args[3])
         except:
             print(hmsg)
             sys.exit()
@@ -80,21 +87,22 @@ if args != []:
         try:
             dist = float(args[1])
             angle = float(args[2])
+            readfile = int(args[3])
         except:
             print(hmsg)
             sys.exit()
         posx = dist*m.cos(angle/180.*m.pi)
         posy = dist*m.sin(angle/180.*m.pi)
     elif args[0] == "skyangle":
-        pad = RDB_pull(rdb)
         try:
             dist = float(args[1])
             angle = float(args[2])
+            readfile = int(args[3])
         except:
             print(hmsg)
             sys.exit()
-        posx = dist*m.cos((angle+pad+180)/180.*m.pi)
-        posy = dist*m.sin((angle+pad+180)/180.*m.pi)
+        posx = -dist*m.cos((-angle+pad+180)/180.*m.pi)
+        posy = dist*m.sin((-angle+pad+180)/180.*m.pi)
     else:
         print(hmsg)
         sys.exit()
@@ -107,35 +115,51 @@ stphi = posy*slopesteeringphi
 oaptheta = posx*slopeoap4theta+posx**2*quadoap4theta
 oapphi = posy*slopeoap4phi
 
-con = conex.conex()
-conexids = ["usb-Newport_CONEX-AGP_A61MB80N-if00-port0", "usb-FTDI_FT232R_USB_UART_AL01V7AB-if00-port0"]
-conexnames = ["theta", "phi"]
-oap0 = np.zeros(2)
-for i in range (2):
-    con.open("/dev/serial/by-id/"+conexids[i])
-    oap0[i] = con.status("oap4_"+conexnames[i])
-    con.close()
-    time.sleep(1)
+#con = conex.conex()
+#conexids = ["usb-Newport_CONEX-AGP_A61MB80N-if00-port0", "usb-FTDI_FT232R_USB_UART_AL01V7AB-if00-port0"]
+#conexnames = ["theta", "phi"]
+#oap0 = np.zeros(2)
+#for i in range (2):
+#    con.open("/dev/serial/by-id/"+conexids[i])
+#    oap0[i] = con.status("oap4_"+conexnames[i])
+#    con.close()
+#    time.sleep(1)
+if readfile:
+    oap_file = "/home/scexao/bin/devices/conf/conf_oap4.txt"
+    with open(oap_file,'r') as f:
+        f2 = [float(s) for s in f.readlines()[0].split(';')[2:4]]
+    f.close()
+    oap0 = f2
+else:
+    oap0 = np.array([oap4th,oap4ph])
 
-conexid = "http://133.40.163.196:50001"
-steering0 = conex_tt.status("steering",conexid)
+#conexid = "http://133.40.163.196:50001"
+#steering0 = conex_tt.status("steering",conexid)
+if readfile:
+    steering_file = "/home/scexao/bin/devices/conf/conf_steering.txt"
+    with open(steering_file,'r') as f:
+        f2 = [float(s) for s in f.readlines()[0].split(';')[2:4]]
+    f.close()
+    steering0 = f2
+else:
+    steering0 = np.array([strth,strph])
 
 if oap0[0] == [] or oap0[1] == [] or steering0 == []:
     sys.exit()
 
 oaptheta += oap0[0]
 oapphi += oap0[1]
-sttheta += steering0[1]
-stphi += steering0[0]
+sttheta += steering0[0]
+stphi += steering0[1]
 
 print("Moving to (%.1f, %.1f) arcsec" % (posx,posy))
 print("Moving steering mirror to (%.3f, %.3f) degree" % (sttheta,stphi))
 print("Moving OAP4 to (%.3f, %.3f) degree" % (oaptheta,oapphi))
 
-os.system("steering theta goto %.3f" % (sttheta,))
-os.system("steering phi goto %.3f" % (stphi,))
-os.system("oap4 theta goto %.3f" % (oaptheta,))
-os.system("oap4 phi goto %.3f" % (oapphi,))
+os.system("~/bin/devices/oap4 theta goto %.3f &" % (oaptheta,))
+os.system("~/bin/devices/steering theta goto %.3f" % (sttheta,))
+os.system("~/bin/devices/oap4 phi goto %.3f &" % (oapphi,))
+os.system("~/bin/devices/steering phi goto %.3f &" % (stphi,))
 
-subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
-subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
+#subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
+#subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '(%.1f, %.1f) as' % (posx,posy), '2'])

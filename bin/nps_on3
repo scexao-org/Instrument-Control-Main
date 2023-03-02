@@ -1,52 +1,9 @@
-#!/usr/bin/python
+#!/bin/bash
 
-import os
-import sys
-import time
+# Shorthand for ON a port of NPS 3
+if [ "$#" -ne 1 ]; then
+    echo "nps_on3"
+    echo "Usage: nps_on3 <port>"
+fi
 
-home = os.getenv('HOME')
-sys.path.append(home+'/src/lib/python/')
-from nps import nps
-
-# SPECIFIC PARAMETERS FOR THIS DEVICE
-
-def message():
-    print "------------------------------------"
-    print "          NPS3 contents             "
-    print "------------------------------------"
-    print "Port 1: Leech controller"
-    print "Port 2: VAMPIRES computer"
-    print "Port 3: 24V power supplies (Ez step)"
-    print "Port 4: 15V power supplies (Zaber)"
-    print "Port 5: 5 and 12V supplies (Wheels)"
-    print "Port 6: C-RED2 cameras"
-    print "Port 7: SAPHIRA Temp. Controller"
-    print "Port 8: SAPHIRA stirling cooler"
-    print "------------------------------------"
-    print "Example of use of the command nps_on"
-    print "------------------------------------"
-    print "\n>>nps_on 3"
-    print "turns on the outlet 3 on the NPS"
-    print "outlet number is 1 <= # <= 8"
-    print "\nSee also: nps_off"
-    print "------------------------------------"
-    exit()
-
-args = sys.argv[1:]
-
-npsid = 3
-if len(args) == 1:
-    portid = int(args[0])
-    if 1 <= portid <= 8:
-        args2 = ['on']
-    else:
-        message()
-else:
-    message()
-npsname = "mps3 port%d" %(portid,)
-
-description = "turn on port on power switch #3"
-
-# GENERIC CODE
-
-nps(npsname, npsid, portid, args=args2, description=description)
+nps 3 $1 on
