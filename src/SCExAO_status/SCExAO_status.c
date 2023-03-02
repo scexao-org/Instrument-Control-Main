@@ -305,7 +305,7 @@ int status_display()
     printw("NPS2 ports 13-16: ");
     print_status("  OCAM POWER   ", SCExAO_status_ext[0].nps2_13_co);
     printw(" | ");
-    print_status("RAJNICAM POWER ", SCExAO_status_ext[0].nps2_14_co);
+    print_status(" KIWIKIU POWER ", SCExAO_status_ext[0].nps2_14_co);
     printw(" | ");
     print_status("SCExAO2 POWER ?", SCExAO_status_ext[0].nps2_15_co);
     printw(" | ");
@@ -317,7 +317,7 @@ int status_display()
     printw(" | ");
     print_status(" VAMPIRES COMP ", SCExAO_status[0].nps3_2_co);
     printw(" | ");
-    print_status("BUFFYCAM POWER ", SCExAO_status[0].nps3_3_co);
+    print_status(" APAPANE POWER ", SCExAO_status[0].nps3_3_co);
     printw(" | ");
     print_status("   15V POWER   ", SCExAO_status[0].nps3_4_co);
     printw("\n");
@@ -328,7 +328,7 @@ int status_display()
     printw(" | ");
     print_status("GLINT PICOMOTOR", SCExAO_status[0].nps3_7_co);
     printw(" | ");
-    print_status("CHUCKCAM POWER ", SCExAO_status[0].nps3_8_co);
+    print_status(" PALILA POWER  ", SCExAO_status[0].nps3_8_co);
     printw("\n");
 
     print_header(" CALIBRATION SOURCE ", '-');
@@ -432,28 +432,24 @@ int status_display()
     printw("IR Cams Focus   : ");
     print_status(SCExAO_status[0].ircam_fcs_st, SCExAO_status[0].ircam_fcs_co);
     printw(" (f1:%6d stp, f2:%6.2f mm )\n", SCExAO_status[0].ircam_fcs_f1, SCExAO_status[0].ircam_fcs_f2);
-    // CHUCKCAM Pupil
-    printw("CHUCKCAM Pupil  : ");
-    print_status(SCExAO_status[0].chuck_pup, SCExAO_status[0].chuck_pup_co);
+    // PALILA Pupil
+    printw("PALILA Pupil    : ");
+    print_status(SCExAO_status[0].palila_pup, SCExAO_status[0].palila_pup_co);
     printw("\n");
-    // CHUCKCAM Pupil Focus
-    printw("CHUCKCAM Pup Fcs: ");
-    print_status(SCExAO_status[0].chuck_pup_fcs_st, SCExAO_status[0].chuck_pup_fcs_co);
-    printw(" (f: %6.2f mm )\n", SCExAO_status[0].chuck_pup_fcs);
-    // BUFFYCAM Pickoff
-    printw("BUFFYCAM Pickoff: ");
-    print_status(SCExAO_status[0].buffy_pickoff_st, SCExAO_status[0].buffy_pickoff_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].buffy_pickoff);
-    // BUFFYCAM Pupil
-    printw("BUFFYCAM Pupil  : ");
-    print_status(SCExAO_status[0].buffy_pup, SCExAO_status[0].buffy_pup_co);
-    printw("\n");
-    // LLOWFS Block
-    printw("LLOWFS Block    : ");
+    // PALILA Pupil Focus
+    printw("PALILA Pup Fcs  : ");
+    print_status(SCExAO_status[0].palila_pup_fcs_st, SCExAO_status[0].palila_pup_fcs_co);
+    printw(" (f: %6.2f mm )\n", SCExAO_status[0].palila_pup_fcs);
+    // APAPANE Pickoff
+    printw("'APAPANE Pickoff: ");
+    print_status(SCExAO_status[0].apapane_pickoff_st, SCExAO_status[0].apapane_pickoff_co);
+    printw(" (x: %6.2f mm )\n", SCExAO_status[0].apapane_pickoff);
+    // KIWIKIU Block
+    printw("KIWIKIU Block   : ");
     print_status(SCExAO_status[0].lowfs_block, SCExAO_status[0].lowfs_block_co);
     printw("\n");
-    // LLOWFS Focus
-    printw("LLOWFS Focus    : ");
+    // KIWIKIU Focus
+    printw("KIWIKIU Focus   : ");
     print_status(" ", -1);
     printw(" (f: %6d stp)\n", SCExAO_status[0].lowfs_fcs);
 
@@ -488,16 +484,28 @@ int status_display()
     print_status(SCExAO_status[0].ircam_wollaston, SCExAO_status[0].ircam_wollaston_co);
     printw("\n");
 
-    print_header(" IR BENCH FIBER INJECTIONS ", '-');
+    print_header(" IR BENCH PHOTONICS ", '-');
 
-    // GLINT PIckoff
-    printw("GLINT Pickoff   : ");
-    print_status(SCExAO_status[0].nuller_pickoff_st, SCExAO_status[0].nuller_pickoff_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].nuller_pickoff);
+    // Photonics Pickoff
+    printw("Photonics PO    : ");
+    print_status(SCExAO_status[0].photonics_pickoff_st, SCExAO_status[0].photonics_pickoff_co);
+    printw(" (x: %6.2f mm )\n", SCExAO_status[0].photonics_pickoff);
+    // Photonics Pickoff Type
+    printw("Photonics PO typ: ");
+    print_status(SCExAO_status[0].photonics_pickoff_type, SCExAO_status[0].photonics_pickoff_type_co);
+    printw("\n");
+    // Photonics Compensating Plate
+    printw("Photonics Comppl: ");
+    print_status(SCExAO_status[0].photonics_compplate, SCExAO_status[0].photonics_compplate_co);
+    printw("\n");
     // FIber Injection Pickoff
     printw("Fib Inj Pickoff : ");
     print_status(SCExAO_status[0].fibinj_pickoff_st, SCExAO_status[0].fibinj_pickoff_co);
     printw(" (x: %6.2f mm )\n", SCExAO_status[0].fibinj_pickoff);
+    // FIber Injection Lens
+    printw("Fib Inj Lens    : ");
+    print_status(SCExAO_status[0].fibinj_len_st, SCExAO_status[0].fibinj_len_co);
+    printw(" (x: %6.2f mm )\n", SCExAO_status[0].fibinj_len);
     // Fiber Injection Fiber
     printw("Fib Inj Fiber   : ");
     print_status(SCExAO_status[0].fibinj_fib_st, SCExAO_status[0].fibinj_fib_co);
@@ -517,7 +525,20 @@ int status_display()
     // REACH Fiber
     printw("REACH Fiber     : ");
     print_status(SCExAO_status[0].reach_fib_st, SCExAO_status[0].reach_fib_co);
-    printw(" (x: %6.2f mm ,y: %6.2f mm ,f: %6.2f mm ,t: %6.2f deg)\n", SCExAO_status[0].reach_fib_x, SCExAO_status[0].reach_fib_y, SCExAO_status[0].reach_fib_f, SCExAO_status[0].reach_fib_theta);
+    printw(" (x: %6d stp,y: %6d stp,f: %6d stp,t: %6.2f deg)\n", SCExAO_status[0].reach_fib_x, SCExAO_status[0].reach_fib_y, SCExAO_status[0].reach_fib_f, SCExAO_status[0].reach_fib_theta);
+    // IR Spectrometer Mode
+    printw("IR Spectro Mode : ");
+    print_status(SCExAO_status[0].irspectro_mode_st, SCExAO_status[0].irspectro_mode_co);
+    printw(" (f1:%6d stp, f2:%6.2f mm )\n", SCExAO_status[0].irspectro_mode_x1, SCExAO_status[0].irspectro_mode_x2);
+    // IR Spectrometer Collimator
+    printw("IR Spectro Col  : ");
+    print_status(SCExAO_status[0].irspectro_col_st, SCExAO_status[0].irspectro_col_co);
+    printw(" (x: %6.2f mm )\n", SCExAO_status[0].irspectro_col);
+    // IR Spectrometer Fiber
+    printw("IR SPectro Fiber: ");
+    print_status(SCExAO_status[0].irspectro_fib_st, SCExAO_status[0].irspectro_fib_co);
+    printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].irspectro_fib_x, SCExAO_status[0].irspectro_fib_y);
+    
 
     print_header(" VISIBLE BENCH ", '-');
 
@@ -570,9 +591,9 @@ int status_display()
     print_status(SCExAO_status[0].first_photometry_st, SCExAO_status[0].first_photometry_co);
     printw(" (x: %6.2f mm )\n", SCExAO_status[0].first_photometry);
     // RHEA Pickoff
-    printw("RHEA Pickoff    : ");
-    print_status(SCExAO_status[0].rhea_pickoff_st, SCExAO_status[0].rhea_pickoff_co);
-    printw(" (x: %6.2f nm )\n", SCExAO_status[0].rhea_pickoff);
+    //printw("RHEA Pickoff    : ");
+    //print_status(SCExAO_status[0].rhea_pickoff_st, SCExAO_status[0].rhea_pickoff_co);
+    //printw(" (x: %6.2f nm )\n", SCExAO_status[0].rhea_pickoff);
 
     print_header(" PYWFS LOOP STATUS ", '-');
 
@@ -606,61 +627,61 @@ int status_display()
     printw(" | ");
     printw("\n");
 
-    print_header(" LOWFS LOOP STATUS ", '-');
+    //print_header(" LOWFS LOOP STATUS ", '-');
 
     // lowfs
-    printw("LOWFS loop status          : ");
-    print_status(SCExAO_status[0].lowfs_loop, SCExAO_status[0].lowfs_loop_co);
-    printw(" | ");
-    printw("LOWFS loop frequency       : ");
-    print_status_i(SCExAO_status[0].lowfs_freq, "Hz ", -1);
-    printw("\n");
-    printw("LOWFS mode type            : ");
-    print_status(SCExAO_status[0].lowfs_mtype, -1);
-    printw(" | ");
-    printw("LOWFS loop gain            : ");
-    print_status_f(SCExAO_status[0].lowfs_gain, "", -1);
-    printw("\n");
-    printw("LOWFS number of modes      : ");
-    print_status_i(SCExAO_status[0].lowfs_nmodes, "", -1);
-    printw(" | ");
-    printw("LOWFS loop leak            : ");
-    print_status_f(SCExAO_status[0].lowfs_leak, "", -1);
-    printw("\n");
+    //printw("LOWFS loop status          : ");
+    //print_status(SCExAO_status[0].lowfs_loop, SCExAO_status[0].lowfs_loop_co);
+    //printw(" | ");
+    //printw("LOWFS loop frequency       : ");
+    //print_status_i(SCExAO_status[0].lowfs_freq, "Hz ", -1);
+    //printw("\n");
+    //printw("LOWFS mode type            : ");
+    //print_status(SCExAO_status[0].lowfs_mtype, -1);
+    //printw(" | ");
+    //printw("LOWFS loop gain            : ");
+    //print_status_f(SCExAO_status[0].lowfs_gain, "", -1);
+    //printw("\n");
+    //printw("LOWFS number of modes      : ");
+    //print_status_i(SCExAO_status[0].lowfs_nmodes, "", -1);
+    //printw(" | ");
+    //printw("LOWFS loop leak            : ");
+    //print_status_f(SCExAO_status[0].lowfs_leak, "", -1);
+    //printw("\n");
 
-    print_header(" SPECKLE NULLING LOOP STATUS ", '-');
+    //print_header(" SPECKLE NULLING LOOP STATUS ", '-');
 
     // speckle nulling
-    printw("Speckle Nulling loop status: ");
-    print_status(SCExAO_status[0].sn_loop, SCExAO_status[0].sn_loop_co);
-    printw(" | ");
-    printw("Speckle Nulling loop freq. : ");
-    print_status_i(SCExAO_status[0].sn_freq, "Hz ", -1);
-    printw("\n");
-    printw("Speckle Nulling loop gain  : ");
-    print_status_f(SCExAO_status[0].sn_gain, "", -1);
-    printw(" | ");
-    printw("\n");
-
-    print_header(" ZAP LOOP STATUS ", '-');
+    //printw("Speckle Nulling loop status: ");
+    //print_status(SCExAO_status[0].sn_loop, SCExAO_status[0].sn_loop_co);
+    //printw(" | ");
+    //printw("Speckle Nulling loop freq. : ");
+    //print_status_i(SCExAO_status[0].sn_freq, "Hz ", -1);
+    //printw("\n");
+    //printw("Speckle Nulling loop gain  : ");
+    //print_status_f(SCExAO_status[0].sn_gain, "", -1);
+    //printw(" | ");
+    //printw("\n");
+    
+    //print_header(" ZAP LOOP STATUS ", '-');
 
     // zap
-    printw("ZAP loop status            : ");
-    print_status(SCExAO_status[0].zap_loop, SCExAO_status[0].zap_loop_co);
-    printw(" | ");
-    printw("ZAP loop frequency         : ");
-    print_status_i(SCExAO_status[0].zap_freq, "Hz ", -1);
-    printw("\n");
-    printw("ZAP mode type              : ");
-    print_status(SCExAO_status[0].zap_mtype, -1);
-    printw(" | ");
-    printw("ZAP loop gain              : ");
-    print_status_f(SCExAO_status[0].zap_gain, "", -1);
-    printw("\n");
-    printw("ZAP number of modes        : ");
-    print_status_i(SCExAO_status[0].zap_nmodes, "", -1);
-    printw(" | ");
-    printw("\n");
+    //printw("ZAP loop status            : ");
+    //print_status(SCExAO_status[0].zap_loop, SCExAO_status[0].zap_loop_co);
+    //printw(" | ");
+    //printw("ZAP loop frequency         : ");
+    //print_status_i(SCExAO_status[0].zap_freq, "Hz ", -1);
+    //printw("\n");
+    //printw("ZAP mode type              : ");
+    //print_status(SCExAO_status[0].zap_mtype, -1);
+    //printw(" | ");
+    //printw("ZAP loop gain              : ");
+    //print_status_f(SCExAO_status[0].zap_gain, "", -1);
+    //printw("\n");
+    //printw("ZAP number of modes        : ");
+    //print_status_i(SCExAO_status[0].zap_nmodes, "", -1);
+    //printw(" | ");
+    //printw("\n");
 
     print_header(" ASTROGRID ", '-');
 
@@ -680,17 +701,17 @@ int status_display()
 
     print_header(" LOGGING STATUS ", '-');
 
-    // Chuck log
-    printw("Logging ChuckCam images    : ");
-    print_status(SCExAO_status[0].logchuck, SCExAO_status[0].logchuck_co);
+    // PALILA log
+    printw("Logging PALILA images      : ");
+    print_status(SCExAO_status[0].logpalila, SCExAO_status[0].logpalila_co);
     printw(" | ");
-    // Chuck dark
-    printw("Acquiring Chuckcam darks   : ");
-    print_status(SCExAO_status[0].darkchuck, SCExAO_status[0].darkchuck_co);
+    // PALILA dark
+    printw("Acquiring PALILA darks     : ");
+    print_status(SCExAO_status[0].darkpalila, SCExAO_status[0].darkpalila_co);
     printw("\n");
-    // Buffy log
-    printw("Logging BuffyCam images    : ");
-    print_status(SCExAO_status_ext[0].logbuffy, SCExAO_status_ext[0].logbuffy_co);
+    // APAPANE log
+    printw("Logging 'APAPANE images    : ");
+    print_status(SCExAO_status_ext[0].logapapane, SCExAO_status_ext[0].logapapane_co);
     printw(" | ");
     // Hotspotalign
     printw("Aligning PSF on the hotspot: ");
@@ -1029,15 +1050,25 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].piaa2_f = atoi(value);
     }
-    // nuller
-    else if (strcmp(status_item, "nuller_pickoff_st") == 0)
+    // Photonics
+    else if (strcmp(status_item, "photonics_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].nuller_pickoff_st, value, 15);
-      SCExAO_status[0].nuller_pickoff_co = atoi(color);
+      strncpy(SCExAO_status[0].photonics_pickoff_st, value, 15);
+      SCExAO_status[0].photonics_pickoff_co = atoi(color);
     }
-    else if (strcmp(status_item, "nuller_pickoff") == 0)
+    else if (strcmp(status_item, "photonics_pickoff") == 0)
     {
-      SCExAO_status[0].nuller_pickoff = atof(value);
+      SCExAO_status[0].photonics_pickoff = atof(value);
+    }
+    else if (strcmp(status_item, "photonics_pickoff_type") == 0)
+    {
+      strncpy(SCExAO_status[0].photonics_pickoff_type, value, 15);
+      SCExAO_status[0].photonics_pickoff_type_co = atoi(color);
+    }
+    else if (strcmp(status_item, "photonics_compplate") == 0)
+    {
+      strncpy(SCExAO_status[0].photonics_compplate, value, 15);
+      SCExAO_status[0].photonics_compplate_co = atoi(color);
     }
     // PG1
     else if (strcmp(status_item, "PG1_pickoff") == 0)
@@ -1291,36 +1322,54 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].reach_fib_theta = atof(value);
     }
-    // buffy/chuck
-    else if (strcmp(status_item, "buffy_pickoff_st") == 0)
+    // APAPANE pickoff
+    else if (strcmp(status_item, "apapane_pickoff_st") == 0)
     {
-      strncpy(SCExAO_status[0].buffy_pickoff_st, value, 15);
-      SCExAO_status[0].buffy_pickoff_co = atoi(color);
+      strncpy(SCExAO_status[0].apapane_pickoff_st, value, 15);
+      SCExAO_status[0].apapane_pickoff_co = atoi(color);
     }
-    else if (strcmp(status_item, "buffy_pickoff") == 0)
+    else if (strcmp(status_item, "apapane_pickoff") == 0)
     {
-      SCExAO_status[0].buffy_pickoff = atof(value);
+      SCExAO_status[0].apapane_pickoff = atof(value);
     }
-    else if (strcmp(status_item, "chuck_pup") == 0)
+    else if (strcmp(status_item, "palila_pup") == 0)
     {
-      strncpy(SCExAO_status[0].chuck_pup, value, 15);
-      SCExAO_status[0].chuck_pup_co = atoi(color);
+      strncpy(SCExAO_status[0].palila_pup, value, 15);
+      SCExAO_status[0].palila_pup_co = atoi(color);
     }
-    else if (strcmp(status_item, "chuck_pup_fcs_st") == 0)
+    else if (strcmp(status_item, "palila_pup_fcs_st") == 0)
     {
-      strncpy(SCExAO_status[0].chuck_pup_fcs_st, value, 15);
-      SCExAO_status[0].chuck_pup_fcs_co = atoi(color);
+      strncpy(SCExAO_status[0].palila_pup_fcs_st, value, 15);
+      SCExAO_status[0].palila_pup_fcs_co = atoi(color);
     }
-    else if (strcmp(status_item, "chuck_pup_fcs") == 0)
+    else if (strcmp(status_item, "palila_pup_fcs") == 0)
     {
-      SCExAO_status[0].chuck_pup_fcs = atof(value);
+      SCExAO_status[0].palila_pup_fcs = atof(value);
     }
-    else if (strcmp(status_item, "buffy_pup") == 0)
+    else if (strcmp(status_item, "irspectro_mode_st") == 0)
     {
-      strncpy(SCExAO_status[0].buffy_pup, value, 15);
-      SCExAO_status[0].buffy_pup_co = atoi(color);
+      strncpy(SCExAO_status[0].irspectro_mode_st, value, 15);
+      SCExAO_status[0].irspectro_mode_co = atoi(color);
     }
-    // rajni
+    else if (strcmp(status_item, "irspectro_mode_x1") == 0)
+    {
+      SCExAO_status[0].irspectro_mode_x1 = atoi(value);
+    }
+    else if (strcmp(status_item, "irspectro_mode_x2") == 0)
+    {
+      SCExAO_status[0].irspectro_mode_x2 = atof(value);
+    }
+    else if (strcmp(status_item, "irspectro_col") == 0)
+    {
+      SCExAO_status[0].irspectro_col = atof(value);
+    }
+    else if (strcmp(status_item, "irspectro_fib_st") == 0)
+    {
+      strncpy(SCExAO_status[0].irspectro_fib_st, value, 15);
+      SCExAO_status[0].irspectro_fib_co = atoi(color);
+    }
+    
+    // KIWIKIU
     else if (strcmp(status_item, "lowfs_block") == 0)
     {
       strncpy(SCExAO_status[0].lowfs_block, value, 15);
@@ -1611,20 +1660,20 @@ int main(int argc, char **argv)
     }
 
     // logging
-    else if (strcmp(status_item, "logchuck") == 0)
+    else if (strcmp(status_item, "logpalila") == 0)
     {
-      strncpy(SCExAO_status[0].logchuck, value, 15);
-      SCExAO_status[0].logchuck_co = atoi(color);
+      strncpy(SCExAO_status[0].logpalila, value, 15);
+      SCExAO_status[0].logpalila_co = atoi(color);
     }
-    else if (strcmp(status_item, "logbuffy") == 0)
+    else if (strcmp(status_item, "logapapane") == 0)
     {
-      strncpy(SCExAO_status_ext[0].logbuffy, value, 15);
-      SCExAO_status_ext[0].logbuffy_co = atoi(color);
+      strncpy(SCExAO_status_ext[0].logapapane, value, 15);
+      SCExAO_status_ext[0].logapapane_co = atoi(color);
     }
-    else if (strcmp(status_item, "darkchuck") == 0)
+    else if (strcmp(status_item, "darkpalila") == 0)
     {
-      strncpy(SCExAO_status[0].darkchuck, value, 15);
-      SCExAO_status[0].darkchuck_co = atoi(color);
+      strncpy(SCExAO_status[0].darkpalila, value, 15);
+      SCExAO_status[0].darkpalila_co = atoi(color);
     }
     else if (strcmp(status_item, "hotspot") == 0)
     {
