@@ -17,7 +17,7 @@ import time
 from xaosim.scexao_shmlib import shm
 
 home = os.getenv('HOME')
-conf_dir = home + "/conf/chuckcam_aux/"
+conf_dir = home + "/conf/palila_aux/"
 sys.path.append(home+'/src/lib/python/')
 
 # ------------------------------------------------------------------

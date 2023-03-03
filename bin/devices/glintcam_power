@@ -10,7 +10,7 @@ from nps import NewNPS as NPS
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
-npsname = "chuckcam_power"
+npsname = "glintcam_power"
 npsid = 2
 portid = 5
 

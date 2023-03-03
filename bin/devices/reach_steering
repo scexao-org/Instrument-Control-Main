@@ -73,7 +73,7 @@ if args != []:
     if args[0] == "onaxis":
         os.system("reach_oap onaxis")
         sys.exit()
-    elif args[0] == "chuckxy":
+    elif args[0] == "palilaxy":
         try:
             posx = float(args[1])
             posy = float(args[2])

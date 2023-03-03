@@ -78,7 +78,7 @@ pad,target = RDB_pull(rdb)
 args = sys.argv[1:]
 if args != []:
     if len(args) >= 3:
-        if args[0] == "chuckxy":
+        if args[0] == "palilaxy":
             posx = float(args[1])
             posy = float(args[2])
         elif args[0] == "skyangle":
@@ -136,7 +136,7 @@ badpixmap_cam = shm_im_badpixmap.get_data()
 # ------------------------------------------------------------------
 
 
-pscale = 16.2 #mas per pixel in Chuckcam
+pscale = 16.2 #mas per pixel in Palila
 
 
 im_cam = shm_im.get_data().astype(np.float)
@@ -160,9 +160,9 @@ theta0 = pos0[0]
 phi0 = pos0[1]
 
 if cam == "ircam0":
-    dist_file = "/home/scexao/bin/devices/conf/distortion_chuck.txt"
+    dist_file = "/home/scexao/bin/devices/conf/distortion_palila.txt"
 else:
-    dist_file = "/home/scexao/bin/devices/conf/distortion_buffy.txt"
+    dist_file = "/home/scexao/bin/devices/conf/distortion_apapane.txt"
 
 dist = []
 with open(dist_file) as f:
@@ -188,11 +188,11 @@ retroinjpos = np.zeros(20)
 if cam == "ircam0":
     xcorr = 0
     ycorr = 4/pscale
-    camera = "Chuckcam"
+    camera = "Palila"
 else:
     xcorr = -1
     ycorr = -0.45
-    camera = "Buffycam"
+    camera = "Apapane"
 
 # loop
 while True:

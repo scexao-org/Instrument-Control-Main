@@ -216,9 +216,11 @@ while true; do
 		    4)
 			echo "moving pickoff in"
 			log "SMI: moving pickoff in"
-			nuller_pickoff in
+			photonics_pickoff in
 			sleep 0.1
 			fibinj_pickoff in
+			sleep 0.1
+			fibinj_len pl
 			sleep 0.1
 			fibinj_fib x $fibnb
 			sleep 0.1

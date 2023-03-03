@@ -121,7 +121,7 @@ badpixmap_cam = shm_im_badpixmap.get_data()
 # ------------------------------------------------------------------
 
 
-pscale = 16.2 #mas per pixel in Chuckcam and Buffycam
+pscale = 16.2 #mas per pixel in Palila and Apapane
 
 
 im_cam = shm_im.get_data().astype(np.float)
@@ -148,9 +148,9 @@ phi0 = pos0[1]
 retroinjpos = np.zeros(20)
 
 if cam == "ircam0":
-    dist_file = "/home/scexao/bin/devices/conf/distortion_chuck.txt"
+    dist_file = "/home/scexao/bin/devices/conf/distortion_palila.txt"
 else:
-    dist_file = "/home/scexao/bin/devices/conf/distortion_buffy.txt"
+    dist_file = "/home/scexao/bin/devices/conf/distortion_apapane.txt"
     
 
 dist = []
@@ -172,11 +172,11 @@ for i in range(len(px1)):
 if cam == "ircam0":
     xcorr = 0
     ycorr = 4/pscale
-    camera = "Chuckcam"
+    camera = "Palila"
 else:
     xcorr = -1
     ycorr = -0.45
-    camera = "Buffycam"
+    camera = "Apapane"
 
 # loop
 while True:

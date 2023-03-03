@@ -97,15 +97,15 @@ except:
 
 gpin,rpin = RDB_pull(rdb)
 
-os.system('cp %s/src/lib/python/%s_PSF_%s.fits %s/src/lib/python/simref.fits' %(home,"Chuckcam","H",home))
+os.system('cp %s/src/lib/python/%s_PSF_%s.fits %s/src/lib/python/simref.fits' %(home,"Palila","H",home))
 
 # parameters of the target point
-with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
+with open('/home/scexao/conf/palila_aux/hotspots.txt') as file:
     pos = np.array([[float(digit) for digit in line.split()] for line in file])
 
 pscale = 15.3 #mas per pixel in Palila
 
-filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
+filename = "/home/scexao/conf/palila_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
 ncor = len(cors)
 cort = np.zeros((2,ncor))

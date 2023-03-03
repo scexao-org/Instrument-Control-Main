@@ -54,9 +54,9 @@ Usage: ircam_steering <mode> <param1> <param2>
 ------------------------------------------------------------------
 MODE:
         onaxis  move the PSF back on-axis
-       chuckxy  steer the PSF with XY coordinates in arcsec in the
+      palilaxy  steer the PSF with XY coordinates in arcsec in the
                 referential of the bench
-    chuckangle  steer the PSF with distance and angle in arcsec
+   palilaangle  steer the PSF with distance and angle in arcsec
                 and degree in the referential of the bench
       skyangle  steer the PSF with distance and angle in arcsec
                 and degree relative to North
@@ -75,7 +75,7 @@ if args != []:
         os.system("oap4 onaxis")
         os.system("steering onaxis")
         sys.exit()
-    elif args[0] == "chuckxy":
+    elif args[0] == "palilaxy":
         try:
             posx = float(args[1])
             posy = float(args[2])
@@ -83,7 +83,7 @@ if args != []:
         except:
             print(hmsg)
             sys.exit()
-    elif args[0] == "chuckangle":
+    elif args[0] == "palilaangle":
         try:
             dist = float(args[1])
             angle = float(args[2])

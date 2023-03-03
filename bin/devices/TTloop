@@ -161,12 +161,12 @@ dmc = np.zeros((50,50))
 
 timeout0 = 0
 # parameters of the target point
-with open('/home/scexao/conf/chuckcam_aux/hotspots.txt') as file:
+with open('/home/scexao/conf/palila_aux/hotspots.txt') as file:
     pos = np.array([[float(digit) for digit in line.split()] for line in file])
 
 pscale = 16.2 #mas per pixel in Palila
 
-filename = "/home/scexao/conf/chuckcam_aux/hotspots_cor.txt"
+filename = "/home/scexao/conf/palila_aux/hotspots_cor.txt"
 cors = [line.rstrip('\n') for line in open(filename)]
 ncor = len(cors)
 cort = np.zeros((2,ncor))
