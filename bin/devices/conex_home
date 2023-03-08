@@ -48,6 +48,8 @@ sleep 1
 #echo "inverse PIAA y:"
 #invpiaa y home &
 #sleep 1
+echo "REACH Pickoff:"
+reach_pickoff home &
 echo "REACH OAP:"
 reach_oap home &
 echo "REACH rotation:"

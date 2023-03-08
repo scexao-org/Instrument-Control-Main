@@ -1359,6 +1359,11 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].irspectro_mode_x2 = atof(value);
     }
+    else if (strcmp(status_item, "irspectro_col_st") == 0)
+    {
+      strncpy(SCExAO_status[0].irspectro_col_st, value, 15);
+      SCExAO_status[0].irspectro_col_co = atoi(color);
+    }
     else if (strcmp(status_item, "irspectro_col") == 0)
     {
       SCExAO_status[0].irspectro_col = atof(value);

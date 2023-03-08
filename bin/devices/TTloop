@@ -70,9 +70,9 @@ gpin = RDB_pull(rdb)
 
 # Reading in shared memory
 #------------------------
-shm_im = shm("ircam0")
-shm_im_dark = shm("ircam0_dark")
-shm_im_badpixmap = shm("ircam0_badpixmap")
+shm_im = shm("palila")
+shm_im_dark = shm("palila_dark")
+shm_im_badpixmap = shm("palila_badpixmap")
 dm = shm("dm00disp08")
 
 dark_palila = shm_im_dark.get_data()

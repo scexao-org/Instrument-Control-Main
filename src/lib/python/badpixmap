@@ -24,9 +24,9 @@ def main():
     else:
         if int(args[0].lower()) == 1 :
             pathcube = "/media/data/"+str(args[1].lower())
-            pathmap = "/home/scexao/conf/chuckcam_aux/badpixmap.fits"
+            pathmap = "/home/scexao/conf/palila_aux/badpixmap.fits"
         elif int(args[0].lower()) == 2 :
-            pathmap = "/home/scexao/conf/rajnicam_aux/badpixmap.fits"
+            pathmap = "/home/scexao/conf/kiwikiu_aux/badpixmap.fits"
             pathcube = "/media/data/LLOWFS/"+str(args[1].lower())
         
         

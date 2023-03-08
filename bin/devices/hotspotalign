@@ -31,9 +31,9 @@ from camera_tools import cam_cmd
 from pyMilk.interfacing.isio_shmlib import SHM as shm
 import image_processing as impro
 
-shm_im = shm("ircam0")
-shm_im_dark = shm("ircam0_dark")
-shm_im_badpixmap = shm("ircam0_badpixmap")
+shm_im = shm("palila")
+shm_im_dark = shm("palila_dark")
+shm_im_badpixmap = shm("palila_badpixmap")
 
 # Reading in shared memory
 #------------------------

@@ -81,7 +81,7 @@ nim = 100
 
 gain = 0.5
 trackcen = int(1)
-cam = "ircam0"
+cam = "palila"
 args = sys.argv[1:]
 if args != []:
     if len(args) == 2:
@@ -108,7 +108,7 @@ sep *= 1.04
 shm_im = shm(cam)
 shm_im_dark = shm("%s_dark" %cam)
 shm_im_badpixmap = shm("%s_badpixmap"%cam)
-shm_ircam_retroinj = shm("ircam0_retroinj")
+shm_ircam_retroinj = shm("palila_retroinj")
 
 dark_cam = shm_im_dark.get_data()
 badpixmap_cam = shm_im_badpixmap.get_data()
@@ -147,7 +147,7 @@ phi0 = pos0[1]
 
 retroinjpos = np.zeros(20)
 
-if cam == "ircam0":
+if cam == "palila":
     dist_file = "/home/scexao/bin/devices/conf/distortion_palila.txt"
 else:
     dist_file = "/home/scexao/bin/devices/conf/distortion_apapane.txt"
@@ -169,7 +169,7 @@ for i in range(len(px1)):
     px2[ind[i,0],ind[i,1]] = px1[i]
     py2[ind[i,0],ind[i,1]] = py1[i]
 
-if cam == "ircam0":
+if cam == "palila":
     xcorr = 0
     ycorr = 4/pscale
     camera = "Palila"
@@ -197,7 +197,7 @@ while True:
             i = 0
             im_cam -= dark_cam
             im_cam *= badpixmap_cam
-            if cam == "ircam0":
+            if cam == "palila":
                 corim = np.median(im_cam[:int(ysizeim/10),:], axis=0)+np.median(im_cam[-int(ysizeim/10):,:], axis=0)
                 corim /= 2.
                 corim2 = np.tile(corim, (ysizeim,1))
@@ -210,7 +210,7 @@ while True:
                 posst[1,0] += xcorr
                 posst[1,1] += ycorr
                 if trackstar == 0:
-                    if cam == "ircam0":
+                    if cam == "palila":
                         posx = -sep*m.cos(m.radians(pa-pad))
                         posy = -sep*m.sin(m.radians(pa-pad))
                     else:
@@ -218,7 +218,7 @@ while True:
                         posy = sep*m.sin(m.radians(pa-pad))
                     xt = np.polynomial.polynomial.polyval2d(posx,posy,px2)
                     yt = np.polynomial.polynomial.polyval2d(posx,posy,py2)
-                    if cam == "ircam0":
+                    if cam == "palila":
                         theta0 += gain*(posst[1,0]-xt)/500
                         phi0 += gain*(posst[1,1]-yt)/500
                     else:
@@ -226,7 +226,7 @@ while True:
                         phi0 -= gain*(posst[1,0]-yt)/500
                         
                 else:
-                    if cam == "ircam0":
+                    if cam == "palila":
                         theta0 += gain*(posst[1,0]-posst[trackstar+1,0])/500
                         phi0 += gain*(posst[1,1]-posst[trackstar+1,1])/500
                     else:

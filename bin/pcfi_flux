@@ -24,8 +24,8 @@ class ird_pcfi(object):
 
     def __init__(self):
         print('Initializing camera shared memory...')
-        self.cam = shm("/tmp/ircam0.im.shm", verbose=False)
-        self.dark = shm("/tmp/ircam0_dark.im.shm", verbose=False)
+        self.cam = shm("/tmp/palila.im.shm", verbose=False)
+        self.dark = shm("/tmp/palila_dark.im.shm", verbose=False)
         if not os.path.isfile("/tmp/ird_flux_val.im.shm"):
             os.system("creashmim %s %d %d" % ("ird_flux_val",1,8))
         self.flux=shm("/tmp/ird_flux_val.im.shm",verbose=False)

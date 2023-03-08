@@ -38,12 +38,12 @@ if __name__ == "__main__":
     g2proxy = ro.remoteObjectProxy('SCEXAO')
     monitored = ["kcam"]
     camids = {
-        "kcam": "B",
-        "ircam0": "C",
+        "apapane": "B",
+        "palila": "C",
         "first": "F",
         "glint": "G",
         "renocam": "P",
-        "ircam1": "R",
+        "kiwikiu": "R",
         "vcam": "V"
     }
     directory = "/media/data/ARCHIVED_DATA"

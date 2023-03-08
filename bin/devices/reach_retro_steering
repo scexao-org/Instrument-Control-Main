@@ -91,15 +91,15 @@ if args != []:
     if len(args) == 5:
         nim = float(args[3])
         gain = float(args[4])
-        cam = "ircam0"
+        cam = "palila"
     elif len(args) == 4:
         nim = float(args[3])
         gain = 0.8
-        cam = "ircam0"
+        cam = "palila"
     elif len(args) == 3:
         nim = 100
         gain = 0.8
-        cam = "ircam0"
+        cam = "palila"
         
 else:
     posx = 0
@@ -108,12 +108,12 @@ else:
     pa = 0
     nim = 100
     gain = 0.9
-    cam = "ircam0"
+    cam = "palila"
 
-if cam == "ircam0" and args[0] == "skyangle":
+if cam == "palila" and args[0] == "skyangle":
     posx = -sep*m.cos(m.radians(pa-pad))
     posy = -sep*m.sin(m.radians(pa-pad))
-elif cam == "kcam" and args[0] == "skyangle":
+elif cam == "apapane" and args[0] == "skyangle":
     posx = -sep*m.sin(m.radians(pa-pad))
     posy = sep*m.cos(m.radians(pa-pad))
 
@@ -121,7 +121,7 @@ elif cam == "kcam" and args[0] == "skyangle":
 shm_im = shm(cam)
 shm_im_dark = shm("%s_dark" %cam)
 shm_im_badpixmap = shm("%s_badpixmap" %cam)
-shm_ircam_retroinj = shm("ircam0_retroinj")
+shm_ircam_retroinj = shm("palila_retroinj")
 
 dark_cam = shm_im_dark.get_data()
 badpixmap_cam = shm_im_badpixmap.get_data()
@@ -159,7 +159,7 @@ print(pos0)
 theta0 = pos0[0]
 phi0 = pos0[1]
 
-if cam == "ircam0":
+if cam == "palila":
     dist_file = "/home/scexao/bin/devices/conf/distortion_palila.txt"
 else:
     dist_file = "/home/scexao/bin/devices/conf/distortion_apapane.txt"
@@ -185,7 +185,7 @@ print(xt, yt)
 
 retroinjpos = np.zeros(20)
 
-if cam == "ircam0":
+if cam == "palila":
     xcorr = 0
     ycorr = 4/pscale
     camera = "Palila"
@@ -213,7 +213,7 @@ while True:
             i = 0
             im_cam -= dark_cam
             im_cam *= badpixmap_cam
-            if cam == "ircam0":
+            if cam == "palila":
                 corim = np.median(im_cam[:int(ysizeim/10),:], axis=0)+np.median(im_cam[-int(ysizeim/10):,:], axis=0)
                 corim /= 2.
                 corim2 = np.tile(corim, (ysizeim,1))
@@ -222,7 +222,7 @@ while True:
             posst,xoff,yoff,strehlv,dia_ring,distco,angleco,contrastco = impro.binary_processing(im_cam, target=target, mas_pix=pscale, pad=pad, nst=1, a=a, rm=rm, saveplot=False,retroinj=True, strehlcalc = False, verbose=False, camera = camera)
             posst[1,0] += xcorr
             posst[1,1] += ycorr
-            if cam == "ircam0":
+            if cam == "palila":
                 theta0 += gain*(posst[1,0]-xt)/500
                 phi0 += gain*(posst[1,1]-yt)/500
             else:

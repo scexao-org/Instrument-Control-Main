@@ -1,1 +1,1 @@
-by-path/pci-0000:00:1d.0-usb-0:1.4.1:1.0-port0
+by-id/usb-FTDI_FT232R_USB_UART_A10JJCDU-if00-port0

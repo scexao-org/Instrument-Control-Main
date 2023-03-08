@@ -24,7 +24,7 @@ sleep 0.1
 compplate
 sleep 0.1
 echo "OAP1:"
-oap1 int
+oap1 ao
 sleep 0.1
 echo "Dichroic:"
 dichroic in &
@@ -92,7 +92,7 @@ echo "Field stop:"
 field_stop out &
 sleep 0.1
 echo "CHARIS pickoff:"
-charis_pickoff 5 &
+charis_pickoff 4 &
 sleep 0.1
 echo "MKIDS pickoff:"
 mkids_pickoff 3 &

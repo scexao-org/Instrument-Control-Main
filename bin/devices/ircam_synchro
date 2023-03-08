@@ -41,7 +41,7 @@ def open_shm(shm_name, dims=(1,1), check=False):
 # ------------------------------------------------------------------
 #             short hands for tmux commands
 # ------------------------------------------------------------------
-def tmux(cargs="", session="ircam0", command="send-keys"):
+def tmux(cargs="", session="palila", command="send-keys"):
     ''' ------------------------------------------------------------
     Synthesizes and sends a tmux command. The default option was
     chosen to match the most common one, hence making the code

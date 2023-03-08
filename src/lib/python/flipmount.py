@@ -53,7 +53,7 @@ class flipmount:
         self.flipid = flipid
         filename = "/home/scexao/bin/devices/conf/path_dio.txt"
         filep = open(filename, 'r')
-        self.diodev = "/dev/serial/by-path/"
+        self.diodev = "/dev/serial/"
         self.diodev += filep.read().rstrip('\n')
 
         na = args.__len__()
