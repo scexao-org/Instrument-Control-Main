@@ -1,1 +1,1 @@
-1;Fiber bundle    ; 55900;106000
+1;Fiber bundle    ; 39400;118100

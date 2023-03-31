@@ -1373,6 +1373,14 @@ int main(int argc, char **argv)
       strncpy(SCExAO_status[0].irspectro_fib_st, value, 15);
       SCExAO_status[0].irspectro_fib_co = atoi(color);
     }
+    else if (strcmp(status_item, "irspectro_fib_x") == 0)
+    {
+      SCExAO_status[0].irspectro_fib_x = atof(value);
+    }
+    else if (strcmp(status_item, "irspectro_fib_y") == 0)
+    {
+      SCExAO_status[0].irspectro_fib_y = atof(value);
+    }
     
     // KIWIKIU
     else if (strcmp(status_item, "lowfs_block") == 0)
@@ -1393,6 +1401,15 @@ int main(int argc, char **argv)
     else if (strcmp(status_item, "fibinj_pickoff") == 0)
     {
       SCExAO_status[0].fibinj_pickoff = atof(value);
+    }
+    else if (strcmp(status_item, "fibinj_len_st") == 0)
+    {
+      strncpy(SCExAO_status[0].fibinj_len_st, value, 15);
+      SCExAO_status[0].fibinj_len_co = atoi(color);
+    }
+    else if (strcmp(status_item, "fibinj_len") == 0)
+    {
+      SCExAO_status[0].fibinj_len = atof(value);
     }
     else if (strcmp(status_item, "fibinj_fib_st") == 0)
     {

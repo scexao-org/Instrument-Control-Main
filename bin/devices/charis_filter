@@ -3,7 +3,7 @@
     charis_filter
 
 Usage:
-    charis_filter (j|h|k|out)
+    charis_filter (j|h|k|out) [-w]
 '''
 
 from docopt import docopt
@@ -28,9 +28,9 @@ if __name__ == "__main__":
     piaa1_proc = subprocess.Popen(['piaa1', str(pos[0])])
     piaa2_proc = subprocess.Popen(['piaa2', str(pos[1])])
 
-    # Note: if we want a waited exit, we'd just add:
-    # piaa1_proc.wait()
-    # piaa2_proc.wait()
+    if args['-w']:
+        piaa1_proc.wait()
+        piaa2_proc.wait()
 
 ''' LEGACY
 #!/bin/bash

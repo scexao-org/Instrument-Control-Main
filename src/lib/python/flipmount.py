@@ -41,10 +41,12 @@ class flipmount:
                  flipname,
                  flipid,
                  args=[],
-                 description="no description"):
+                 description="no description",
+                 defpos=["IN","OUT"]):
 
         self.flipname = flipname
         self.description = description
+        self.defpos = defpos
 
         if args != [] and "--help1" in args[0]:
             self.quickhelp()
@@ -103,11 +105,11 @@ COMMAND:
         key = rdb.hget('map:shm_lookup', self.flipname)
         # Now Getting the keys
         value = rdb.hget(key, 'value').strip()
-        if value == 'IN':
-            value = 'OUT'
+        if value == self.defpos[0]:
+            value = self.defpos[1]
             color = '1'
-        elif value == 'OUT':
-            value = 'IN'
+        elif value == self.defpos[1]:
+            value = self.defpos[0]
             color = '0'
         else:
             value = 'UNKNOWN'
@@ -118,7 +120,7 @@ COMMAND:
 
     # -----------------------------------------------------------------
     def setout(self):
-        value = 'OUT'
+        value = self.defpos[1]
         color = '1'
         command = LEGACY_EXEC + ' set ' + self.flipname + ' "' + value + '" ' + color
         os.system(command)
@@ -128,9 +130,9 @@ COMMAND:
         key = rdb.hget('map:shm_lookup', self.flipname)
         # Now Getting the keys
         value = rdb.hget(key, 'value').strip()
-        if value == 'IN':
-            print("Flip mount is in")
-        elif value == 'OUT':
-            print("Flip mount is out")
+        if value == self.defpos[0]:
+            print("Flip mount is %s" %value)
+        elif value == self.defpos[1]:
+            print("Flip mount is %s" %value)
         else:
             print("Flip mount in unknown state")

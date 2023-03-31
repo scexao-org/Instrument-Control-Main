@@ -42,7 +42,7 @@ def ezs_response(cmd, data, quiet=False):
         print("cmd      = ", cmd)
         print("reply    = ", a)
 
-    if cmd[2] == "?" and a != '':
+    if cmd[2] == "?" and a != '' and ('ff2f30' in str(a.decode())):
         b   = (str(a.decode()).split('ff2f30'))[1]
         c   = (b.split('030d0a'))[0]
         res = binascii.a2b_hex(c[2:])

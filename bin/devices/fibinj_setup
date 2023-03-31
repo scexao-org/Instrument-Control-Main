@@ -61,6 +61,7 @@ declare -a ds
 declare -a xs
 declare -a ys
 declare -a fs
+declare -a ss
 declare -a cs
 i=1
 for line in `cat $files`
@@ -70,7 +71,8 @@ do
     xs[$i]=`echo $line |cut -d\; -f3`
     ys[$i]=`echo $line |cut -d\; -f4`
     fs[$i]=`echo $line |cut -d\; -f5`
-    cs[$i]=`echo $line |cut -d\; -f6`
+    ss[$i]=`echo $line |cut -d\; -f6`
+    cs[$i]=`echo $line |cut -d\; -f7`
     i=$(($i+1))
 done
 
@@ -87,6 +89,44 @@ do
     nc[$i]=`echo $line |cut -d\; -f1`
     dc[$i]=`echo $line |cut -d\; -f2`
     fc[$i]=`echo $line |cut -d\; -f3`
+    i=$(($i+1))
+done
+
+echo "reading Spectro fibers positions"
+files="/home/scexao/bin/devices/conf/conf_irspectro_fib.txt"
+nli=$(cat $files | wc -l)
+IFS=$'\n'
+declare -a ni
+declare -a di
+declare -a xi
+declare -a yi
+declare -a ci
+i=1
+for line in `cat $files`
+do
+    ni[$i]=`echo $line |cut -d\; -f1`
+    di[$i]=`echo $line |cut -d\; -f2`
+    xi[$i]=`echo $line |cut -d\; -f3`
+    yi[$i]=`echo $line |cut -d\; -f4`
+    ci[$i]=`echo $line |cut -d\; -f5`
+    i=$(($i+1))
+done
+
+echo "reading Spectro fibers focus"
+files="/home/scexao/bin/devices/conf/conf_irspectro_col.txt"
+nlj=$(cat $files | wc -l)
+IFS=$'\n'
+declare -a nj
+declare -a df
+declare -a fj
+declare -a cj
+i=1
+for line in `cat $files`
+do
+    nj[$i]=`echo $line |cut -d\; -f1`
+    dj[$i]=`echo $line |cut -d\; -f2`
+    fj[$i]=`echo $line |cut -d\; -f3`
+    cj[$i]=`echo $line |cut -d\; -f4`
     i=$(($i+1))
 done
 
@@ -160,18 +200,22 @@ while true; do
 	
 	echo $fibselected > "/home/scexao/bin/devices/conf/current_SMINUMBER.txt"
 	
-	menuitems=( "0" "Move PIAA1 in")
-	menuitems+=( "1" "Manual PIAA1 alignment")
-	menuitems+=( "2" "Move PIAA2 in")
-	menuitems+=( "3" "Manual PIAA2 alignment")
+	menuitems=( "00" "Move PIAA1 in")
+	menuitems+=( "01" "Manual PIAA1 alignment")
+	menuitems+=( "02" "Move PIAA2 in")
+	menuitems+=( "03" "Manual PIAA2 alignment")
 	menuitems+=( "-" "")
-	menuitems+=( "4" "Move fiber in")
-	menuitems+=( "5" "Manual Fiber alignment")
-	menuitems+=( "6" "Manual Carriage translation")
-	menuitems+=( "7" "Manual filter change")
+	menuitems+=( "04" "Move fiber in")
+	menuitems+=( "05" "Manual Fiber alignment")
+	menuitems+=( "06" "Manual Carriage translation")
 	menuitems+=( "-" "")
-	menuitems+=( "8" "Move pickoff out")
-	menuitems+=( "9" "Move PIAA out")
+	menuitems+=( "07" "Move pickoff out")
+	menuitems+=( "08" "Move PIAA out")
+	menuitems+=( "-" "")
+	menuitems+=( "09" "IRSPECTRO photometric mode")
+	menuitems+=( "10" "IRSPECTRO spectroscopic mode")
+	menuitems+=( "11" "Manual Fiber alignment")
+	menuitems+=( "12" "IRSPECTRO out")
 	menuitems+=( "-" "")
 	menuitems+=( "C" "Configurations" )
 	
@@ -191,29 +235,29 @@ while true; do
 		menuconfmanage_default=$choiceval
 		case $choiceval in
 		    -);;
-   		    0) 
+   		    00) 
 			# moving PIAA1 wheel
 			echo "moving PIAA1 in"
 			log "SMI: moving PIAA1 in"
 			piaa1 4
 			
 			state="menuconfmanage";;
-		    1)
+		    01)
 			state="menuconf_p1align"
 			log "SMI: Manually aligning PIAA1"
 			manualpiaa1align=0;;
-		    2)
+		    02)
 			# moving PIAA2 wheel
 			echo "moving PIAA2 in"
 			log "SMI: moving PIAA2 in"
 			piaa2 4
 			
 			state="menuconfmanage";;
-		    3) 
+		    03) 
 			state="menuconf_p2align"
 			log "SMI: Manually aligning PIAA2"
 			manualpiaa2align=0;;
-		    4)
+		    04)
 			echo "moving pickoff in"
 			log "SMI: moving pickoff in"
 			photonics_pickoff in
@@ -226,31 +270,63 @@ while true; do
 			sleep 0.1
 			fibinj_fib y $fibnb
 			sleep 0.1
-			fibinj_fib f $fibnb		    
+			fibinj_fib f $fibnb
+			sleep 1
+			fibinj_fib status
 			state="menuconfmanage";;
-		    5)
+		    05)
 			state="menuconf_fiberalign"
 			log "SMI: Manually aligning the Fiber"
 			manualfiberalign=0;;
-		    6)
+		    06)
 			state="menuconf_carriage"
 			log "SMI: Manually translating the carriage"
 			manualfiberalign=0;;
-		    7)
-			state="menuconf_filter"
-			;;
-		    8)
+		    07)
 			echo "moving pickoff out"
 			fibinj_pickoff out
 			log "SMI: moving pickoff out"
 			state="menuconfmanage";;
-		    9)
+		    08)
 			echo "moving PIAA out"
 			piaa1 7
 			piaa2 7
 			log "SMI: moving the PIAA out"
 			state="menuconfmanage";;
-		    
+		    09)
+			echo "moving IR spectrograph in photometric mode"
+			irspectro_mode photo
+			sleep 0.1
+			irspectro_fib x ${ss[$fibnb]}
+			sleep 0.1
+			irspectro_fib y ${ss[$fibnb]}
+			sleep 0.1
+			irspectro_col ${ss[$fibnb]}
+			sleep 1
+			irspectro_fib status
+			state="menuconfmanage";;
+			10)
+			echo "moving IR spectrograph in spectrometric mode"
+			irspectro_mode spectro
+			sleep 0.1
+			irspectro_fib x ${ss[$fibnb]}
+			sleep 0.1
+			irspectro_fib y ${ss[$fibnb]}
+			sleep 0.1
+			irspectro_col ${ss[$fibnb]}
+			sleep 1
+			irspectro_fib status
+			state="menuconfmanage";;
+			11)
+			state="menuconf_spectrofibalign"
+			log "SMI: Manually aligning the IR Spectrometer Fiber"
+			spectrofibalign=0;;
+			12)
+			echo "moving IR spectrograph out"
+			irspectro_mode out
+			sleep 0.1
+			state="menuconfmanage";;
+
 		    C) state="menuconfselect";;  
 		esac;;
 	    3) state="menuconfselect";; # "Back" button
@@ -735,43 +811,123 @@ while true; do
 	esac
     fi
 
-    # ==========================================================
-    #  MANUAL FILTER CHANGE
-    if [ $state = "menuconf_filter" ]; then
+# ==========================================================
+    #  MANUAL ALIGNMENT IRSPECTRO FIBER
+    if [ $state = "menuconf_spectrofibalign" ]; then
 	stateok=1
-	menuname="MANUAL FILTER CHANGE"
+	menuname="MANUAL ALIGNMENT IR SPECTRO FIBER"
 	
-	file="/home/scexao/bin/devices/conf/current_filter.txt"
+	file="/home/scexao/bin/devices/conf/current_spectrofibamp.txt"
 	if [ -a $file ]
 	then
-	    filter=$(echo "$(cat $file)")
+	    fibamp=$(echo "$(cat $file)")
 	else
-	    filter="?"
+	    fibamp="?"
 	fi
 	
-	menuitems=( "1" " 1250 nm, 25 nm BW")
-	menuitems+=( "2" " 1300 nm, 25 nm BW")
-	menuitems+=( "3" " 1350 nm, 25 nm BW")
-	menuitems+=( "4" " 1550 nm, 25 nm BW")
-	menuitems+=( "5" " 1610 nm, 12 nm BW")
-	menuitems+=( "6" " 1500 nm, 25 nm BW")
 	
-	dialog --title "Manual filter change" \
+	menuitems=(  "0" "Amplitude : $spectrofibamp microns")
+	menuitems+=( "-" "")
+	menuitems+=( "1" "Move up")
+	menuitems+=( "2" "Move down")
+	menuitems+=( "3" "Move left")
+	menuitems+=( "4" "Move right")
+	menuitems+=( "5" "Focus in")
+	menuitems+=( "6" "Focus out")
+	
+	dialog --title "IR Spectro Fiber manual alignment" \
 	    --ok-label "Select" \
 	    --cancel-label "Back" \
 	    --help-button --help-label "Exit" \
-	    --default-item ${filter} \
+	    --default-item $spectrofibalign \
+	    --menu "$menuname" \
+	    50 80 100 "${menuitems[@]}"  2> $tempfile
+	
+	retval=$?
+	choiceval=$(cat $tempfile)
+	
+	case $retval in
+	    0) 	spectrofibalign=$choiceval
+		case $choiceval in
+		    -) ;;
+  		    0) state="menuconf_spectrofibamp";;
+		    1)
+			((yi[$fibnb]-=$spectrofibamp))
+			irspectro_fib y goto ${yi[$fibnb]}
+			sleep 0.1
+			state="menuconf_spectrofibalign";;
+		    2)
+			((yi[$fibnb]+=$spectrofibamp))
+			irspectro_fib y goto ${yi[$fibnb]}
+			sleep 0.1
+			state="menuconf_spectrofibalign";;
+		    3)
+			((xi[$fibnb]-=$spectrofibamp))
+			irspectro_fib x goto ${xi[$fibnb]}
+			sleep 0.1
+			state="menuconf_spectrofibalign";;
+		    4) 
+			((xi[$fibnb]+=$spectrofibamp))
+			irspectro_fib x goto ${xi[$fibnb]}
+			sleep 0.1
+			state="menuconf_spectrofibalign";;
+		    5)
+			((fj[$fibnb]-=$spectrofibamp))
+			irspectro_col goto ${fj[$fibnb]}
+			sleep 0.1
+			state="menuconf_spectrofibalign";;
+		    6) 
+			((fj[$fibnb]+=$spectrofibamp))
+			irspectro_col goto ${fj[$fibnb]}
+			sleep 0.1
+			state="menuconf_spectrofibalign";;
+		esac
+		;;
+	    1) 
+		log "SMI: IR Spectro Fiber aligned"
+		state="menuconf_saves";; 
+	    2) state="menuexit";;
+	    255) ;;#state="menuexit";;
+	esac
+	
+    fi
+
+    # ==========================================================
+    #  AMPLITUDE ALIGNMENT IR SPECTRO FIBER
+    if [ $state = "menuconf_spectrofibamp" ]; then
+	stateok=1
+	menuname="AMPLITUDE ALIGNMENT IR SPECTRO FIBER"
+	
+	file="/home/scexao/bin/devices/conf/current_spectrofibamp.txt"
+	if [ -a $file ]
+	then
+	    fibamp=$(echo "$(cat $file)")
+	else
+	    fibamp="?"
+	fi
+	
+	menuitems=( "1000" " 1000 microns")
+	menuitems+=( "500" " 500 microns")
+	menuitems+=( "200" " 200 microns")
+	menuitems+=( "100" " 100 microns")
+	menuitems+=( "50" " 50 microns")
+	menuitems+=( "20" " 20 microns")
+	menuitems+=( "10" " 10 microns")
+	
+	dialog --title "Amplitude alignment FPM" \
+	    --ok-label "Select" \
+	    --cancel-label "Back" \
+	    --help-button --help-label "Exit" \
+	    --default-item ${fibamp} \
 	    --menu "$menuname" \
 	    50 80 100 "${menuitems[@]}"  2> $tempfile
 	
 	retval=$?
 	
 	case $retval in
-	    0)filter=$(cat $tempfile)
-		echo "$filter" > /home/scexao/bin/devices/conf/current_filter.txt
-		smiwheel $filter
-		log "SMI: changing filter to ${menuitems[$(($filter * 2 - 1))]}"
-		state="menuconfmanage";; 
+	    0)fibamp=$(cat $tempfile)
+		echo "$spectrofibamp" > /home/scexao/bin/devices/conf/current_fibamp.txt
+		state="menuconf_spectrofibalign";; 
 	    1) state="menuconfmanage";; 
 	    2) state="menuexit";;
 	    255) ;;#state="menuexit";;

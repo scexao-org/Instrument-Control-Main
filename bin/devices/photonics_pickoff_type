@@ -27,8 +27,9 @@ from flipmount import flipmount
 stagename = "photonics_pickoff_type"
 flipid = "N"
 description = "Flip mount for the Photonics modules pickoff"
+defpos = ["K-BAND DICHRO","90:10 BS"]
 
 # GENERIC CODE
 
 args = sys.argv[1:]
-flipmount(stagename, flipid, args, description)
+flipmount(stagename, flipid, args, description, defpos)

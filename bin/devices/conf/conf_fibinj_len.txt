@@ -1,2 +1,2 @@
-1;Photonic Lantern;0.610;0
-2;K-band REACH    ;25.08;1
+1;Photonic Lant. ;0.610;1
+2;K-band REACH   ;25.08;0

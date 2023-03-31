@@ -1,1 +1,6 @@
-1;IR PyWFS focus  ;0.00;1
+1;SMA Linear arr.;0.50;1
+2;FCP/PC SMF     ;1.00;1
+3;SMA MMF        ;0.50;1
+4;V-groove Port 1;0.00;1
+5;V-groove Port 2;0.00;1
+6;V-groove Port 3;0.00;1

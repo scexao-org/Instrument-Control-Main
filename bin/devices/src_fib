@@ -27,7 +27,7 @@ from devices import devices
 
 devname = "src_fib"
 
-conexids = ["usb-Newport_CONEX-AGP_A60QY9WJ-if00-port0", "usb-Newport_CONEX-AGP_A6XTSLMS-if00-port0"]
+conexids = ["usb-Newport_CONEX-AGP_A60QY9WJ-if00-port0", "usb-Newport_CONEX-AGP_A606QDT0-if00-port0"]
 conexnames = ["x", "y"]
 
 description = "Calibration source fiber stage"
