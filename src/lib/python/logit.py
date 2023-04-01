@@ -24,4 +24,3 @@ def logit(system_keyword, status, checkfolder=True):
     else:
         # max frequency of 280Hz, will return an error if date-folder doesn't exist
         dummy = _subprocessPopen("/home/scexao/bin/dolog -s "+str(system_keyword)+" '"+str(status).replace("'","")+"'", shell=True)
-

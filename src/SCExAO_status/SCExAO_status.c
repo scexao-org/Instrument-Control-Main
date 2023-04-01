@@ -177,7 +177,7 @@ int status_display()
   init_pair(2, COLOR_BLACK, COLOR_RED);
   init_pair(3, COLOR_BLACK, COLOR_GREEN);
   init_pair(4, COLOR_BLACK, COLOR_BLUE);
-  init_pair(5, COLOR_BLACK, COLOR_CYAN);
+  init_pair(5, COLOR_BLACK, COLOR_CYAN);/home/vdeo/src/milk/plugins/cacao-src/AOloopControl_computeCalib/AOloopControl_computeCalib_Hadamard.c
   init_pair(6, COLOR_GREEN, COLOR_BLACK);
 
   while (!kbdhit())

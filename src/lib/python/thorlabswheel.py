@@ -154,9 +154,7 @@ CONTENT:""")
                 "subprocess.call(['scxkw-setter', 'set', self.devnamew, params, self.param%d[slot-1]])"
                 % (self.nend, ), globals(), locals())
         else:
-            subprocess.call([
-                "scxkw-setter", "set", self.devnamew, params
-            ])
+            subprocess.call(["scxkw-setter", "set", self.devnamew, params])
 
     # -----------------------------------------------------------------
     def wheel_goto_slot(self, slot):
@@ -173,10 +171,7 @@ CONTENT:""")
                     "subprocess.call(['scxkw-setter', 'set', self.devnamew, params, self.param%d[int(slot)-1]])"
                     % (self.nend, ), globals(), locals())
             else:
-                subprocess.call([
-                    "scxkw-setter", "set", self.devnamew,
-                    params
-                ])
+                subprocess.call(["scxkw-setter", "set", self.devnamew, params])
 
         else:
             print("Conex only has 6 positions")
