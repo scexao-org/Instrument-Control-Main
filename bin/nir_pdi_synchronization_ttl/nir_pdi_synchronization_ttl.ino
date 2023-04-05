@@ -14,7 +14,7 @@
 // We use unsigned long for everything time-related in microseconds.
 unsigned long max_integration_time = 1000000;
 unsigned long min_integration_time = 100;
-unsigned long beginning_time;
+unsigned long last_loop_finish;
 unsigned long last_reset;
 unsigned long dt1;
 unsigned long dt2;
@@ -115,37 +115,42 @@ void loop()
       dt5 = dt2 + integration_time + 20;
       dt6 = dt3 + integration_time;
 
+
+      // last_loop_finish is really when the for(;;) last finished.
+      last_loop_finish = micros();
       for (;;)
       {
-        beginning_time = micros();
         // One loop pass covers 2 exposure times with 2 polarizations
 
         // First pola flc_pin LOW
-        for (; micros() - beginning_time < dt1;) // This way of testing works around micros() overflowing
+        for (; micros() - last_loop_finish < dt1;) // This way of testing works around micros() overflowing
         {
         }
         digitalWrite(camera_pin_p, HIGH);
-        for (; micros() - beginning_time < dt2;)
+        for (; micros() - last_loop_finish < dt2;)
         {
         }
         digitalWrite(camera_pin_p, LOW);
-        for (; micros() - beginning_time < dt3;)
+        for (; micros() - last_loop_finish < dt3;)
         {
         }
         // Second pola flc_pin HIGH
         digitalWrite(flc_pin, HIGH);
-        for (; micros() - beginning_time < dt4;)
+        for (; micros() - last_loop_finish < dt4;)
         {
         }
         digitalWrite(camera_pin_p, HIGH);
-        for (; micros() - beginning_time < dt5;)
+        for (; micros() - last_loop_finish < dt5;)
         {
         }
         digitalWrite(camera_pin_p, LOW);
-        for (; micros() - beginning_time < dt6;)
+        for (; micros() - last_loop_finish < dt6;)
         {
         }
         digitalWrite(flc_pin, LOW);
+        
+        last_loop_finish = dt6; // We take it that way, rather than calling micros() again.
+        // Otherwise the loop will be a teensy tiny bit longer than 2*integration_time.
 
         // Sweep mode
         if (sweep_mode)
@@ -161,15 +166,19 @@ void loop()
         {
           // Sleep for 150 ms
           // EDT framegrabber set to timeout at 100 ms. Force it to timeout.
-          for (; micros() - beginning_time < dt6 + 150000;)
+          for (; micros() - last_loop_finish < dt6 + 150000;)
           {
           }
           // Next reset in 5 sec.
           last_reset = micros();
+          last_loop_finish = last_reset;
         } // if auto_reset
       }   // For FLC / cam trig loop
     }     // else: All serial parameters valid
 
+
+    // Note: this code won't ever be executed. You'll need to reboot the arduino
+    // In reset mode to get that done in setup().
     digitalWrite(flc_pin, LOW);
     digitalWrite(flc_control_pin, LOW);
 
