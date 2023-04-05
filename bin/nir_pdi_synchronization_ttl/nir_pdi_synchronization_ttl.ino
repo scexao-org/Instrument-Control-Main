@@ -148,9 +148,6 @@ void loop()
         {
         }
         digitalWrite(flc_pin, LOW);
-        
-        last_loop_finish = dt6; // We take it that way, rather than calling micros() again.
-        // Otherwise the loop will be a teensy tiny bit longer than 2*integration_time.
 
         // Sweep mode
         if (sweep_mode)
@@ -173,6 +170,10 @@ void loop()
           last_reset = micros();
           last_loop_finish = last_reset;
         } // if auto_reset
+
+        last_loop_finish += dt6; // We take it that way, rather than calling micros() again.
+        // Otherwise the loop will be a teensy tiny bit longer than 2*integration_time.
+        
       }   // For FLC / cam trig loop
     }     // else: All serial parameters valid
 
