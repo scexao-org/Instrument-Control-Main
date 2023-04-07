@@ -1,4 +1,4 @@
-1;Linear arr. SMA;.50 ;1
+1;Linear arr. SMA;0.50;1
 2;SMF FCP/PC     ;1.00;2
 3;MMF SMA        ;0.51;0
 4;V-groove Port 1;0.00;2

@@ -26,7 +26,6 @@ from devices import devices
 
 devname = "pywfs_fieldstop"
 
-#conexids = ["usb-Newport_CONEX-AGP_A606QD57-if00-port0", "usb-Newport_CONEX-AGP_A6Z9D9QL-if00-port0"]
 conexids = ["usb-Newport_CONEX-AGP_A606QDMA-if00-port0", "usb-Newport_CONEX-AGP_A6Z9D9QL-if00-port0"]
 conexnames = ["x", "y"]
 

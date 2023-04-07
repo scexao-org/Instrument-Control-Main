@@ -39,19 +39,6 @@ def zab_cmd(cmd):
     buf = ''.join(list(map(chr, nl)))
     return buf.encode('latin-1')
 
-def zab_response(data):
-   r = list(map(ord, data))
-   foo = r
-   r = []
-   flag = 0
-   for c in foo:
-      if flag == 0: 
-          r.append(c)
-          if c == 255: flag = 1
-      else: flag = 0
-   buf = string.join(list(map(str,r[-6:]))).strip()
-   return buf
-
 class zaber:
     def __init__(self):
         self.s = None
@@ -78,6 +65,12 @@ class zaber:
         if log:
             logit.logit(devname,'moved_to_'+str(pos))
         
+    def push(self, idn, step, devname, log=True):
+        self.command(idn, 21, step)
+        time.sleep(delay)
+        if log:
+            logit.logit(devname,'moved_rel_'+str(step))
+      
     def status(self, idn, devname):
         pos = self.command(idn, 60, 0)
         subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname, str(pos)])

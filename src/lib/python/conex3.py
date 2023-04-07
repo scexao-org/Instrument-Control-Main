@@ -36,6 +36,12 @@ class conex(object):
         if log:
             logit.logit(devname,'moved_to_'+str(pos))
 
+    def push(self, step, devname, log=True):
+        self.s.write(str.encode("1PR"+str(step)+"\r\n"))
+        time.sleep(delay)
+        if log:
+            logit.logit(devname,'pushed_by_'+str(step))
+
     def status(self, devname):
         self.s.write("1TP\r\n".encode())
         time.sleep(delay)

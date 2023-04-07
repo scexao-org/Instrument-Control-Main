@@ -93,8 +93,8 @@ do
 done
 
 echo "reading Spectro fibers positions"
-files="/home/scexao/bin/devices/conf/conf_irspectro_fib.txt"
-nli=$(cat $files | wc -l)
+filei="/home/scexao/bin/devices/conf/conf_irspectro_fib.txt"
+nli=$(cat $filei | wc -l)
 IFS=$'\n'
 declare -a ni
 declare -a di
@@ -102,7 +102,7 @@ declare -a xi
 declare -a yi
 declare -a ci
 i=1
-for line in `cat $files`
+for line in `cat $filei`
 do
     ni[$i]=`echo $line |cut -d\; -f1`
     di[$i]=`echo $line |cut -d\; -f2`
@@ -113,15 +113,15 @@ do
 done
 
 echo "reading Spectro fibers focus"
-files="/home/scexao/bin/devices/conf/conf_irspectro_col.txt"
-nlj=$(cat $files | wc -l)
+filej="/home/scexao/bin/devices/conf/conf_irspectro_col.txt"
+nlj=$(cat $filej | wc -l)
 IFS=$'\n'
 declare -a nj
 declare -a df
 declare -a fj
 declare -a cj
 i=1
-for line in `cat $files`
+for line in `cat $filej`
 do
     nj[$i]=`echo $line |cut -d\; -f1`
     dj[$i]=`echo $line |cut -d\; -f2`
@@ -820,13 +820,13 @@ while true; do
 	file="/home/scexao/bin/devices/conf/current_spectrofibamp.txt"
 	if [ -a $file ]
 	then
-	    fibamp=$(echo "$(cat $file)")
+	    spectrofibamp=$(echo "$(cat $file)")
 	else
-	    fibamp="?"
+	    spectrofibamp="?"
 	fi
 	
 	
-	menuitems=(  "0" "Amplitude : $spectrofibamp microns")
+	menuitems=(  "0" "Amplitude : $spectrofibamp mm")
 	menuitems+=( "-" "")
 	menuitems+=( "1" "Move up")
 	menuitems+=( "2" "Move down")
@@ -852,40 +852,40 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_spectrofibamp";;
 		    1)
-			((yi[$fibnb]-=$spectrofibamp))
-			irspectro_fib y goto ${yi[$fibnb]}
+			yi[${ss[$fibnb]}]=$(echo "scale=2; ${yi[${ss[$fibnb]}]}-$spectrofibamp" | bc)
+			irspectro_fib y goto ${yi[${ss[$fibnb]}]}
 			sleep 0.1
 			state="menuconf_spectrofibalign";;
 		    2)
-			((yi[$fibnb]+=$spectrofibamp))
-			irspectro_fib y goto ${yi[$fibnb]}
+			yi[${ss[$fibnb]}]=$(echo "scale=2; ${yi[${ss[$fibnb]}]}+$spectrofibamp" | bc)
+			irspectro_fib y goto ${yi[${ss[$fibnb]}]}
 			sleep 0.1
 			state="menuconf_spectrofibalign";;
 		    3)
-			((xi[$fibnb]-=$spectrofibamp))
-			irspectro_fib x goto ${xi[$fibnb]}
+			xi[${ss[$fibnb]}]=$(echo "scale=2; ${xi[${ss[$fibnb]}]}-$spectrofibamp" | bc)
+			irspectro_fib x goto ${xi[${ss[$fibnb]}]}
 			sleep 0.1
 			state="menuconf_spectrofibalign";;
 		    4) 
-			((xi[$fibnb]+=$spectrofibamp))
-			irspectro_fib x goto ${xi[$fibnb]}
+			xi[${ss[$fibnb]}]=$(echo "scale=2; ${xi[${ss[$fibnb]}]}+$spectrofibamp" | bc)
+			irspectro_fib x goto ${xi[${ss[$fibnb]}]}
 			sleep 0.1
 			state="menuconf_spectrofibalign";;
 		    5)
-			((fj[$fibnb]-=$spectrofibamp))
-			irspectro_col goto ${fj[$fibnb]}
+			fj[${ss[$fibnb]}]=$(echo "scale=2; ${fj[${ss[$fibnb]}]}-$spectrofibamp" | bc)
+			irspectro_col goto ${fj[${ss[$fibnb]}]}
 			sleep 0.1
 			state="menuconf_spectrofibalign";;
 		    6) 
-			((fj[$fibnb]+=$spectrofibamp))
-			irspectro_col goto ${fj[$fibnb]}
+			fj[${ss[$fibnb]}]=$(echo "scale=2; ${fj[${ss[$fibnb]}]}+$spectrofibamp" | bc)
+			irspectro_col goto ${fj[${ss[$fibnb]}]}
 			sleep 0.1
 			state="menuconf_spectrofibalign";;
 		esac
 		;;
 	    1) 
 		log "SMI: IR Spectro Fiber aligned"
-		state="menuconf_saves";; 
+		state="menuconf_savei";; 
 	    2) state="menuexit";;
 	    255) ;;#state="menuexit";;
 	esac
@@ -901,32 +901,32 @@ while true; do
 	file="/home/scexao/bin/devices/conf/current_spectrofibamp.txt"
 	if [ -a $file ]
 	then
-	    fibamp=$(echo "$(cat $file)")
+	    spectrofibamp=$(echo "$(cat $file)")
 	else
-	    fibamp="?"
+	    spectrofibamp="?"
 	fi
 	
-	menuitems=( "1000" " 1000 microns")
-	menuitems+=( "500" " 500 microns")
-	menuitems+=( "200" " 200 microns")
-	menuitems+=( "100" " 100 microns")
-	menuitems+=( "50" " 50 microns")
-	menuitems+=( "20" " 20 microns")
-	menuitems+=( "10" " 10 microns")
+	menuitems=( "1.00" " 1 mm")
+	menuitems+=( "0.50" " 0.5 mm")
+	menuitems+=( "0.20" " 0.2 mm")
+	menuitems+=( "0.10" " 0.1 mm")
+	menuitems+=( "0.05" " 0.05 mm")
+	menuitems+=( "0.02" " 0.02 mm")
+	menuitems+=( "0.01" " 0.01 mm")
 	
 	dialog --title "Amplitude alignment FPM" \
 	    --ok-label "Select" \
 	    --cancel-label "Back" \
 	    --help-button --help-label "Exit" \
-	    --default-item ${fibamp} \
+	    --default-item ${spectrofibamp} \
 	    --menu "$menuname" \
 	    50 80 100 "${menuitems[@]}"  2> $tempfile
 	
 	retval=$?
 	
 	case $retval in
-	    0)fibamp=$(cat $tempfile)
-		echo "$spectrofibamp" > /home/scexao/bin/devices/conf/current_fibamp.txt
+	    0)spectrofibamp=$(cat $tempfile)
+		echo "$spectrofibamp" > /home/scexao/bin/devices/conf/current_spectrofibamp.txt
 		state="menuconf_spectrofibalign";; 
 	    1) state="menuconfmanage";; 
 	    2) state="menuexit";;
@@ -979,7 +979,7 @@ while true; do
 	rm $files
 	for i in $(seq 1 $nls)
 	do
-	    printf '%s;%s;%-6s;%-6s;%-6s;%s\n' ${ns[$i]} ${ds[$i]} ${xs[$i]} ${ys[$i]} ${fs[$i]} ${cs[$i]} >> $files
+	    printf '%s;%s;%-6s;%-6s;%-6s;%s;%s\n' ${ns[$i]} ${ds[$i]} ${xs[$i]} ${ys[$i]} ${fs[$i]} ${ss[$i]} ${cs[$i]} >> $files
 	done
 
 	echo "saving fiber position"
@@ -1002,6 +1002,32 @@ while true; do
 
 	echo "saving cariage position"
 	fibinj_car status
+	
+	state="menuconfmanage"
+    fi
+
+    # ==========================================================
+    #  SAVE POSITION IR SPECTRO FIBER
+    if [ $state = "menuconf_savei" ]; then
+	stateok=1
+	
+	cp $filei /home/scexao/bin/devices/conf/archive/
+	rm $filei
+	for i in $(seq 1 $nli)
+	do
+	    printf '%s;%s;%-6s;%-6s;%s\n' ${ni[$i]} ${di[$i]} ${xi[$i]} ${yi[$i]} ${ci[$i]} >> $filei
+	done
+
+	cp $filej /home/scexao/bin/devices/conf/archive/
+	rm $filej
+	for i in $(seq 1 $nlj)
+	do
+	    printf '%s;%s;%-4s;%s\n' ${nj[$i]} ${dj[$i]} ${fj[$i]} ${cj[$i]} >> $filej
+	done
+
+	echo "saving IR spectro fiber position"
+        irspectro_fib status
+		irspectro_col status
 	
 	state="menuconfmanage"
     fi

@@ -74,9 +74,51 @@ class micronix(object):
                 axisid = axesids[axesnames.index(axisname)]
                 
                 if "home" in args[1].lower():   #Home command
-                    opened = self.open(self.micid)
-                    if opened:
-                        self.home(axisid)
+                    self.open(self.micid)
+                    self.home(axisid)
+                    time.sleep(1)
+                    pos0 = -1000.
+                    pos = self.status(axisid,axisname)
+                    subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'UNKNOWN', '3'])
+                    while pos0 != pos:
+                        pos0 = pos
+                        pos = self.status(axisid,axisname)
+                        time.sleep(0.2)
+                        try:
+                            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_"+axisname, str(pos)])
+                        except:
+                            print("waiting for value")    
+                    self.s.write("%iZRO\r\n".encode() %axisid)
+                    time.sleep(0.2)
+                    self.s.write("%iZRO\r\n".encode() %axisid)
+                    time.sleep(0.2)
+                    pos = self.status(axisid,axisname)
+                    time.sleep(0.2)
+                    try:
+                        subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_"+axisname, str(pos)])
+                    except:
+                        print("waiting for value")   
+                    self.close()
+                
+                elif "status" in args[1].lower():
+                    self.open(self.micid)
+                    pos = self.status(axisid, axisname)
+                    time.sleep(0.2)
+                    self.close()
+                    d = locals()
+                    exec("paramf = list(map(float, self.param%d))" %(axisid+1), globals(), d)
+                    paramf = d['paramf']
+                    if pos in paramf:
+                        for i in range(self.nslots):
+                            if pos == paramf[i]:
+                                print("Position = "+str(pos)+", Micronix is in position "+self.param0[i]+", "+self.param1[i])
+                    else:
+                        print("Position = "+str(pos)+", Micronix is not in a defined position. Try homing.")
+                    
+                elif "goto" in args[1].lower():  #Goto commands
+                    if isfloat(args[2]):
+                        self.open(self.micid)
+                        self.goto(axisid,float(args[2]))
                         time.sleep(1)
                         pos0 = -1000.
                         pos = self.status(axisid,axisname)
@@ -89,85 +131,76 @@ class micronix(object):
                                 subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_"+axisname, str(pos)])
                             except:
                                 print("waiting for value")
+                        self.close()
+                    else:
+                        self.usage()
                         
-                        self.s.write("%iZRO\r\n".encode() %axisid)
-                        time.sleep(0.2)
-                        self.close()
-                
-                elif "status" in args[1].lower():
-                    opened = self.open(self.micid)
-                    if opened:
-                        pos = self.status(axisid, axisname)
-                        time.sleep(0.2)
-                        self.close()
-                        d = locals()
-                        exec("paramf = list(map(float, self.param%d))" %(axisid+1), globals(), d)
-                        paramf = d['paramf']
-                        if pos in paramf:
-                            for i in range(self.nslots):
-                                if pos == paramf[i]:
-                                    print("Position = "+str(pos)+", Micronix is in position "+self.param0[i]+", "+self.param1[i])
-                        else:
-                            print("Position = "+str(pos)+", Micronix is not in a defined position. Try homing.")
-                    
-                elif "goto" in args[1].lower():  #Goto commands
+                elif "push" in args[1].lower():  #Goto commands
                     if isfloat(args[2]):
-                        opened = self.open(self.micid)
-                        if opened:
-                            self.goto(axisid,float(args[2]))
-                            time.sleep(1)
-                            pos0 = -1000.
+                        self.open(self.micid)
+                        self.push(axisid,float(args[2]))
+                        time.sleep(1)
+                        pos0 = -1000.
+                        pos = self.status(axisid,axisname)
+                        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'UNKNOWN', '3'])
+                        while pos0 != pos:
+                            pos0 = pos
                             pos = self.status(axisid,axisname)
-                            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'UNKNOWN', '3'])
-                            while pos0 != pos:
-                                pos0 = pos
-                                pos = self.status(axisid,axisname)
-                                time.sleep(0.2)
-                                try:
-                                    subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_"+axisname, str(pos)])
-                                except:
-                                    print("waiting for value")
-                            self.close()
+                            time.sleep(0.2)
+                            try:
+                                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_"+axisname, str(pos)])
+                            except:
+                                print("waiting for value")
+                        self.close()
                     else:
                         self.usage()
                         
                 elif args[1].isdigit():
                     slot = int(args[1])
-                    opened = self.open(self.micid)
-                    if opened:
-                        #self.goto_slot(slot, conu)
-                        self.close()
+                    self.open(self.micid)
+                    d = locals()
+                    exec("pos = float(self.param%d[slot-1])" %(axisid+1,), globals(), d)
+                    pos = d['pos']
+                    self.goto(axisid,float(pos))
+                    time.sleep(0.2)
+                    pos0 = self.status(axisid,axisname)
+                    subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'UNKNOWN', '3'])
+                    it = 0
+                    while pos0 != pos or it == 30:
+                        pos0 = self.status(axisid,axisname)
+                        it += 1
+                        time.sleep(0.2)
+                        try:
+                            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_"+axisname, str(pos0)])
+                        except:
+                            print("waiting for value")
+                    self.close()
 
             elif args[0].lower() in defpos:
                 inddef = defpos.index(args[0].lower())
                 if (0 <= inddef < self.nslots):
                     for i in range(naxes):
-                        opened = self.open(self.micid)
-                        if not opened:
-                            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'NOT CONNECTED', '0'])
-                            sys.exit()
-                        else:
-                            d = locals()
-                            exec("pos = float(self.param%d[inddef])" %(i+2,), globals(), d)
-                            pos = d['pos']
-                            self.goto(axesids[i],float(pos))
-                            time.sleep(0.2)
+                        self.open(self.micid)
+                        d = locals()
+                        exec("pos = float(self.param%d[inddef])" %(i+2,), globals(), d)
+                        pos = d['pos']
+                        self.goto(axesids[i],float(pos))
+                        time.sleep(0.2)
+                        pos0 = self.status(axesids[i],axesnames[i])
+                        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'UNKNOWN', '3'])
+                        it = 0
+                        while pos0 != pos or it == 30:
                             pos0 = self.status(axesids[i],axesnames[i])
-                            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'UNKNOWN', '3'])
-                            it = 0
-                            while pos0 != pos or it == 10:
-                                pos0 = self.status(axesids[i],axesnames[i])
-                                it += 1
-                                time.sleep(0.2)
-                                try:
-                                    subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_"+self.axesnames[i], str(pos0)])
-                                except:
-                                    print("waiting for value")
-                            if self.color_st:
-                                exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', self.param1[inddef][:16], self.param%d[inddef]])" % (self.nend,), globals(), locals())
-                            else:
-                                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_st", self.param1[inddef][:16]])
-                        
+                            it += 1
+                            time.sleep(0.2)
+                            try:
+                                subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_"+self.axesnames[i], str(pos0)])
+                            except:
+                                print("waiting for value")
+                        if self.color_st:
+                            exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', self.param1[inddef][:16], self.param%d[inddef]])" % (self.nend,), globals(), locals())
+                        else:
+                            subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_st", self.param1[inddef][:16]])
                     self.close()
 
             elif "status" in args[0].lower():
@@ -175,17 +208,14 @@ class micronix(object):
                 paramf = np.zeros(naxes)
                 found = False
                 for i in range(naxes):
-                    opened = self.open(self.micid)
-                    if not opened:
-                        subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'NOT CONNECTED', '0'])
-                        sys.exit()
+                    self.open(self.micid)
                     pos[i] = self.status(axesids[i], axesnames[i])
                     time.sleep(0.2)
                     self.close()
                 for i in range(self.nslots):
                     for j in range(naxes):
                         exec("paramf[j] = float(self.param%d[i])" %(j+2,), globals(), locals())
-                    if (np.sum(paramf[1:]) > 0 and np.all(pos == paramf)) or (np.sum(paramf[1:]) == 0 and pos[0] == paramf[0]):
+                    if np.all(pos == paramf):
                         print("Device is in position "+self.param0[i]+", "+self.param1[i])
                         if self.color_st:
                             exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', self.param1[i][:16], self.param%d[i]])" % (self.nend,), globals(), locals())
@@ -197,10 +227,7 @@ class micronix(object):
                     subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'UNKNOWN', '3'])
 
             elif "com" in args[0].lower():
-                opened = self.open(self.micid)
-                if not opened:
-                    subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'NOT CONNECTED', '0'])
-                    sys.exit()
+                self.open(self.micid)
                 self.s.write(("%s\r\n"%args[1]).encode())
                 time.sleep(0.2)
                 status = self.s.readlines()
@@ -218,20 +245,22 @@ class micronix(object):
         try:
             self.s = serial.Serial(micid, baudrate=38400, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, rtscts=True, timeout=0.1)
             dummy = self.s.readlines() # flush the port
-            opened = True
             time.sleep(0.2)
         except:
             print("DISCONNECTED")
             subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'NOT CONNECTED', '0'])
-            opened = False
-        return opened
+            sys.exit()
 
     def home(self, axisid):
         try:
             self.s.write("%iFBK3\r\n".encode() %axisid)
-            time.sleep(1)
+            time.sleep(0.2)
+            self.s.write("%iFBK3\r\n".encode() %axisid)
+            time.sleep(0.2)
             self.s.write("%iHOM\r\n".encode() %axisid)
-            time.sleep(1)
+            time.sleep(0.2)
+            self.s.write("%iHOM\r\n".encode() %axisid)
+            time.sleep(0.2)
         except:
             print("CANNOT HOME AXIS")
     
@@ -263,6 +292,15 @@ class micronix(object):
         except:
             print("CANNOT MOVE AXIS")
     
+    def push(self, axisid, pos):
+        try:
+            self.s.write("%iMVR%f\r\n".encode() %(axisid,pos))
+            time.sleep(0.2)
+            self.s.write("%iMVR%f\r\n".encode() %(axisid,pos))
+            time.sleep(0.2)
+        except:
+            print("CANNOT MOVE AXIS")
+    
     def close(self):
         time.sleep(0.2)
         self.s.close()
@@ -281,6 +319,7 @@ Usage: %s <dev> <command> <arg>
     status  displays status
       home  sends home
       goto  moves to absolute position: numerical value
+      push  moves by a relative value
      1 - %d defined positions""" % (self.nslots,))
         if self.defpos != []:
             for i in range(len(self.defpos)):

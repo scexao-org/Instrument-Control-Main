@@ -529,7 +529,7 @@ int status_display()
     // IR Spectrometer Mode
     printw("IR Spectro Mode : ");
     print_status(SCExAO_status[0].irspectro_mode_st, SCExAO_status[0].irspectro_mode_co);
-    printw(" (f1:%6d stp, f2:%6.2f mm )\n", SCExAO_status[0].irspectro_mode_x1, SCExAO_status[0].irspectro_mode_x2);
+    printw(" (x1:%6d stp, x2:%6.2f mm )\n", SCExAO_status[0].irspectro_mode_x1, SCExAO_status[0].irspectro_mode_x2);
     // IR Spectrometer Collimator
     printw("IR Spectro Col  : ");
     print_status(SCExAO_status[0].irspectro_col_st, SCExAO_status[0].irspectro_col_co);

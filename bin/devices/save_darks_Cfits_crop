@@ -1,9 +1,0 @@
-#!/bin/bash
-
-Cfits -n takedark$1 << EOF
-readshmim ircam$1crop
-imgstreamave ircam$1crop $2 dark$1 3
-savefits dark$1 "$3/dark_$4.fits"
-savefits tmpstrcoadd "$3/darkcube_$4.fits"
-exit
-EOF
