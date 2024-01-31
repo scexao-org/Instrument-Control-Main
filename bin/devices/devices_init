@@ -37,18 +37,18 @@ sleep 1
 pupil 1 &
 sleep 0.1
 echo "PIAA lenses #1:"
-piaa1 x 2
+piaa1 x 4
 sleep 1
-piaa1 y 2
+piaa1 y 4
 sleep 1
 piaa1 7 &
 sleep 0.1
 echo "PIAA lenses #2:"
-piaa2 x 2 
+piaa2 x 4 
 sleep 1
-piaa2 y 2
+piaa2 y 4
 sleep 1
-piaa2 f 2
+piaa2 f 4
 sleep 1
 piaa2 7 &
 sleep 0.1

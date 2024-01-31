@@ -1,3 +1,0 @@
-#!/bin/bash
-
-ssh scexao-op@localhost "PATH=\${HOME}/anaconda3/bin:\${PATH} startChuck"

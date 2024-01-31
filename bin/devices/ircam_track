@@ -27,15 +27,37 @@ home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 import image_processing as impro
 import vibration as vib
-import conex_tt
-import conex3 as conex
-con = conex.conex()
+
+from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxkw.redisutil.typed_db import Redis
 
 
-slopesteeringtheta = -0.07643424974
-slopesteeringphi = 0.101835075
-polyoap4theta = np.poly1d([-6.28e-4,8.43e-4,7.29e-03,0.0399,0])
-slopeoap4phi = 0.3291207033
+slopesteeringtheta = -8.0402870315665422e-02
+slopesteeringphi = 0.10938040525309624
+slopeoap4theta = 4.6688518976026505e-02
+quadoap4theta = 3.8675589199720413e-03
+slopeoap4phi = 0.34508821721121127
+
+rdb = Redis(host=REDIS_DB_HOST, port=REDIS_DB_PORT)
+
+def RDB_pull(rdb):
+
+    fits_keys_to_pull = {'D_IMRPAD','X_OAP4TH','X_OAP4PH','X_STRTHE','X_STRPHI'}
+    # Now Getting the keys
+    with rdb.pipeline() as pipe:
+        for key in fits_keys_to_pull:
+            pipe.hget(key, 'FITS header')
+            pipe.hget(key, 'value')
+        values = pipe.execute()
+    status = {k: v for k,v in zip(values[::2], values[1::2])}
+
+    pad = float(status['D_IMRPAD'])
+    oap4th = float(status['X_OAP4TH'])
+    oap4ph = float(status['X_OAP4PH'])
+    strth = float(status['X_STRTHE'])
+    strph = float(status['X_STRPHI'])
+
+    return(pad,oap4th,oap4ph,strth,strph)
 
 hmsg = """
 -------- IRCam target tracking ---------
@@ -55,8 +77,8 @@ if len(args) < 2:
     print(hmsg)
 else:
     try:
-        sep = float(args[0])
-        pa = float(args[1])
+        dist = float(args[0])
+        angle = float(args[1])
     except:
         print(hmsg)
     if len(args) >= 3:
@@ -66,76 +88,61 @@ else:
 #             files and shared memory
 # ------------------------------------------------------------------
 
-try:
-    telescope_status  = shm("/tmp/telescope_status.im.shm", verbose=False)
-except:
-    print("Telescope Status not started")
-    sys.exit()
+pad,oap4th,oap4ph,strth,strph = RDB_pull(rdb)
 
-oap4_file = "/home/scexao/bin/devices/conf/conf_oap4.txt"
-
-f = open(oap4_file,'r')
-f2 = f.readlines()
+oap_file = "/home/scexao/bin/devices/conf/conf_oap4.txt"
+with open(oap_file,'r') as f:
+    f2 = [float(s) for s in f.readlines()[0].split(';')[2:4]]
 f.close()
-oap0 = np.zeros((2))
-for i in range(2):
-    oap0[i] = f2[0].split(';')[2+i].rstrip()
-
-conexids = ["/dev/serial/by-id/usb-Newport_CONEX-AGP_A61MB80N-if00-port0", "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AL01V7AB-if00-port0"]
+oap0 = f2
 
 steering_file = "/home/scexao/bin/devices/conf/conf_steering.txt"
-
-f = open(steering_file,'r')
-f2 = f.readlines()
+with open(steering_file,'r') as f:
+    f2 = [float(s) for s in f.readlines()[0].split(';')[2:4]]
 f.close()
-steering0 = np.zeros(2)
-for i in range(2):
-    steering0[i] = f2[2].split(';')[2+i].rstrip()
+steering0 = f2
 
-conexttid = "http://133.40.163.196:50001"
+if oap0[0] == [] or oap0[1] == [] or steering0 == []:
+    sys.exit()
 
 print(oap0, steering0)
 
-cnt0 = telescope_status.get_counter()
-
-subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '%.1f as, %d deg' % (sep,pa), '2'])
-subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '%.1f as, %d deg' % (sep, pa), '2'])
-
+pad0 = 0
 try:
     while True:
-        cnt = telescope_status.get_counter()
-        if cnt == cnt0:
+        pad,oap4th,oap4ph,strth,strph = RDB_pull(rdb)
+        if pad0 == pad:
             time.sleep(1)
         else:
-            cnt0 = cnt
-            temp = telescope_status.get_data()
-            pad = temp[0][4]
             print(pad)
-            posx = -sep*m.cos((-pa+pad+180)/180.*m.pi)
-            posy = sep*m.sin((-pa+pad+180)/180.*m.pi)
-            print(posx, posy)
+            pad0 = pad
+            posx = -dist*m.cos((-angle+pad+180)/180.*m.pi)
+            posy = dist*m.sin((-angle+pad+180)/180.*m.pi)
             
             sttheta = posx*slopesteeringtheta
             stphi = posy*slopesteeringphi
-            oaptheta = polyoap4theta(posx)
+            oaptheta = posx*slopeoap4theta+posx**2*quadoap4theta
             oapphi = posy*slopeoap4phi
-            print(oaptheta, oapphi, sttheta, stphi)
             
             oaptheta += oap0[0]
             oapphi += oap0[1]
             sttheta += steering0[0]
             stphi += steering0[1]
-            print(oaptheta, oapphi, sttheta, stphi)
             
-            conex_tt.move(stphi,sttheta,conexttid)
-            con.open(conexids[0])
-            con.move(oaptheta, "", False)
-            con.close()
-            con.open(conexids[1])
-            con.move(oapphi, "", False)
-            con.close()
+            print("Moving to (%.1f, %.1f) arcsec" % (posx,posy))
+            print("Moving steering mirror to (%.3f, %.3f) degree" % (sttheta,stphi))
+            print("Moving OAP4 to (%.3f, %.3f) degree" % (oaptheta,oapphi))
+            
+            os.system("~/bin/devices/oap4 theta goto %.3f" % (oaptheta,))
+            os.system("~/bin/devices/steering theta goto %.3f" % (sttheta,))
+            os.system("~/bin/devices/oap4 phi goto %.3f" % (oapphi,))
+            os.system("~/bin/devices/steering phi goto %.3f" % (stphi,))
+            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '%.1f as, %d deg' % (dist,angle), '2'])
+            subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '%.1f as, %d deg' % (dist, angle), '2'])
+            time.sleep(10)
+            
+            
             
 except KeyboardInterrupt:
-    os.system("ircam_steering onaxis")
     sys.exit()
     

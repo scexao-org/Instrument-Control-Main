@@ -161,7 +161,7 @@ while true; do
 	for i in `seq 1 ${fibnbmax}`;
 	do
 	    menuitems+=( "${ns[i]}" "${ds[i]}" )
-	done 
+	done
 	menuitems+=( "-" "")
 	menuitems+=( "C" "Configurations")
 	
@@ -199,7 +199,9 @@ while true; do
 	fibselected=${fibnb}
 	
 	echo $fibselected > "/home/scexao/bin/devices/conf/current_SMINUMBER.txt"
-	
+	echo $fibselected
+	sleep 5
+ 	if [ $fibselected != 6 ]; then
 	menuitems=( "00" "Move PIAA1 in")
 	menuitems+=( "01" "Manual PIAA1 alignment")
 	menuitems+=( "02" "Move PIAA2 in")
@@ -211,6 +213,11 @@ while true; do
 	menuitems+=( "-" "")
 	menuitems+=( "07" "Move pickoff out")
 	menuitems+=( "08" "Move PIAA out")
+	else
+	menuitems=( "04" "Move pickoff in")
+	menuitems+=( "-" "")
+	menuitems+=( "07" "Move pickoff out")
+	fi
 	menuitems+=( "-" "")
 	menuitems+=( "09" "IRSPECTRO photometric mode")
 	menuitems+=( "10" "IRSPECTRO spectroscopic mode")
@@ -262,6 +269,7 @@ while true; do
 			log "SMI: moving pickoff in"
 			photonics_pickoff in
 			sleep 0.1
+			if [ $fibselected != 6 ]; then
 			fibinj_pickoff in
 			sleep 0.1
 			fibinj_len pl
@@ -273,6 +281,7 @@ while true; do
 			fibinj_fib f $fibnb
 			sleep 1
 			fibinj_fib status
+			fi
 			state="menuconfmanage";;
 		    05)
 			state="menuconf_fiberalign"
@@ -284,7 +293,10 @@ while true; do
 			manualfiberalign=0;;
 		    07)
 			echo "moving pickoff out"
+			photonics_pickoff out
+			if [ $fibselected != 6 ]; then
 			fibinj_pickoff out
+			fi
 			log "SMI: moving pickoff out"
 			state="menuconfmanage";;
 		    08)

@@ -8,7 +8,6 @@ home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 import logit #Custom logging library
 
-delay = 0.1 
 
 def step2zaberByte(nstep):
     step = nstep        # local version of the variable
@@ -55,17 +54,18 @@ class zaber:
             print("Zaber chain %s not connected" %zaberchain)
             sys.exit()
 
-    def home(self, idn, devname):
+    def home(self, idn, devname, log=True):
         self.command(idn, 1, 0)
-        logit.logit(devname,'Homed')
+        if log:
+            logit.logit(devname,'Homed')
 
-    def move(self, idn, pos, devname, log=True):
+    def move(self, idn, pos, devname, log=True, delay=0.1):
         self.command(idn, 20, pos)
         time.sleep(delay)
         if log:
             logit.logit(devname,'moved_to_'+str(pos))
         
-    def push(self, idn, step, devname, log=True):
+    def push(self, idn, step, devname, log=True, delay=0.1):
         self.command(idn, 21, step)
         time.sleep(delay)
         if log:

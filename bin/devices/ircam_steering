@@ -50,7 +50,7 @@ def RDB_pull(rdb):
     return(pad,oap4th,oap4ph,strth,strph)
 
 hmsg = """------------------------------------------------------------------
-Usage: ircam_steering <mode> <param1> <param2>
+Usage: ircam_steering <mode> <param1> <param2> <param3>
 ------------------------------------------------------------------
 MODE:
         onaxis  move the PSF back on-axis
@@ -64,6 +64,8 @@ PARAM1:
     horizontal or radial distance (arcsec) depending on the mode
 PARAM2:
     vertical distnace (arcsec) or angle (deg) dpending on the mode
+PARAM3:
+    read configuration files (1) or offset from current position (0)
 ------------------------------------------------------------------"""
 
 args = sys.argv[1:]
@@ -143,6 +145,8 @@ if readfile:
     steering0 = f2
 else:
     steering0 = np.array([strth,strph])
+
+print(oap0, steering0)
 
 if oap0[0] == [] or oap0[1] == [] or steering0 == []:
     sys.exit()

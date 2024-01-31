@@ -22,18 +22,18 @@ import time
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-from nps import NPS
+from nps import NewNPS
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
-npsname = "vcam_power"
-npsid = 1
-portid = 4
+npsname = "vcam2_power"
+npsid = 2
+portid = 16
 
-description = "power switch for the VAMPIRES cameras"
+description = "power switch for VCAM2"
 
 # GENERIC CODE
 
 args = sys.argv[1:]
-NPS(npsname, npsid, portid, args=args, description=description)
+NewNPS(npsname, npsid, portid, args=args, description=description)
 

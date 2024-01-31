@@ -36,12 +36,10 @@ whnames = ["irnd", "optnd", "filter"]
 
 description = "Filter and density wheels for the calibration source"
 
-# WARNING:
-print('--------')
-print('Warning: src_flux requires "src_power on" - or you will get a thorlabs wheel error.')
-print('--------')
-
-# GENERIC CODE
-
-args = sys.argv[1:]
-thorlabswheel(devname, whids, whnames, args=args, description=description)
+if sys.argv[-1] == 'reset':
+    thorlabswheel(devname, whids, whnames, args=['irnd', '6'], description=description)
+    thorlabswheel(devname, whids, whnames, args=['optnd', '5'], description=description)
+    thorlabswheel(devname, whids, whnames, args=['filter', '6'], description=description)
+else:
+    args = sys.argv[1:]
+    thorlabswheel(devname, whids, whnames, args=args, description=description)

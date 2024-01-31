@@ -114,12 +114,12 @@ if __name__ == "__main__":
         message()
 
     # Sanitize dev
-    NPS_CLASS = {1: NPS, 2: NewNPS, 3: NPS}
-    PORT_MAX = {1: 8, 2: 16, 3: 8}
+    NPS_CLASS = {1: NPS, 2: NewNPS, 3: NPS, 4: NewNPS}
+    PORT_MAX = {1: 8, 2: 16, 3: 8, 4: 8}
 
     try:
         nps_id = int(args["<dev>"])
-        if not nps_id in [1, 2, 3]:
+        if not nps_id in [1,2,3,4]:
             raise ValueError
         Nps_class = NPS_CLASS[nps_id]
     except ValueError:

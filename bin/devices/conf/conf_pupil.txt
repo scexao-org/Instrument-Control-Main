@@ -4,5 +4,5 @@
 4;18-hole NRM     ;135.0;69000 ;53000 ;2
 5;vAPP mask       ;179.5;71000 ;40500 ;2
 6;Apodizing coro  ;228.0;66000 ;93500 ;2
-7;Block           ;270.0;0     ;0     ;0
-8;Shaped pup mask ;317.0;73400 ;67100 ;2
+7;Redundant apod1 ;266.0;55400 ;1100  ;2
+8;Redundant apod2 ;312.5;55400 ;19100 ;2

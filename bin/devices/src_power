@@ -29,5 +29,18 @@ description = "power switch for the source box"
 # GENERIC CODE
 
 args = sys.argv[1:]
-NPS(npsname, npsid, portid, args=args, description=description)
+
+if args[0] == 'force':
+    args = [args[1]]
+    NPS(npsname, npsid, portid, args=args, description=description)
+
+else:
+    print('src_power DISABLED -- running src_flux irnd 6; optnd 5; filter 6 instead')
+    print('Override is possible with src_flux force on|off')
+   
+
+
+
+
+
 

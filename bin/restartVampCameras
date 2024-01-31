@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-nps_off1 4
-nps_off1 1
-nps_on1 4
-nps_on1 1

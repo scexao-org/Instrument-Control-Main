@@ -27,6 +27,5 @@ conexnames = ["theta"]
 description = "Polarizer angle"
 
 # GENERIC CODE
-
 args = sys.argv[1:]
 devices(devname, conexids, conexnames, args=args, description=description, color_st=True)
