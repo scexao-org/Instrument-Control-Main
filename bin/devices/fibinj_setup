@@ -199,15 +199,13 @@ while true; do
 	fibselected=${fibnb}
 	
 	echo $fibselected > "/home/scexao/bin/devices/conf/current_SMINUMBER.txt"
-	echo $fibselected
-	sleep 5
  	if [ $fibselected != 6 ]; then
 	menuitems=( "00" "Move PIAA1 in")
 	menuitems+=( "01" "Manual PIAA1 alignment")
 	menuitems+=( "02" "Move PIAA2 in")
 	menuitems+=( "03" "Manual PIAA2 alignment")
 	menuitems+=( "-" "")
-	menuitems+=( "04" "Move fiber in")
+	menuitems+=( "04" "Move pickoff and fiber in")
 	menuitems+=( "05" "Manual Fiber alignment")
 	menuitems+=( "06" "Manual Carriage translation")
 	menuitems+=( "-" "")
