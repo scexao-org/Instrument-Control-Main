@@ -74,12 +74,21 @@ def find_center(shiftx, shifty):
             im_palila = read_shm()/100.
         else:
             im_palila += read_shm()/100.
-    [cx,cy] = impro.centroid(im_palila,method="gaussian")
-    cx -= shiftx
-    cy -= shifty
-    return [cx, cy]
+    fmax = np.max(im_palila)
+    fstd = np.std(im_palila)
+    print(fmax, fstd, fmax/fstd)
+    if fmax/fstd > 75:
+        low_flux = False
+        [cx,cy] = impro.centroid(im_palila,method="gaussian")
+        cx -= shiftx
+        cy -= shifty
+    else:
+        low_flux = True
+        cx = cy = 0
+    return [[cx, cy], low_flux]
 
 # Main
+
 #------------------------
 
 # ------------------------------------------------------------------
@@ -120,12 +129,10 @@ if gpin:
 
 im_palila = read_shm()
 (ysize,xsize) = im_palila.shape
-print(xsize, ysize)
 crop = shm_im.get_crop().astype(int)
 #crop = np.array([128,128,160,160])
 shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5
 shifty = pos[0,1]-crop[2]+256+cor[1]-0.5
-print( shiftx, shifty)
 # parameters of the loop
 gain = 0.5
 precision = 0.2
@@ -147,34 +154,40 @@ invA = la.inv(A)
 
 #initialize the position
 cnt = 0
-c0 = find_center(shiftx, shifty)
-print(c0)
+[c0,low_flux] = find_center(shiftx, shifty)
+if low_flux:
+    print("LOW FLUX, ABORTING ALIGNMENT")
+    os.system("/home/scexao/bin/log Hotspotalign: aborting alignment")
+    os.system("scexaostatus set hotspot 'LOW FLUX' 0")
+    sys.exit(1)
+else:
+    print(c0)
 
-#dev = USB.connect()
+
+cntmax = 20
 
 # loop
-while (((c0[0]**2+c0[1]**2)**0.5) > precision) and (cnt < 500):
+while (((c0[0]**2+c0[1]**2)**0.5) > precision) and (cnt < cntmax) and not low_flux:
     cnt = cnt+1
-    c0 = find_center(shiftx, shifty)
-    print(c0)
-    
-    com = np.dot(invA, c0)
-    print(com)
-    com0x = int(round(com[0,0]*gain))
-    com0y = int(round(com[0,1]*gain))
-    os.system("dm_stage theta push %i" %com0x)
-    #dev.set_relative(1,com0x)
-    #time.sleep(0.1)
-    os.system("dm_stage phi push %i" %com0y)
-    #dev.set_reltive(2,com0y)
-    #time.sleep(0.1)
+    [c0,low_flux] = find_center(shiftx, shifty)
+    if low_flux:
+        print("LOW FLUX, ABORTING ALIGNMENT")
+        os.system("/home/scexao/bin/log Hotspotalign: aborting alignment")
+        os.system("scexaostatus set hotspot 'LOW FLUX' 0")
+        sys.exit(1)
+    else:
+        print(c0)
+        com = np.dot(invA, c0)
+        com0x = int(round(com[0,0]*gain))
+        com0y = int(round(com[0,1]*gain))
+        os.system("dm_stage theta push %i" %com0x)
+        os.system("dm_stage phi push %i" %com0y)
 
 shm_im.close()
 
-#for i in range(2)+1:
-#    pos = dev.get_position(i)
-#    print(pos)
-#    dev.finish(i)
-
-os.system("/home/scexao/bin/log Hotspotalign: alignment done")
-os.system("scexaostatus set hotspot 'OFF' 1")
+if cnt == cntmax:
+    os.system("/home/scexao/bin/log Hotspotalign: aborting alignment ")
+    os.system("scexaostatus set hotspot 'TOO MANY ITER.' 0")
+else:
+    os.system("/home/scexao/bin/log Hotspotalign: alignment done")
+    os.system("scexaostatus set hotspot 'OFF' 1")

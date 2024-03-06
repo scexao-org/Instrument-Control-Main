@@ -173,6 +173,7 @@ CONTENT:""")
     # -----------------------------------------------------------------
     async def status(self):
         dev = await USB.connect()
+        print(dev)
         pos = await dev.get_position(self.picoid)
         print(pos)
         await dev.finish(self.picoid)

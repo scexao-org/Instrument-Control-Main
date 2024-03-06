@@ -63,12 +63,6 @@ typedef struct
   float lyot_wheel;
   int lyot_x;
   int lyot_y;
-  char invpiaa_st[16];
-  int invpiaa_co;
-  float invpiaa_x;
-  float invpiaa_y;
-  int invpiaa_theta;
-  int invpiaa_phi;
   char oap4_st[16];
   int oap4_co;
   float oap4_theta;
@@ -98,11 +92,6 @@ typedef struct
   int ircam_pupil_co;
   float ircam_pupil_x;
   float ircam_pupil_y;
-  char ircam_qwp[16];
-  int ircam_qwp_co;
-  char ircam_hwp[16];
-  int ircam_hwp_co;
-  int ircam_hwp_theta;
   char ircam_filter[16];
   int ircam_filter_co;
   char ircam_wollaston[16];
@@ -159,7 +148,6 @@ typedef struct
   int reach_fib_x;
   int reach_fib_y;
   int reach_fib_f;
-  float reach_fib_theta;
   char pywfs_pickoff_st[16];
   int pywfs_pickoff_co;
   float pywfs_pickoff;
@@ -179,12 +167,15 @@ typedef struct
   char vampires_fieldstop_st[16];
   float vampires_fieldstop_x;
   float vampires_fieldstop_y;
+  float vampires_fieldstop_f;
+  // first PL pickoff
+  char firstpl_pickoff_st[16];
+  float firstpl_pickoff;
+  int firstpl_pickoff_co;
+  // first pickoff
   char first_pickoff_st[16];
   int first_pickoff_co;
   float first_pickoff;
-  char rhea_pickoff_st[16];
-  int rhea_pickoff_co;
-  float rhea_pickoff;
   int first_inj_co;
   char first_inj_st[16];
   int first_inj_x;
@@ -199,10 +190,15 @@ typedef struct
   float first_photometry;
   char src_select_st[16];
   int src_select_co;
-  float src_select;
-  char src_flux_irnd[16];
-  char src_flux_optnd[16];
+  float src_select_theta1;
+  float src_select_theta2;
+  char src_flux_nd1[16];
+  char src_flux_nd2[16];
+  char src_flux_nd3[16];
   char src_flux_filter[16];
+  char src_superk_st[16];
+  int src_superk_co;
+  int src_superk_flux;
 
   // WFS
   char pywfs_loop[16];

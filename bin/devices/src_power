@@ -30,17 +30,14 @@ description = "power switch for the source box"
 
 args = sys.argv[1:]
 
-if args[0] == 'force':
-    args = [args[1]]
+response = input("It is recommended to use superk power on/off now. Are you sure you want to proceed? [y/n]")
+
+if response in ['yes','y']:
     NPS(npsname, npsid, portid, args=args, description=description)
 
 else:
-    print('src_power DISABLED -- running src_flux irnd 6; optnd 5; filter 6 instead')
-    print('Override is possible with src_flux force on|off')
+    print('Command canceled.')
    
-
-
-
 
 
 

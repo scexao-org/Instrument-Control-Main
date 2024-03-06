@@ -21,19 +21,18 @@ from devices import devices
 
 devname = "src_select"
 
-conexids = ["usb-Newport_CONEX-AGP_A6YU85TK-if00-port0"]
-conexnames = ["wheel"]
+conexids = ["usb-Newport_CONEX-AGP_A6YU85TK-if00-port0","usb-Newport_CONEX-AGP_A64ONRCK-if00-port0"]
+conexnames = ["theta1", "theta2"]
 
 description = "Select calibration source"
+
+defpos = ["sks", "ska","ski","tfs","tfa","tfi","las","laa","lai"]
 
 # GENERIC CODE
 
 args = sys.argv[1:]
-if args != [] and (args[0].isdigit() or args[0].lower() == "home"):
-    os.system("nps_off1 5")
- 
-devices(devname, conexids, conexnames, args=args, description=description, color_st=True)
 
-if args != [] and (args[0].isdigit() or args[0].lower() == "home"):
-    time.sleep(10)
-    os.system("nps_on1 5")
+if args != [] and "status" not in args and "push" not in args:
+    os.system("superk power off")
+
+devices(devname, conexids, conexnames, args=args, description=description, defpos=defpos, color_st=True)

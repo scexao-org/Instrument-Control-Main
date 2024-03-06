@@ -1,3 +1,4 @@
 #!/bin/bash
 
+echo "Deprecated, think about using photonics_pickoff instead next time"
 photonics_pickoff $@

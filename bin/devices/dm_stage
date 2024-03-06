@@ -31,4 +31,5 @@ defpos = ["onaxis"]
 # GENERIC CODE
 
 args = sys.argv[1:]
+
 picomotor(piconame, picoids, axesnames, args, description)#, defpos, color_st=True)

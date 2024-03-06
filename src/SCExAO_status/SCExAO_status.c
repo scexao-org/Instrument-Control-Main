@@ -278,7 +278,7 @@ int status_display()
     printw("NPS2 ports 1-4  : ");
     print_status("   FIRST MEMS  ", SCExAO_status[0].nps2_1_co);
     printw(" | ");
-    print_status(" QUEST (temp)  ", SCExAO_status[0].nps2_2_co);
+    print_status("               ", SCExAO_status[0].nps2_2_co);
     printw(" | ");
     print_status("               ", SCExAO_status[0].nps2_3_co);
     printw(" | ");
@@ -335,18 +335,26 @@ int status_display()
     // Cal source
     printw("Cal source      : ");
     print_status(SCExAO_status[0].src_fib_st, SCExAO_status[0].src_fib_co);
-    printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].src_fib_x, SCExAO_status[0].src_fib_y);
+    printw(" (x: %6.2f mm, y: %6.2f mm)\n", SCExAO_status[0].src_fib_x, SCExAO_status[0].src_fib_y);
     // Source type
     printw("Source type     : ");
     print_status(SCExAO_status[0].src_select_st, SCExAO_status[0].src_select_co);
-    printw(" (w: %6.2f deg)\n", SCExAO_status[0].src_select);
-    // Source IR ND
-    printw("Source IR ND    : ");
-    print_status(SCExAO_status[0].src_flux_irnd, -1);
+    printw(" (t1: %6.2f deg, t2: %6.2f deg)\n", SCExAO_status[0].src_select_theta1, SCExAO_status[0].src_select_theta2);
+    // SuperK status
+    printw("Supercontinuum  : ");
+    print_status(SCExAO_status[0].src_superk_st, SCExAO_status[0].src_superk_co);
+    printw(" (p: %6d %)\n", SCExAO_status[0].src_superk_flux);
+    // Source ND1
+    printw("Source ND wheel1: ");
+    print_status(SCExAO_status[0].src_flux_nd1, -1);
     printw("\n");
-    // Source Opt ND
-    printw("Source Opt ND   : ");
-    print_status(SCExAO_status[0].src_flux_optnd, -1);
+    // Source ND2
+    printw("Source ND wheel2: ");
+    print_status(SCExAO_status[0].src_flux_nd2, -1);
+    printw("\n");
+    // Source ND3
+    printw("Source ND wheel3: ");
+    print_status(SCExAO_status[0].src_flux_nd3, -1);
     printw("\n");
     // Source Filter
     printw("Source Filter   : ");
@@ -369,7 +377,7 @@ int status_display()
     // Dichroic
     printw("Dichroic        : ");
     print_status(SCExAO_status[0].dichroic_st, SCExAO_status[0].dichroic_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].dichroic);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].dichroic);
     // Pupil Mask
     printw("Pupil Mask      : ");
     print_status(SCExAO_status[0].pupil_st, SCExAO_status[0].pupil_co);
@@ -390,10 +398,6 @@ int status_display()
     printw("Lyot Mask       : ");
     print_status(SCExAO_status[0].lyot_st, SCExAO_status[0].lyot_co);
     printw(" (w: %6.2f deg, x: %6d stp, y: %6d stp)\n", SCExAO_status[0].lyot_wheel, SCExAO_status[0].lyot_x, SCExAO_status[0].lyot_y);
-    // Inverse PIAA
-    printw("Inverse PIAA    : ");
-    print_status(SCExAO_status[0].invpiaa_st, SCExAO_status[0].invpiaa_co);
-    printw(" (x: %6.2f mm , y: %6.2f mm , t: %6d stp, p: %6d stp)\n", SCExAO_status[0].invpiaa_x, SCExAO_status[0].invpiaa_y, SCExAO_status[0].invpiaa_theta, SCExAO_status[0].invpiaa_phi);
 
     print_header(" BACK IR BENCH AND IRCAMS ", '-');
     // PG1 Pickoff
@@ -419,7 +423,7 @@ int status_display()
     // IR Cams Pupil Masks
     printw("IR Cam Pup Mask : ");
     print_status(SCExAO_status[0].ircam_pupil_st, SCExAO_status[0].ircam_pupil_co);
-    printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].ircam_pupil_x, SCExAO_status[0].ircam_pupil_y);
+    printw(" (x: %6.2f mm , y: %6.2f mm)\n", SCExAO_status[0].ircam_pupil_x, SCExAO_status[0].ircam_pupil_y);
     // IR Cams Filter
     printw("IR Cam Filter   : ");
     print_status(SCExAO_status[0].ircam_filter, SCExAO_status[0].ircam_filter_co);
@@ -431,7 +435,7 @@ int status_display()
     // IR Cams Focus
     printw("IR Cams Focus   : ");
     print_status(SCExAO_status[0].ircam_fcs_st, SCExAO_status[0].ircam_fcs_co);
-    printw(" (f1:%6d stp, f2:%6.2f mm )\n", SCExAO_status[0].ircam_fcs_f1, SCExAO_status[0].ircam_fcs_f2);
+    printw(" (f1:%6d stp, f2:%6.2f mm)\n", SCExAO_status[0].ircam_fcs_f1, SCExAO_status[0].ircam_fcs_f2);
     // PALILA Pupil
     printw("PALILA Pupil    : ");
     print_status(SCExAO_status[0].palila_pup, SCExAO_status[0].palila_pup_co);
@@ -439,11 +443,11 @@ int status_display()
     // PALILA Pupil Focus
     printw("PALILA Pup Fcs  : ");
     print_status(SCExAO_status[0].palila_pup_fcs_st, SCExAO_status[0].palila_pup_fcs_co);
-    printw(" (f: %6.2f mm )\n", SCExAO_status[0].palila_pup_fcs);
+    printw(" (f: %6.2f mm)\n", SCExAO_status[0].palila_pup_fcs);
     // APAPANE Pickoff
     printw("'APAPANE Pickoff: ");
     print_status(SCExAO_status[0].apapane_pickoff_st, SCExAO_status[0].apapane_pickoff_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].apapane_pickoff);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].apapane_pickoff);
     // KIWIKIU Block
     printw("KIWIKIU Block   : ");
     print_status(SCExAO_status[0].lowfs_block, SCExAO_status[0].lowfs_block_co);
@@ -458,15 +462,11 @@ int status_display()
     // Polarizer
     printw("Polarizer       : ");
     print_status(SCExAO_status[0].polarizer, SCExAO_status[0].polarizer_co);
-    printw(" (t: %6.2f deg )\n", SCExAO_status[0].polarizer_theta);
-    // IR Cams QWPs
-    printw("IR Cam QWP      : ");
-    print_status(SCExAO_status[0].ircam_qwp, SCExAO_status[0].ircam_qwp_co);
-    printw("\n");
+    printw(" (t: %6.2f deg)\n", SCExAO_status[0].polarizer_theta);
     // Field stop
     printw("Field Stop      : ");
     print_status(SCExAO_status[0].field_stop_st, SCExAO_status[0].field_stop_co);
-    printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].field_stop_x, SCExAO_status[0].field_stop_y);
+    printw(" (x: %6.2f mm , y: %6.2f mm)\n", SCExAO_status[0].field_stop_x, SCExAO_status[0].field_stop_y);
     // CHARIS Wollaston
     printw("CHARIS Wollaston: ");
     print_status(SCExAO_status[0].charis_wollaston, SCExAO_status[0].charis_wollaston_co);
@@ -475,10 +475,6 @@ int status_display()
     printw("IR Cam FLC      : ");
     print_status(SCExAO_status[0].ircam_flc_st, SCExAO_status[0].ircam_flc_co);
     printw(" (t: %6.2f deg)\n", SCExAO_status[0].ircam_flc);
-    // IR Cams HWP
-    printw("IR Cam HWP      : ");
-    print_status(SCExAO_status[0].ircam_hwp, SCExAO_status[0].ircam_hwp_co);
-    printw(" (t: %6.2f deg )\n", SCExAO_status[0].ircam_hwp_theta);
     // IR Cams Wollaston
     printw("IR Cam Wollaston: ");
     print_status(SCExAO_status[0].ircam_wollaston, SCExAO_status[0].ircam_wollaston_co);
@@ -489,7 +485,7 @@ int status_display()
     // Photonics Pickoff
     printw("Photonics PO    : ");
     print_status(SCExAO_status[0].photonics_pickoff_st, SCExAO_status[0].photonics_pickoff_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].photonics_pickoff);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].photonics_pickoff);
     // Photonics Pickoff Type
     printw("Photonics PO typ: ");
     print_status(SCExAO_status[0].photonics_pickoff_type, SCExAO_status[0].photonics_pickoff_type_co);
@@ -501,11 +497,11 @@ int status_display()
     // FIber Injection Pickoff
     printw("Fib Inj Pickoff : ");
     print_status(SCExAO_status[0].fibinj_pickoff_st, SCExAO_status[0].fibinj_pickoff_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].fibinj_pickoff);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].fibinj_pickoff);
     // FIber Injection Lens
     printw("Fib Inj Lens    : ");
     print_status(SCExAO_status[0].fibinj_len_st, SCExAO_status[0].fibinj_len_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].fibinj_len);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].fibinj_len);
     // Fiber Injection Fiber
     printw("Fib Inj Fiber   : ");
     print_status(SCExAO_status[0].fibinj_fib_st, SCExAO_status[0].fibinj_fib_co);
@@ -517,7 +513,7 @@ int status_display()
     // REACH Pickoff
     printw("REACH Pickoff   : ");
     print_status(SCExAO_status[0].reach_pickoff_st, SCExAO_status[0].reach_pickoff_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].reach_pickoff);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].reach_pickoff);
     // REACH OAP
     printw("REACH OAP       : ");
     print_status(SCExAO_status[0].reach_oap_st, SCExAO_status[0].reach_oap_co);
@@ -525,19 +521,19 @@ int status_display()
     // REACH Fiber
     printw("REACH Fiber     : ");
     print_status(SCExAO_status[0].reach_fib_st, SCExAO_status[0].reach_fib_co);
-    printw(" (x: %6d stp,y: %6d stp,f: %6d stp,t: %6.2f deg)\n", SCExAO_status[0].reach_fib_x, SCExAO_status[0].reach_fib_y, SCExAO_status[0].reach_fib_f, SCExAO_status[0].reach_fib_theta);
+    printw(" (x: %6d stp, y: %6d stp, f: %6d stp)\n", SCExAO_status[0].reach_fib_x, SCExAO_status[0].reach_fib_y, SCExAO_status[0].reach_fib_f);
     // IR Spectrometer Mode
     printw("IR Spectro Mode : ");
     print_status(SCExAO_status[0].irspectro_mode_st, SCExAO_status[0].irspectro_mode_co);
-    printw(" (x1:%6d stp, x2:%6.2f mm )\n", SCExAO_status[0].irspectro_mode_x1, SCExAO_status[0].irspectro_mode_x2);
+    printw(" (x1: %6d stp, x2:%6.2f mm)\n", SCExAO_status[0].irspectro_mode_x1, SCExAO_status[0].irspectro_mode_x2);
     // IR Spectrometer Collimator
     printw("IR Spectro Col  : ");
     print_status(SCExAO_status[0].irspectro_col_st, SCExAO_status[0].irspectro_col_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].irspectro_col);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].irspectro_col);
     // IR Spectrometer Fiber
     printw("IR SPectro Fiber: ");
     print_status(SCExAO_status[0].irspectro_fib_st, SCExAO_status[0].irspectro_fib_co);
-    printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].irspectro_fib_x, SCExAO_status[0].irspectro_fib_y);
+    printw(" (x: %6.2f mm, y: %6.2f mm)\n", SCExAO_status[0].irspectro_fib_x, SCExAO_status[0].irspectro_fib_y);
     
 
     print_header(" VISIBLE BENCH ", '-');
@@ -549,7 +545,7 @@ int status_display()
     // PyWFS Field stop
     printw("PyWFS Field Stop: ");
     print_status(SCExAO_status[0].pywfs_fieldstop_st, SCExAO_status[0].pywfs_fieldstop_co);
-    printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].pywfs_fieldstop_x, SCExAO_status[0].pywfs_fieldstop_y);
+    printw(" (x: %6.2f mm, y: %6.2f mm)\n", SCExAO_status[0].pywfs_fieldstop_x, SCExAO_status[0].pywfs_fieldstop_y);
     // PyWFS Filter
     printw("PyWFS Filter    : ");
     print_status(SCExAO_status[0].pywfs_filter, SCExAO_status[0].pywfs_filter_co);
@@ -573,15 +569,19 @@ int status_display()
     // VAMPIRES Field stop
     printw("VAMP Field Stop : ");
     print_status(SCExAO_status[0].vampires_fieldstop_st, SCExAO_status[0].vampires_fieldstop_co);
-    printw(" (x: %6.2f mm , y: %6.2f mm )\n", SCExAO_status[0].vampires_fieldstop_x, SCExAO_status[0].vampires_fieldstop_y);
+    printw(" (x: %6.2f mm, y: %6.2f mm, f: %6.2f mm)\n", SCExAO_status[0].vampires_fieldstop_x, SCExAO_status[0].vampires_fieldstop_y, SCExAO_status[0].vampires_fieldstop_f);
     // FIRST PIckoff
     printw("FIRST Pickoff   : ");
     print_status(SCExAO_status[0].first_pickoff_st, SCExAO_status[0].first_pickoff_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].first_pickoff);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].first_pickoff);
+    // FIRST PL PIckoff
+    printw("VIS PL Pickoff  : ");
+    print_status(SCExAO_status[0].firstpl_pickoff_st, SCExAO_status[0].firstpl_pickoff_co);
+    printw(" (w: %6.2f deg)\n", SCExAO_status[0].firstpl_pickoff);
     // FIRST injection
     printw("FIRST Injection : ");
     print_status(SCExAO_status[0].first_inj_st, SCExAO_status[0].first_inj_co);
-    printw(" (x: %6d stp,y: %6d stp,f: %6.2f mm)\n", SCExAO_status[0].first_inj_x, SCExAO_status[0].first_inj_y, SCExAO_status[0].first_inj_f);
+    printw(" (x: %6d stp, y: %6d stp, f: %6.2f mm)\n", SCExAO_status[0].first_inj_x, SCExAO_status[0].first_inj_y, SCExAO_status[0].first_inj_f);
     // FIRST Calibration source
     // printw("FIRST Cal Source: ");
     // print_status(SCExAO_status[0].first_src_st, SCExAO_status[0].first_src_co);
@@ -589,11 +589,7 @@ int status_display()
     // FIRST Photometry
     printw("FIRST Photometry: ");
     print_status(SCExAO_status[0].first_photometry_st, SCExAO_status[0].first_photometry_co);
-    printw(" (x: %6.2f mm )\n", SCExAO_status[0].first_photometry);
-    // RHEA Pickoff
-    //printw("RHEA Pickoff    : ");
-    //print_status(SCExAO_status[0].rhea_pickoff_st, SCExAO_status[0].rhea_pickoff_co);
-    //printw(" (x: %6.2f nm )\n", SCExAO_status[0].rhea_pickoff);
+    printw(" (x: %6.2f mm)\n", SCExAO_status[0].first_photometry);
 
     print_header(" PYWFS LOOP STATUS ", '-');
 
@@ -926,17 +922,34 @@ int main(int argc, char **argv)
       strncpy(SCExAO_status[0].src_select_st, value, 15);
       SCExAO_status[0].src_select_co = atoi(color);
     }
-    else if (strcmp(status_item, "src_select") == 0)
+    else if (strcmp(status_item, "src_select_theta1") == 0)
     {
-      SCExAO_status[0].src_select = atof(value);
+      SCExAO_status[0].src_select_theta1 = atof(value);
     }
-    else if (strcmp(status_item, "src_flux_irnd") == 0)
+    else if (strcmp(status_item, "src_select_theta2") == 0)
     {
-      strncpy(SCExAO_status[0].src_flux_irnd, value, 15);
+      SCExAO_status[0].src_select_theta2 = atof(value);
     }
-    else if (strcmp(status_item, "src_flux_optnd") == 0)
+    else if (strcmp(status_item, "src_superk_st") == 0)
     {
-      strncpy(SCExAO_status[0].src_flux_optnd, value, 15);
+      strncpy(SCExAO_status[0].src_superk_st, value, 15);
+      SCExAO_status[0].src_superk_co = atoi(color);
+    }
+    else if (strcmp(status_item, "src_superk_flux") == 0)
+    {
+      SCExAO_status[0].src_superk_flux = atoi(value);
+    }
+    else if (strcmp(status_item, "src_flux_nd1") == 0)
+    {
+      strncpy(SCExAO_status[0].src_flux_nd1, value, 15);
+    }
+    else if (strcmp(status_item, "src_flux_nd2") == 0)
+    {
+      strncpy(SCExAO_status[0].src_flux_nd2, value, 15);
+    }
+    else if (strcmp(status_item, "src_flux_nd3") == 0)
+    {
+      strncpy(SCExAO_status[0].src_flux_nd3, value, 15);
     }
     else if (strcmp(status_item, "src_flux_filter") == 0)
     {
@@ -1116,28 +1129,6 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].lyot_y = atoi(value);
     }
-    // inverse piaa
-    else if (strcmp(status_item, "invpiaa_st") == 0)
-    {
-      strncpy(SCExAO_status[0].invpiaa_st, value, 15);
-      SCExAO_status[0].invpiaa_co = atoi(color);
-    }
-    else if (strcmp(status_item, "invpiaa_x") == 0)
-    {
-      SCExAO_status[0].invpiaa_x = atof(value);
-    }
-    else if (strcmp(status_item, "invpiaa_y") == 0)
-    {
-      SCExAO_status[0].invpiaa_y = atof(value);
-    }
-    else if (strcmp(status_item, "invpiaa_theta") == 0)
-    {
-      SCExAO_status[0].invpiaa_theta = atoi(value);
-    }
-    else if (strcmp(status_item, "invpiaa_phi") == 0)
-    {
-      SCExAO_status[0].invpiaa_phi = atoi(value);
-    }
     // oap4
     else if (strcmp(status_item, "oap4_st") == 0)
     {
@@ -1219,11 +1210,6 @@ int main(int argc, char **argv)
       SCExAO_status[0].ircam_fcs_f2 = atof(value);
     }
     // Polarization
-    else if (strcmp(status_item, "ircam_qwp") == 0)
-    {
-      strncpy(SCExAO_status[0].ircam_qwp, value, 15);
-      SCExAO_status[0].ircam_qwp_co = atoi(color);
-    }
     else if (strcmp(status_item, "field_stop_st") == 0)
     {
       strncpy(SCExAO_status[0].field_stop_st, value, 15);
@@ -1269,15 +1255,6 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].ircam_pupil_y = atof(value);
     }
-    else if (strcmp(status_item, "ircam_hwp") == 0)
-    {
-      strncpy(SCExAO_status[0].ircam_hwp, value, 15);
-      SCExAO_status[0].ircam_hwp_co = atoi(color);
-    }
-    else if (strcmp(status_item, "ircam_hwp_theta") == 0)
-    {
-      SCExAO_status[0].ircam_hwp_theta = atof(value);
-    }
     // REACH
     else if (strcmp(status_item, "reach_pickoff_st") == 0)
     {
@@ -1317,10 +1294,6 @@ int main(int argc, char **argv)
     else if (strcmp(status_item, "reach_fib_f") == 0)
     {
       SCExAO_status[0].reach_fib_f = atof(value);
-    }
-    else if (strcmp(status_item, "reach_fib_theta") == 0)
-    {
-      SCExAO_status[0].reach_fib_theta = atof(value);
     }
     // APAPANE pickoff
     else if (strcmp(status_item, "apapane_pickoff_st") == 0)
@@ -1495,6 +1468,10 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].vampires_fieldstop_y = atof(value);
     }
+    else if (strcmp(status_item, "vampires_fieldstop_f") == 0)
+    {
+      SCExAO_status[0].vampires_fieldstop_f = atof(value);
+    }
     // first
     else if (strcmp(status_item, "first_pickoff_st") == 0)
     {
@@ -1543,16 +1520,6 @@ int main(int argc, char **argv)
     else if (strcmp(status_item, "first_photometry") == 0)
     {
       SCExAO_status[0].first_photometry = atof(value);
-    }
-    // rhea
-    else if (strcmp(status_item, "rhea_pickoff_st") == 0)
-    {
-      strncpy(SCExAO_status[0].rhea_pickoff_st, value, 15);
-      SCExAO_status[0].rhea_pickoff_co = atoi(color);
-    }
-    else if (strcmp(status_item, "rhea_pickoff") == 0)
-    {
-      SCExAO_status[0].rhea_pickoff = atof(value);
     }
     // pywfs
     else if (strcmp(status_item, "pywfs_loop") == 0)

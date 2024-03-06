@@ -29,7 +29,7 @@ import ezstep_chain3 as ezstep_chain
 import logit #Custom logging library
 
 ttmdev  = "/dev/serial/by-path/"
-ttmdev += "pci-0000:00:1d.0-usb-0:1.2.1:1.0-port0" # all steppers
+ttmdev += "pci-0000:00:1d.0-usb-0:1.8.4.4.4.3:1.0-port0" # all steppers
 
 stagename = "fibinj_car"
 idn=3
