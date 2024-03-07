@@ -47,7 +47,7 @@ defpos = np.array([[1,1,1,1],[2,1,1,1],[2,2,1,1],[3,1,1,1],[4,1,1,1],[4,2,1,1]
                    ,[6,3,3,6],[6,4,3,6],[5,5,3,6],[6,5,3,6],[6,6,3,6]])
 npos = len(defpos)
 
-if sys.argv[-1] in ['default','min','max','more','less']:
+if sys.argv[-1] in ['default','min','max','more','less','waymore','wayless']:
     
     if sys.argv[-1] == 'max' :
         n2 = 0
@@ -58,15 +58,19 @@ if sys.argv[-1] in ['default','min','max','more','less']:
     elif sys.argv[-1] == 'default' :
         n2 = npos-6
 
-    elif sys.argv[-1] == 'more' or sys.argv[-1] == 'less' :
+    elif sys.argv[-1] in ['more','less','waymore','wayless'] :
 
         f = open(filename)
         n = int(f.read())
         f.close()
         if sys.argv[-1] == 'less':
             n2 = np.min([n+1,npos-1])
-        else:
+        elif sys.argv[-1] == 'more':
             n2 = np.max([n-1,0])
+        if sys.argv[-1] == 'wayless':
+            n2 = np.min([n+3,npos-1])
+        elif sys.argv[-1] == 'waymore':
+            n2 = np.max([n-3,0])
 
     thorlabswheel(devname, whids, whnames, args=['nd1', str(defpos[n2][0])], description=description)
     thorlabswheel(devname, whids, whnames, args=['nd2', str(defpos[n2][1])], description=description)
