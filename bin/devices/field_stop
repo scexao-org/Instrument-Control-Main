@@ -31,7 +31,7 @@ conexnames = ["x", "y"]
 
 description = "Field stop xy stage"
 
-defpos = ["out","0","90","45","135"]
+defpos = ["out","in","vertical","45deg","135deg"]
 
 # GENERIC CODE
 

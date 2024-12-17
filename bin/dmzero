@@ -1,5 +1,5 @@
-Cfits << EOF
-readshmim dmvolt
-imzero dmvolt
-quit
-EOF
+#!/bin/bash
+
+ssh sc6 dmzero
+
+

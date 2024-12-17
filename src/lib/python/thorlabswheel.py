@@ -34,7 +34,8 @@ class thorlabswheel:
                  whnames=[],
                  args=[],
                  description="no description",
-                 color_st=False):
+                 color_st=False,
+                 extra_commands = []):
 
         self.devname = devname
         self.description = description
@@ -47,6 +48,7 @@ class thorlabswheel:
         self.whnames = whnames
         self.args = args
         self.color_st = color_st
+        self.extra_commands = extra_commands
         self.wh = wheel.wheel()
 
         if whnames == []:
@@ -116,6 +118,10 @@ Usage: %s %s <command>
             for i in range(len(self.whnames)):
                 print("    %-6s  move %s stage" %
                       (self.whnames[i], self.whnames[i]))
+            if self.extra_commands != []:
+                for i in range(len(self.extra_commands)):
+                    print("    %-6s  %s" %
+                          (self.extra_commands[i][0], self.extra_commands[i][1]))
         print("""COMMAND:
     status  displays status
      1 - 6 defined positions""")

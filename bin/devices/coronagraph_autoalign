@@ -9,7 +9,7 @@ from scipy.interpolate import griddata
 import subprocess
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
-from xaosim.scexao_shmlib import shm
+from pyMilk.interfacing.shm import SHM
 import colormaps as cmaps
 import image_processing as impro
 import vibration as vib
@@ -20,10 +20,10 @@ zab = zaber.zaber()
 plt.ion()
 
 camid = 0
-cam = shm("/tmp/ircam%d.im.shm" % (camid,), verbose=False)
+cam = SHM("ircam%d" % (camid,), verbose=False)
 (xsize, ysize) = cam.mtdata['size'][:2]#size[:cam.naxis]
-cam_dark = shm("/tmp/ircam%d_dark.im.shm" % (camid,), verbose=False)
-cam_badpixmap = shm("/tmp/ircam%d_badpixmap.im.shm" % (camid,), verbose=False)
+cam_dark = SHM("ircam%d_dark" % (camid,), verbose=False)
+cam_badpixmap = SHM("ircam%d_badpixmap" % (camid,), verbose=False)
 fitter = fitting.LinearLSQFitter()
 
 args = sys.argv[1:]

@@ -42,11 +42,15 @@ class zaber:
     def __init__(self):
         self.s = None
 
-    def open(self, zaberchain):
-        filename = "/home/scexao/bin/devices/conf/path_zabchain_"+zaberchain+".txt"
-        filep = open(filename, 'r')
-        self.dev  = "/dev/serial/"
-        self.dev += filep.read().rstrip('\n')
+    def open(self, zaberchain, dev_override=None):
+        if dev_override is None:
+            filename = "/home/scexao/bin/devices/conf/path_zabchain_"+zaberchain+".txt"
+            filep = open(filename, 'r')
+            self.dev  = "/dev/serial/"
+            self.dev += filep.read().rstrip('\n')
+        else:
+            self.dev = dev_override
+
         try:
             self.s = serial.Serial(self.dev, 9600, timeout=0.5)
             dummy = self.s.readlines() # flush the port
@@ -81,11 +85,14 @@ class zaber:
         full_cmd = '%s %d %s' % (idn, cmd, args)
         #if not quiet:
         self.s.write(zab_cmd(full_cmd))
-        dummy = ''.encode()
-        while dummy == ''.encode():
+        for k in range(8):
             dummy = self.s.readline()
+            if dummy != ''.encode():
+                break
             time.sleep(0.1)
-        reply = zaberByte2step(dummy[2:])
+        reply=''
+        if len(dummy) > 2:
+            reply = zaberByte2step(dummy[2:])
         if not quiet:
             print("zaber %d = %d" % (int(idn), reply))
         return(reply)

@@ -1,7 +1,0 @@
-#!/home/scexao/anaconda3/bin/python
-# EASY-INSTALL-DEV-SCRIPT: 'camstack==0.1','palila.py'
-__requires__ = 'camstack==0.1'
-__import__('pkg_resources').require('camstack==0.1')
-__file__ = '/home/scexao/src/camstack/viewers/palila.py'
-with open(__file__) as f:
-    exec(compile(f.read(), __file__, 'exec'))

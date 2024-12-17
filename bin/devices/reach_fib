@@ -26,9 +26,6 @@ from devices import devices
 
 devname = "reach_fib"
 
-conexids = ["usb-Newport_CONEX-AGP_A64ONRCK-if00-port0"]
-conexnames = ["theta"]
-
 zaberchain = "irback"
 zaberids = [11, 13, 12]
 zabernames = ["x", "y", "f"]
@@ -40,4 +37,4 @@ defpos = ["onaxis"]
 # GENERIC CODE
 
 args = sys.argv[1:]
-devices(devname, conexids, conexnames, zaberchain, zaberids, zabernames, args, description, defpos, color_st=True)
+devices(devname, zaberchain=zaberchain, zaberids=zaberids, zabernames=zabernames, args=args, description=description, defpos=defpos, color_st=True)

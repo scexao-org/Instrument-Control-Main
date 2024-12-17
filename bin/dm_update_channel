@@ -1,12 +1,12 @@
 #/bin/bash
 
-Cfits << EOF
+milk << EOF
 loadfits "/home/scexao/conf/dm_patterns/$2" dmf
-saveflfits dmf "_tmp_dmf.fits"
+saveFITS dmf "_tmp_dmf.fits"
 exit
 EOF
 
-Cfits << EOF
+milk << EOF
 loadfits "_tmp_dmf.fits" dmf
 readshmim dm00disp$1
 cp dmf dm00disp$1

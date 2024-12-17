@@ -35,7 +35,6 @@ import image_processing as impro
 import conex_tt
 from astropy.modeling import models, fitting
 
-#from xaosim.scexao_shmlib import shm
 from pyMilk.interfacing.isio_shmlib import SHM as shm
 
 

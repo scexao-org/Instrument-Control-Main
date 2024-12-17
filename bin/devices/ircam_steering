@@ -46,11 +46,15 @@ def RDB_pull(rdb):
     oap4ph = float(status['X_OAP4PH'])
     strth = float(status['X_STRTHE'])
     strph = float(status['X_STRPHI'])
+    
+    print('Redis fetch result:')
+    for k,v in status.items():
+        print(f'{k}:    {v}')
 
     return(pad,oap4th,oap4ph,strth,strph)
 
 hmsg = """------------------------------------------------------------------
-Usage: ircam_steering <mode> <param1> <param2> <param3>
+Usage: ircam_steering <mode> <param1> <param2> <motion>
 ------------------------------------------------------------------
 MODE:
         onaxis  move the PSF back on-axis
@@ -64,8 +68,9 @@ PARAM1:
     horizontal or radial distance (arcsec) depending on the mode
 PARAM2:
     vertical distnace (arcsec) or angle (deg) dpending on the mode
-PARAM3:
-    read configuration files (1) or offset from current position (0)
+MOTION:
+           abs  read configuration files
+           rel  offset from current position
 ------------------------------------------------------------------"""
 
 args = sys.argv[1:]
@@ -81,7 +86,7 @@ if args != []:
         try:
             posx = float(args[1])
             posy = float(args[2])
-            readfile = int(args[3])
+            motion = args[3]
         except:
             print(hmsg)
             sys.exit()
@@ -89,7 +94,7 @@ if args != []:
         try:
             dist = float(args[1])
             angle = float(args[2])
-            readfile = int(args[3])
+            motion = args[3]
         except:
             print(hmsg)
             sys.exit()
@@ -99,7 +104,7 @@ if args != []:
         try:
             dist = float(args[1])
             angle = float(args[2])
-            readfile = int(args[3])
+            motion = args[3]
         except:
             print(hmsg)
             sys.exit()
@@ -126,25 +131,31 @@ oapphi = posy*slopeoap4phi
 #    oap0[i] = con.status("oap4_"+conexnames[i])
 #    con.close()
 #    time.sleep(1)
-if readfile:
+if motion == "abs":
     oap_file = "/home/scexao/bin/devices/conf/conf_oap4.txt"
     with open(oap_file,'r') as f:
         f2 = [float(s) for s in f.readlines()[0].split(';')[2:4]]
     f.close()
     oap0 = f2
-else:
+elif motion == "rel":
     oap0 = np.array([oap4th,oap4ph])
+else:
+    print(hmsg)
+    sys.exit()
 
 #conexid = "http://133.40.163.196:50001"
 #steering0 = conex_tt.status("steering",conexid)
-if readfile:
+if motion == "abs":
     steering_file = "/home/scexao/bin/devices/conf/conf_steering.txt"
     with open(steering_file,'r') as f:
         f2 = [float(s) for s in f.readlines()[0].split(';')[2:4]]
     f.close()
     steering0 = f2
-else:
+elif motion == "rel":
     steering0 = np.array([strth,strph])
+else:
+    print(hmsg)
+    sys.exit()
 
 print(oap0, steering0)
 
@@ -165,5 +176,5 @@ os.system("~/bin/devices/steering theta goto %.3f" % (sttheta,))
 os.system("~/bin/devices/oap4 phi goto %.3f &" % (oapphi,))
 os.system("~/bin/devices/steering phi goto %.3f &" % (stphi,))
 
-#subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
-#subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
+subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'oap4_st', '(%.1f, %.1f) as' % (posx,posy), '2'])
+subprocess.call(['/home/scexao/bin/scexaostatus', 'set', 'steering_st', '(%.1f, %.1f) as' % (posx,posy), '2'])

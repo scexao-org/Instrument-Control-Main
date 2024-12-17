@@ -30,7 +30,6 @@ from scxkw.redisutil.typed_db import Redis
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from camera_tools import cam_cmd
-#from xaosim.scexao_shmlib import shm
 from pyMilk.interfacing.isio_shmlib import SHM as shm
 
 
@@ -39,7 +38,7 @@ from pyMilk.interfacing.isio_shmlib import SHM as shm
 # ------------------------------------------------------------------
 def RDB_pull(rdb):
 
-    fits_keys_to_pull = {'X_NULPKO'}
+    fits_keys_to_pull = {'X_PHOPKO'}
     # Now Getting the keys
     with rdb.pipeline() as pipe:
         for key in fits_keys_to_pull:
@@ -48,7 +47,7 @@ def RDB_pull(rdb):
         values = pipe.execute()
     status = {k: v for k,v in zip(values[::2], values[1::2])}
 
-    gpin = status['X_NULPKO'].strip() == 'IN'
+    gpin = status['X_PHOPKO'].strip() == 'IN'
 
     return(gpin)
 
@@ -97,19 +96,19 @@ if args != []:
         x0 = float(args[0])
         y0 = float(args[1])
         dtime = int(args[2])
-        gain = 0.01
+        gain = 0.1
         a = 16
     elif len(args) == 2:
         x0 = float(args[0])
         y0 = float(args[1])
         dtime = 0
-        gain = 0.01
+        gain = 0.1
         a = 16
         
 else:
     x0 = y0 = 0
     dtime = 0
-    gain = 0.01 #Gain of the loop 
+    gain = 0.1 #Gain of the loop 
     a = 16
         
 
@@ -178,12 +177,13 @@ cort /= pscale
 cor = np.array([0,0])
 if gpin:
     cor = cort[:,0]
+print(cor)
 
 im_palila = shm_im.get_data()
 (ysize,xsize) = im_palila.shape
 mask = np.zeros_like(im_palila)
 mask[ysize//2-a:ysize//2+a,xsize//2-a:xsize//2+a] = 1.
-crop = shm_im.get_crop().astype(int)
+crop = np.array(shm_im.get_crop())
 #crop = np.array([128,128,160,160])
 shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5-x0/pscale
 shifty = pos[0,1]-crop[2]+256+cor[1]-0.5-y0/pscale

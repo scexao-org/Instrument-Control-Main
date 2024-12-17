@@ -1,5 +1,5 @@
 1;Open            ;Open            ;Open            ;Open              
-2;OD 0.3          ;OD 0.3          ;OD 1.3          ;900nm 40nm BW     
+2;OD 0.3          ;OD 0.3          ;OD 1.3          ;800nm SP          
 3;OD 1.0          ;OD 1.0          ;OD 2.5          ;1250nm 25nm BW    
 4;OD 1.3          ;OD 1.3          ;1500nm LP       ;1300m, 25nm BW    
 5;OD 2.0          ;OD 2.0          ;900nm LP        ;1350nm 25nm BW    

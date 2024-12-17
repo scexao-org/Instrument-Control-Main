@@ -1,7 +1,10 @@
-Cfits << EOF
+#!/bin/bash
+
+milk << EOF
+mload milkfft
 stroke=0.004
 loadfits "~/conf/dm_patterns/BullsEye.fits" im
-transl im imt "$1" "$2"
+fft.transl im imt "$1" "$2"
 imtrunc imt 0.0 100.0 imtt
 ddisp=imtt*stroke
 readshmim dm00disp04

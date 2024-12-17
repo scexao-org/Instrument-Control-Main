@@ -20,7 +20,7 @@ import numpy as np
 import os,sys,time
 import matplotlib.pyplot as plt
 import math as m
-from xaosim.scexao_shmlib import shm
+from pyMilk.interfacing.shm import SHM
 import subprocess
 
 home = os.getenv('HOME')

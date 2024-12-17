@@ -1,6 +1,0 @@
-#!/bin/bash
-
-#tmux new-session -d -s buffycam
-#tmux send-keys -t buffycam "ssh -CY scexao-op@localhost \"source scexao-set-env.sh; PATH=\${HOME}/anaconda3/bin:\${PATH} buffycam.py\"" Enter
-
-apapane.py $@

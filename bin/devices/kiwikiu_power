@@ -26,11 +26,11 @@ from nps import NewNPS as NPS
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
-npsname = "rajnicam_power"
+npsname = "kiwikiu_power"
 npsid = 2
 portid = 14
 
-description = "power switch for RajniCam"
+description = "power switch for Kiwikiu (LOWFS)"
 
 # GENERIC CODE
 

@@ -30,7 +30,7 @@ chn = 8
 
 home = os.getenv('HOME')
 
-from xaosim.scexao_shmlib import shm
+from pyMilk.interfacing.shm import SHM
 from xaosim.zernike import mkzer1
 
 joy = None
@@ -89,7 +89,7 @@ z_vals = np.zeros(10)      # zernike coefficients
 sync = True
 # -----------------------
 
-dmc  = shm('/tmp/dm00disp%02d.im.shm' % (chn,)) # DM channel (perturbation)
+dmc  = SHM('dm00disp%02d' % (chn,)) # DM channel (perturbation)
 
 # -----------------------
 #   set up the window

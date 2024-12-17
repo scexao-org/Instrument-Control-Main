@@ -26,8 +26,6 @@ from scxkw.redisutil.typed_db import Redis
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 from camera_tools import cam_cmd
-#from xaosim.scexao_shmlib import shm
-#from scexao_shm import shm
 from pyMilk.interfacing.isio_shmlib import SHM as shm
 import image_processing as impro
 
@@ -129,7 +127,7 @@ if gpin:
 
 im_palila = read_shm()
 (ysize,xsize) = im_palila.shape
-crop = shm_im.get_crop().astype(int)
+crop = np.asarray(shm_im.get_crop()).astype(int)
 #crop = np.array([128,128,160,160])
 shiftx = pos[0,0]-crop[0]+320+cor[0]-0.5
 shifty = pos[0,1]-crop[2]+256+cor[1]-0.5

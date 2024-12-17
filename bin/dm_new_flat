@@ -14,7 +14,7 @@ from   pyMilk.interfacing.isio_shmlib import SHM
 auxdir = home + "/conf/dm_patterns/"
 
 hmsg = """ --------------------------------------------------------------
-dm_new_flat: saves what is currently in the channel 8 as the new flat
+dm_new_flat: sum all 12 dm channels and save to file
 -------------------------------------------------------------- """
 
 args = sys.argv[1:]
@@ -24,15 +24,15 @@ chn = 8
 disp = np.zeros([50,50],dtype=np.float32)
 
 for i in range(12):
-    disp+=SHM(f'/tmp/dm00disp{i:02d}.im.shm', verbose=False).get_data() 
+    disp += SHM(f'dm00disp{i:02d}', verbose=False).get_data() 
 
 
-today=date.today()
+today = date.today()
 
 fname = home+"/conf/dm_patterns/internal_flat%s.fits"
 
 
 
-pf.writeto(fname %'', disp, overwrite=True)
+pf.writeto(fname % '', disp, overwrite=True)
 
 pf.writeto(fname % today.strftime('_%Y%m%d'), disp, overwrite=True)

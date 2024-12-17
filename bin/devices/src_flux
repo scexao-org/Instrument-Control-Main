@@ -47,6 +47,11 @@ defpos = np.array([[1,1,1,1],[2,1,1,1],[2,2,1,1],[3,1,1,1],[4,1,1,1],[4,2,1,1]
                    ,[6,3,3,6],[6,4,3,6],[5,5,3,6],[6,5,3,6],[6,6,3,6]])
 npos = len(defpos)
 
+extra_commands = [['default','default NDs (7.5)'],['min','minimum flux, max NDs'],
+                  ['max','maximum flux, no NDs. CAUTION!'],['more','more flux by factor ~2'],
+                  ['less','less flux by factor ~2'],['waymore','more flux by factor ~10'],
+                  ['wayless','less flux by factor ~10']]
+
 if sys.argv[-1] in ['default','min','max','more','less','waymore','wayless']:
     
     if sys.argv[-1] == 'max' :
@@ -83,6 +88,6 @@ if sys.argv[-1] in ['default','min','max','more','less','waymore','wayless']:
 
 else:
     args = sys.argv[1:]
-    thorlabswheel(devname, whids, whnames, args=args, description=description)
+    thorlabswheel(devname, whids, whnames, args=args, description=description, extra_commands = extra_commands)
 
 
