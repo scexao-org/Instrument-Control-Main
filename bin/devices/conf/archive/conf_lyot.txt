@@ -1,5 +1,5 @@
 1;Open (default)  ;0.0  ;0     ;0     ;1
-2;Lyot coro stop  ;47.0 ;118050;145240;2
+2;Lyot coro stop  ;47.0 ;118050;135240;2
 3;Apod. 8OPM stop ;91.0 ;117000;129000;2
 4;Vect vortex stp ;137.0;105000;128300;2
 5;PIAACMC stop    ;178.6;104700;132300;2
