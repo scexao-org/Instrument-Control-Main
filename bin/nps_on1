@@ -1,9 +1,0 @@
-#!/bin/bash
-
-# Shorthand for ON a port of NPS 1
-if [ "$#" -ne 1 ]; then
-    echo "nps_on1"
-    echo "Usage: nps_on1 <port>"
-fi
-
-nps 1 $1 on
