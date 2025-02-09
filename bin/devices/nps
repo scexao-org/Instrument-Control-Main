@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 '''
 NPS control - Use "nps help" for full info
 
@@ -28,10 +28,10 @@ def message(nps_id=0):
         print("------------------------------------")
         print("          NPS1 contents             ")
         print("------------------------------------")
-        print("Port 1: SCExAO comp 4 redundant")
+        print("Port 1: --")
         print("Port 2: SCExAO comp 2 primary")
         print("Port 3: High voltage tip/tilt driver")
-        print("Port 4: VAMPIRES camera")
+        print("Port 4: VAMPIRES camera 1")
         print("Port 5: Source box")
         print("Port 6: DM electronics")
         print("Port 7: VAMPIRES synchro & FLC")
@@ -41,34 +41,34 @@ def message(nps_id=0):
         print("------------------------------------")
         print("          NPS2 contents             ")
         print("------------------------------------")
-        print("Port  1: SCExAO comp 4 primary")
-        print("Port  2: SCExAO comp 2 redundant")
-        print("Port  3: KIWIKIU power")
-        print("Port  4: OCAM power")
-        print("Port  5: Tip/Tilt modulator")
-        print("Port  6: FIRST Neon cal source")
-        print("Port  7: DM Vacuum Pump")
-        print("Port  8: --")
-        print("Port  9: SCExAO comp 4 primary")
-        print("Port 10: SCExAO comp 2 redundant")
-        print("Port 11: KIWIKIU power")
-        print("Port 12: OCAM power")
-        print("Port 13: Tip/Tilt modulator")
-        print("Port 14: FIRST Neon cal source")
-        print("Port 15: DM Vacuum Pump")
-        print("Port 16: --")
+        print("Port  1: SCExAO comp 4 primary?")
+        print("Port  2: --?")
+        print("Port  3: --?")
+        print("Port  4: APAPANE C-RED2")
+        print("Port  5: --?")
+        print("Port  6: --?")
+        print("Port  7: --?")
+        print("Port  8: FIRST Neon cal source")
+        print("Port  9: --")
+        print("Port 10: --")
+        print("Port 11: FIRST Science Camera")
+        print("Port 12: Tip/Tilt modulator")
+        print("Port 13: PUEO power")
+        print("Port 14: KIWIKIU power")
+        print("Port 15: SCExAO comp 2 redundant")
+        print("Port 16: VAMPIRES camera 2")
         print("------------------------------------")
     elif nps_id == 3:
         print("------------------------------------")
         print("          NPS3 contents             ")
         print("------------------------------------")
-        print("Port 1: --")
-        print("Port 2: VAMPIRES computer")
-        print("Port 3: APAPANE power")
+        print("Port 1: FIRST Photo Camera")
+        print("Port 2: --")
+        print("Port 3: APAPANE C-RED ONE")
         print("Port 4: 15V power supplies (Zaber)")
         print("Port 5: 5 and 12V supplies (Wheels)")
         print("Port 6: 24V power supplies (Ez step)")
-        print("Port 7: GLINT picomotors")
+        print("Port 7: --")
         print("Port 8: PALILA power")
         print("------------------------------------")
     else:
@@ -150,7 +150,6 @@ if __name__ == "__main__":
         command = "off"
     else:
         command = "status"
-
     Nps_class(nps_name, nps_id, port_id, args=[command], description=description)
 
     sys.exit(0)

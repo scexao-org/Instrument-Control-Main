@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # ========================================================= #
 #    ___                     _                      _       #
@@ -47,20 +47,16 @@ class AbstractNPS:
         self.npsid = npsid
         self.portid = portid
 
-        na = args.__len__()
-
-        if args == []:
+        if len(args) == 0:
             self.usage()
 
-        elif "on" in args[0]:
+        cmd = args[0].lower()
+        if cmd == "on":
             self.npson()
-
-        elif "off" in args[0]:
+        elif cmd == "off":
             self.npsoff()
-
-        elif "status" in args[0]:
+        elif cmd == "status":
             self.status()
-
         else:
             self.usage()
 
@@ -87,7 +83,7 @@ COMMAND:
     def npsoff(self):
         raise NotImplementedError()
 
-    def npsstatus(self):
+    def status(self):
         raise NotImplementedError()
 
 
@@ -161,7 +157,7 @@ check that environment variable NPS_IP is correctly set
             cmd = "DN0\r\n".encode()
             sock.send(cmd)
             time.sleep(1)
-            npsstatus = sock.recv(1024)
+            npsstatus = sock.recv(1024).decode()
             npsstatus2 = npsstatus[npsstatus.find("OUTLET %i" %
                                                   (self.portid, )) + 9:]
             npsstatus3 = npsstatus2[:npsstatus2.find("(") - 1]
@@ -182,7 +178,7 @@ check that environment variable NPS_IP is correctly set
 
         except Exception as e:
             print("""-------------------------------------------------------
-nps_on could not connect to NPS.
+nps_status could not connect to NPS.
 check that environment variable NPS_IP is correctly set
 -------------------------------------------------------""")
             print("Actual exception:")
