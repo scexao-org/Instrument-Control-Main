@@ -17,7 +17,8 @@ import datetime
 from scipy.interpolate import griddata
 from scipy.signal      import medfilt2d
 from numpy.linalg      import solve
-from scipy.ndimage.interpolation import rotate
+from scipy.ndimage import rotate
+from scipy.special import factorial
 
 # =================================================
 # =================================================
@@ -31,8 +32,77 @@ chn = 8
 home = os.getenv('HOME')
 
 from pyMilk.interfacing.shm import SHM
-from xaosim.zernike import mkzer1
 
+def mkzer1(jj, sz, rad, limit=False):
+	n, m = noll_2_zern(jj)
+	if jj == 1:
+		return np.ones((sz, sz))
+	else:
+		return mkzer(n, m, sz, rad, limit)
+
+def noll_2_zern(j):
+	if j < 1:
+		msg = f"Noll index starts at one ({j=})"
+		raise ValueError(msg)
+	n = 0
+	j1 = j - 1
+	while j1 > n:
+		n += 1
+		j1 -= n
+
+	m = (-1)**j * ((n % 2) + 2 * int((j1 + ((n + 1) % 2)) / 2))
+	return n, m
+
+def mkzer(n, m, size, rad, limit=False):
+	coeffs, pows = zer_coeff(n, np.abs(m))
+	rho = dist(size, size)/float(rad)
+	outp = np.where(rho > 1)
+	inp = np.where(rho <= 1)
+	
+	res = np.sum(coeffs[:, None, None] * rho**pows[:, None, None], axis=0)
+	
+	if limit:
+		res[outp] = 0
+	azi = azim(size, size)
+	if m > 0:
+		res *= np.cos(m * azi)
+	elif m < 0:
+		res *= np.sin(-m * azi)
+
+	# normalization
+	rms0 = np.std(res[inp])
+	res /= rms0
+	return res
+def zer_coeff(n, m):
+	s = np.arange((n - m) // 2 + 1)
+	coeffs = (-1)**s * factorial(n-s) / (factorial(s) * factorial((n + m)/2 - s) * factorial((n - m)/2 - s))
+	pows = n - 2*s
+	return coeffs, pows
+
+def dist(n, m):
+	if n % 2 == 0:
+		xl = np.arange(n) - n//2 + 0.5
+	else:
+		xl = np.arange(n) - n//2
+	if m % 2 == 0:
+		yl = np.arange(m) - m//2 + 0.5
+	else:
+		yl = np.arange(m) - m//2
+	xx, yy = np.meshgrid(xl, yl)
+	return np.hypot(yy, xx)
+
+	
+def azim(n, m):
+	if n % 2 == 0:
+		xl = np.arange(n) - n//2 + 0.5
+	else:
+		xl = np.arange(n) - n//2
+	if m % 2 == 0:
+		yl = np.arange(m) - m//2 + 0.5
+	else:
+		yl = np.arange(m) - m//2
+	xx, yy = np.meshgrid(xl, yl)
+	return np.arctan2(xx, yy)
 joy = None
 
 hmsg = """
