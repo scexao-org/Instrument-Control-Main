@@ -157,6 +157,7 @@ scale = -0.05#12.1e-3/3600./180*m.pi*18/
 modes *= -scale*gain
 
 dmc = np.zeros((50,50))
+dmc = dm.get_data()
 
 timeout0 = 0
 # parameters of the target point

@@ -78,6 +78,8 @@ def main():
     
     elif "home" in args[0].lower():
         ttm = ezstep_chain.ezstep_chain(ttmdev)
+        ttm.init_smi(quiet=False)
+        time.sleep(2)
         position = ttm.home(idn)
         pos0 = -1.5
         pos = ttm.current_pos(idn)
@@ -105,7 +107,7 @@ def main():
         except:
             usage()
             
-        if (0<= pos <= 11500000):
+        if (0<= pos <= 11000000):
             ttm = ezstep_chain.ezstep_chain(ttmdev)
             ttm.goto(idn, pos)#4
             pos0 = -1.5
@@ -118,7 +120,7 @@ def main():
             ttm.close()
             logit.logit('SMI_car_axis','moved_to_position_'+str(pos))
         else:
-            usage()
+            print("Value needs to be between 0 and 11,000,000")
     else:
         usage()
 

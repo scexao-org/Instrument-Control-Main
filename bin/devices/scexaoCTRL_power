@@ -35,11 +35,9 @@ if args[0] == '1':
     portid = 2
 elif args[0] == '2':
     npsid = 2
-    portid = 2
+    portid = 15
 else:
-    npsid = 1
-    portid = 0
-    args2 = []
+    print("wrong argument")
 
 
 description = "power switch for the scexaoCTRL computer"

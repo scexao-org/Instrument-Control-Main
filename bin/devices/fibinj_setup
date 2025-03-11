@@ -117,7 +117,7 @@ filej="/home/scexao/bin/devices/conf/conf_irspectro_col.txt"
 nlj=$(cat $filej | wc -l)
 IFS=$'\n'
 declare -a nj
-declare -a df
+declare -a dj
 declare -a fj
 declare -a cj
 i=1

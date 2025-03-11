@@ -23,7 +23,7 @@ TIMEOUT = 2.25
 CONEX_PORT = 50001
 
 class ConexStatus(object):
-    def __init__(self, state='offline', pos=(np.NaN, np.NaN), conexstatus='', limits=None):
+    def __init__(self, state='offline', pos=(np.nan, np.nan), conexstatus='', limits=None):
         """
             state is a ConexManager state : 'idle' 'offline' 'processing' 'stopped/stopping'
                                          'moving to {}, {}'

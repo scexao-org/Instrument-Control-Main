@@ -1,8 +1,8 @@
 1;Open (default)  ;0.0  ;0     ;0     ;1
-2;Lyot coro stop  ;47.0 ;118050;135240;2
+2;Lyot coro stop  ;47.0 ;116450;131240;2
 3;Apod. 8OPM stop ;91.0 ;117000;129000;2
 4;Vect vortex stp ;137.0;105000;128300;2
-5;PIAACMC stop    ;178.6;104700;132300;2
+5;PIAACMC stop    ;178.6;113700;128300;2
 6;MPIAA stop 1    ;218.0;199500;133500;2
 7;MPIAA stop 2    ;268.0;163500;135500;2
 8;Mirror          ;315.0;0     ;0     ;0

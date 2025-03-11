@@ -1,9 +1,9 @@
-1;SuperK 2 SCExAO ;60.00;24.00;1
-2;SuperK 2 AO3k   ;60.00;13.00;2
-3;SuperK 2 intsph ;60.00; 5.00;1
+1;SuperK 2 SCExAO ;60.50;24.00;1
+2;SuperK 2 AO3k   ;60.50;12.15;2
+3;SuperK 2 intsph ;60.50; 3.70;1
 4;LLTF 2 SCExAO   ;45.00;24.00;2
-5;LLTF 2 AO3k     ;45.00;13.00;1
-6;LLTF 2 intsph   ;45.00; 5.00;2
+5;LLTF 2 AO3k     ;45.00;12.15;1
+6;LLTF 2 intsph   ;45.00; 3.70;2
 7;Laser 2 SCExAO  ;00.00;24.00;3
-8;Laser 2 AO3k    ;00.00;13.00;3
-9;Laser 2 intsph  ;00.00; 5.00;3
+8;Laser 2 AO3k    ;00.00;12.15;3
+9;Laser 2 intsph  ;00.00; 3.70;3

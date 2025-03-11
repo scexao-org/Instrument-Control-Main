@@ -21,7 +21,7 @@ import os,sys,time
 import matplotlib.pyplot as plt
 import math as m
 
-from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxconf import REDIS_DB_HOST, REDIS_DB_PORT
 from scxkw.redisutil.typed_db import Redis
 
 
@@ -55,6 +55,7 @@ for any questions, ask Julien Lozi (lozi@naoj.org).
 """
 
 args = sys.argv[1:]
+sep = np.nan
 
 if len(args) == 2:
     try:

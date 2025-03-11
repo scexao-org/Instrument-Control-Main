@@ -21,7 +21,7 @@ import os,sys,time
 import matplotlib.pyplot as plt
 import math as m
 
-from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxconf import REDIS_DB_HOST, REDIS_DB_PORT
 from scxkw.redisutil.typed_db import Redis
 
 
@@ -45,8 +45,11 @@ def RDB_pull(rdb):
 hmsg = """
 -------- PCFI target tracking ---------
 
-Usage: reach_track <separation> <PA>
-
+Usage: reach_track <mode> <separation> <PA>
+INPUT <mode>       :
+      onaxis
+      palilaxy
+      skyangle
 INPUT <separation> : Separation between star and target (in arcsec)
 INPUT <PA>         : Position angle in degrees (0deg: North, 90deg: East)
 EXAMPLE :  pcfi_track 0.2 135 

@@ -257,13 +257,13 @@ int status_display()
     print_header(" NETWORK POWER SWITCHES ", '-');
     // NPS1
     printw("NPS1 ports 1-4  : ");
-    print_status("VAMPIRES CAMERA", SCExAO_status[0].nps1_1_co);
+    print_status("               ", SCExAO_status[0].nps1_1_co);
     printw(" | ");
-    print_status("SCExAO2 POWER ?", SCExAO_status[0].nps1_2_co);
+    print_status("SCExAO2 POWER  ", SCExAO_status[0].nps1_2_co);
     printw(" | ");
     print_status("HIGH-VOLTAGE TT", SCExAO_status[0].nps1_3_co);
     printw(" | ");
-    print_status("VAMPIRES CAMERA", SCExAO_status[0].nps1_4_co);
+    print_status("VAMPIRES CAM 1 ", SCExAO_status[0].nps1_4_co);
     printw("\n");
     printw("NPS1 ports 5-8  : ");
     print_status("  SOURCE BOX   ", SCExAO_status[0].nps1_5_co);
@@ -272,7 +272,7 @@ int status_display()
     printw(" | ");
     print_status(" VAMPIRES SYNC ", SCExAO_status[0].nps1_7_co);
     printw(" | ");
-    print_status("   ?UNKNOWN?   ", SCExAO_status[0].nps1_8_co);
+    print_status("VAMP DIFF WHEEL", SCExAO_status[0].nps1_8_co);
     printw("\n");
     // NPS2
     printw("NPS2 ports 1-4  : ");
@@ -280,23 +280,23 @@ int status_display()
     printw(" | ");
     print_status("               ", SCExAO_status[0].nps2_2_co);
     printw(" | ");
-    print_status("               ", SCExAO_status[0].nps2_3_co);
+    print_status(" IRSPECTRO FIB ", SCExAO_status[0].nps2_3_co);
     printw(" | ");
-    print_status("               ", SCExAO_status[0].nps2_4_co);
+    print_status("APAPANE C-RED2 ", SCExAO_status[0].nps2_4_co);
     printw("\n");
     printw("NPS2 ports 5-8  : ");
-    print_status("  GLINT CRED2  ", SCExAO_status[0].nps2_5_co);
+    print_status("               ", SCExAO_status[0].nps2_5_co);
     printw(" | ");
-    print_status("               ", SCExAO_status[0].nps2_6_co);
+    print_status("  GLINT MEMS   ", SCExAO_status[0].nps2_6_co);
     printw(" | ");
-    print_status("               ", SCExAO_status[0].nps2_7_co);
+    print_status("FIRST HAMAMATSU", SCExAO_status[0].nps2_7_co);
     printw(" | ");
-    print_status("FIRST NEON SRC ", SCExAO_status[0].nps2_8_co);
+    print_status("               ", SCExAO_status[0].nps2_8_co);
     printw("\n");
     printw("NPS2 ports 9-12 : ");
-    print_status("VAMP DIFFWHEEL?", SCExAO_status_ext[0].nps2_9_co);
+    print_status("               ", SCExAO_status_ext[0].nps2_9_co);
     printw(" | ");
-    print_status("DM VACUUM PUMP ", SCExAO_status_ext[0].nps2_10_co);
+    print_status("               ", SCExAO_status_ext[0].nps2_10_co);
     printw(" | ");
     print_status(" FIRST SCI CAM ", SCExAO_status_ext[0].nps2_11_co);
     printw(" | ");
@@ -307,17 +307,17 @@ int status_display()
     printw(" | ");
     print_status(" KIWIKIU POWER ", SCExAO_status_ext[0].nps2_14_co);
     printw(" | ");
-    print_status("SCExAO2 POWER ?", SCExAO_status_ext[0].nps2_15_co);
+    print_status(" SCExAO2 POWER ", SCExAO_status_ext[0].nps2_15_co);
     printw(" | ");
-    print_status("  UNKNOWN  ?   ", SCExAO_status_ext[0].nps2_16_co);
+    print_status("VAMPIRES CAM 2 ", SCExAO_status_ext[0].nps2_16_co);
     printw("\n");
     // NPS3
     printw("NPS3 ports 1-4  : ");
     print_status("FIRST PHOTO CAM", SCExAO_status[0].nps3_1_co);
     printw(" | ");
-    print_status(" VAMPIRES COMP ", SCExAO_status[0].nps3_2_co);
+    print_status("               ", SCExAO_status[0].nps3_2_co);
     printw(" | ");
-    print_status(" APAPANE POWER ", SCExAO_status[0].nps3_3_co);
+    print_status("APAPANE C-RED1 ", SCExAO_status[0].nps3_3_co);
     printw(" | ");
     print_status("   15V POWER   ", SCExAO_status[0].nps3_4_co);
     printw("\n");
@@ -326,7 +326,7 @@ int status_display()
     printw(" | ");
     print_status("   24V POWER   ", SCExAO_status[0].nps3_6_co);
     printw(" | ");
-    print_status("GLINT PICOMOTOR", SCExAO_status[0].nps3_7_co);
+    print_status("               ", SCExAO_status[0].nps3_7_co);
     printw(" | ");
     print_status(" PALILA POWER  ", SCExAO_status[0].nps3_8_co);
     printw("\n");

@@ -33,6 +33,7 @@ class thorlabswheel:
                  whids=[],
                  whnames=[],
                  args=[],
+                 defpos=[],
                  description="no description",
                  color_st=False,
                  extra_commands = []):
@@ -47,6 +48,7 @@ class thorlabswheel:
         self.whids = whids
         self.whnames = whnames
         self.args = args
+        self.defpos = defpos
         self.color_st = color_st
         self.extra_commands = extra_commands
         self.wh = wheel.wheel()
@@ -92,6 +94,10 @@ class thorlabswheel:
 
                 elif args[whu].isdigit():
                     slot = args[whu]
+                    self.wheel_goto_slot(slot)
+                
+                elif args[whu].lower() in defpos:
+                    slot = str(defpos.index(args[whu])+1)
                     self.wheel_goto_slot(slot)
 
                 else:

@@ -1,4 +1,4 @@
-1;Linear arr. SMA;.50 ;1
+1;Linear arr. SMA;.55 ;1
 2;SMF FCP/PC     ;.61 ;2
 3;19-port lantern;.70 ;1
 4;V-groove Port 1;0.00;2

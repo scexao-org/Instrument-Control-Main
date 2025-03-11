@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+# ================================================================== #
+#                 _____  ___  __           _      _          __  __  #
+#   /\/\    /\ /\ \_   \/   \/ _\    _ __ (_) ___| | _____  / _|/ _| #
+#  /    \  / //_/  / /\/ /\ /\ \    | '_ \| |/ __| |/ / _ \| |_| |_  #
+# / /\/\ \/ __ \/\/ /_/ /_// _\ \   | |_) | | (__|   < (_) |  _|  _| #
+# \/    \/\/  \/\____/___,'  \__/   | .__/|_|\___|_|\_\___/|_| |_|   #
+#                                   |_|                              #
+#                                                                    #
+# ================================================================== #
+
+import os
+import sys
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/lib/python/')
+from devices import devices
+
+# SPECIFIC PARAMETERS FOR THIS DEVICE
+
+devname = "mkids_pickoff"
+
+conexids = ["usb-Newport_CONEX-AGP_A619G731-if00-port0","usb-Newport_CONEX-AGP_A62X7LUM-if00-port0"]
+conexnames = ["wheel","theta"]
+
+description = "MEC pickoff mirror"
+
+defpos = ["open", "arwindow", "mirror", "t10r90", "t90r10", "1.35umsp", "open2", "open3"]
+
+# GENERIC CODE
+
+args = sys.argv[1:]
+devices(devname, conexids, conexnames, args=args, defpos=defpos, description=description, color_st=True)

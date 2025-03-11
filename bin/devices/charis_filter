@@ -3,7 +3,7 @@
     charis_filter
 
 Usage:
-    charis_filter (j|h|k|out) [-w]
+    charis_filter (j|h|k|out)
 '''
 
 from docopt import docopt
@@ -28,10 +28,9 @@ if __name__ == "__main__":
     piaa1_proc = subprocess.Popen(['piaa1', str(pos[0])])
     piaa2_proc = subprocess.Popen(['piaa2', str(pos[1])])
 
-    if args['-w']:
-        piaa1_proc.wait()
-        piaa2_proc.wait()
 
+    piaa1_proc.wait()
+    piaa2_proc.wait()
 ''' LEGACY
 #!/bin/bash
 
@@ -45,7 +44,7 @@ for arg in "$@"; do
     piaa1 6 &
     piaa2 7 & ;;
     "H")
-    piaa1 8 &
+    piaa1 8 
     piaa2 7 & ;;
     "K")
     piaa1 7 &

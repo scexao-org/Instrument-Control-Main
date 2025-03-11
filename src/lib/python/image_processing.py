@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from astropy.modeling import models, fitting
 from scipy.fftpack import fftfreq
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline as RBSpline
 from scipy.ndimage import median_filter, shift
 from astropy.io import fits as pf
 
@@ -25,11 +25,11 @@ fitter = fitting.LevMarLSQFitter()
 def SubaruPSF(x, y, amplitude=1.0, x_0=0.0, y_0=0.0):
     """Simulation of SCExAO PSF"""
     psf = pf.getdata("%s/src/lib/python/simref.fits" % home)
-    psf_func = interp2d(np.arange(257) - 128,
+    psf_func = RBSpline(np.arange(257) - 128,
                         np.arange(257) - 128,
-                        psf,
+                        psf.T,
                         kind='linear')
-    psf_eval = amplitude * psf_func(x[:, 0] - x_0, y[0, :] - y_0)
+    psf_eval = amplitude * psf_func(x[:, 0] - x_0, y[0, :] - y_0).T
     return np.reshape(psf_eval, x.shape)
 
 
@@ -41,11 +41,11 @@ def SubaruPSF(x, y, amplitude=1.0, x_0=0.0, y_0=0.0):
 def RetroinjPSF(x, y, amplitude=1.0, x_0=0.0, y_0=0.0):
     """Simulation of Retroinj PSF"""
     psf = pf.getdata("%s/src/lib/python/REACH_retroinj.fits" % home)
-    psf_func = interp2d(np.arange(129) - 64,
+    psf_func = RBSpline(np.arange(129) - 64,
                         np.arange(129) - 64,
-                        psf,
+                        psf.T,
                         kind='linear')
-    psf_eval = amplitude * psf_func(x[:, 0] - x_0, y[0, :] - y_0)
+    psf_eval = amplitude * psf_func(x[:, 0] - x_0, y[0, :] - y_0).T
     return np.reshape(psf_eval, x.shape)
 
 
@@ -664,8 +664,7 @@ def calculate_strehl(image,
         ax.set(xlabel="Angle [arcsec]",
                ylabel="Angle [arcsec]",
                title="%s, Strehl ratio: %.2f" % (target, strehl))
-        plt.savefig("%s%s_Strehl_%s.png" % (savepath, timestamp, target),
-                    overwrite=True)
+        plt.savefig("%s%s_Strehl_%s.png" % (savepath, timestamp, target))
         pf.writeto("%s%s_Strehl_%s.fits" % (savepath, timestamp, target),
                    imgstr3,
                    overwrite=True)
@@ -758,7 +757,7 @@ def binary_processing(im,
                                     center=[ym, xm],
                                     radius=rm[i + int(retroinj)])
         maskedim = maskedim * (1 - mask)
-        plt.savefig("test1.png", overwrite=True)
+        plt.savefig("test1.png")
         if retroinj and trackstar > 0 and i + 1 == trackstar:
             print("tracking this star")
             postmp[i + int(retroinj) + 1, :] = retrotmp[::-1]
@@ -795,7 +794,7 @@ def binary_processing(im,
 
         ym = postmp[i + int(retroinj) + 1, 1]
         xm = postmp[i + int(retroinj) + 1, 0]
-        plt.savefig("test2.png", overwrite=True)
+        plt.savefig("test2.png")
 
     posst = np.zeros((nst + int(retroinj), 2))
     psf_fit = fitter1(model_init, x, y, im, maxiter=2000)
@@ -811,8 +810,8 @@ def binary_processing(im,
     yoff = posst[0, 1] - cy
     im = shift(im, (-yoff, -xoff))
     posst -= np.tile(posst[0, :], (nst + int(retroinj), 1))
-    x = x.astype(np.float) + psf_fit.parameters[1] - cx
-    y = y.astype(np.float) + psf_fit.parameters[2] - cy
+    x = x.astype(float) + psf_fit.parameters[1] - cx
+    y = y.astype(float) + psf_fit.parameters[2] - cy
 
     distco = np.sqrt((posst[1:, 0] - posst[0, 0])**2 +
                      (posst[1:, 1] - posst[0, 1])**2)
@@ -911,8 +910,7 @@ def binary_processing(im,
                  color="yellow",
                  ha="center",
                  va="center")
-        plt.savefig("%s%s_Binary_%s.png" % (savepath, timestamp, target),
-                    overwrite=True)
+        plt.savefig("%s%s_Binary_%s.png" % (savepath, timestamp, target))
         pf.writeto("%s%s_Binary_%s.fits" % (savepath, timestamp, target),
                    im[1:, 1:] / np.max(im),
                    overwrite=True)
@@ -979,8 +977,7 @@ def binary_processing(im,
                  color="yellow",
                  ha="center",
                  va="center")
-        plt.savefig("%s%s_Binary_%s_fit.png" % (savepath, timestamp, target),
-                    overwrite=True)
+        plt.savefig("%s%s_Binary_%s_fit.png" % (savepath, timestamp, target))
         pf.writeto("%s%s_Binary_%s_fit.fits" % (savepath, timestamp, target),
                    psf_fit(x, y)[1:, 1:] / np.max(psf_fit(x, y)),
                    overwrite=True)

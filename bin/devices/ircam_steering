@@ -17,9 +17,9 @@ home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
 import conex3 as conex
 import conex_tt
-from xaosim.scexao_shmlib import shm
+from pyMilk.interfacing.isio_shmlib import SHM as shm
 
-from scxkw.config import REDIS_DB_HOST, REDIS_DB_PORT
+from scxconf import REDIS_DB_HOST, REDIS_DB_PORT
 from scxkw.redisutil.typed_db import Redis
 
 slopesteeringtheta = -8.0402870315665422e-02
