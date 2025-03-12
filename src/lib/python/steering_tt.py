@@ -110,7 +110,7 @@ class steering_tt:
             
         elif "status" in args[0].lower():
             self.conex_status()
-            
+
         else:
             self.usage()
 
@@ -174,7 +174,7 @@ CONTENT:""")
         else:
             print("Position = "+str(pos[::-1])+", Conex is not in a defined position. Try homing.")
             subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
-              
+
     # -----------------------------------------------------------------
     def conex_goto(self, pos):
         posc = conex_tt.status(self.devname, self.conexid)

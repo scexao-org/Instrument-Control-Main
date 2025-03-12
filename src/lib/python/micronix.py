@@ -49,6 +49,7 @@ class micronix(object):
         self.color_st = color_st
         
         filename = home+"/bin/devices/conf/conf_"+micname+".txt"
+        filename2 = home+"/bin/devices/conf/archive/conf_"+micname+".txt"
         slots = [line.rstrip('\n') for line in open(filename)]
         self.nslots = len(slots)
         nparam = len(slots[0].split(';'))
@@ -210,7 +211,7 @@ class micronix(object):
                 for i in range(naxes):
                     self.open(self.micid)
                     pos[i] = self.status(axesids[i], axesnames[i])
-                    time.sleep(0.2)
+                    time.sleep(0.1)
                     self.close()
                 for i in range(self.nslots):
                     for j in range(naxes):
@@ -225,6 +226,28 @@ class micronix(object):
                 if not found:
                     print("Device is not in a defined position. Try homing.")
                     subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', 'UNKNOWN', '3'])
+
+            elif ("save" in args[0].lower() and args[1].lower() in defpos):
+                subprocess.call(["cp",filename,filename2])
+                inddef = defpos.index(args[1].lower())
+                print('OLD POSITION: '+slots[inddef])
+                sparam = slots[inddef].split(';')
+                pos = np.zeros(2)
+                found = False
+                for i in range(naxes):
+                    self.open(self.micid)
+                    pos[i] = self.status(axesids[i], axesnames[i])
+                    time.sleep(0.1)
+                    self.close()
+                    sparam[i+2] = '%7.3f'%pos[i]
+                slots[inddef] = ';'.join(sparam)
+                print('NEW POSITION: '+slots[inddef])
+                with open(filename, 'w') as file:
+                    file.writelines(line+'\n' for line in slots)
+                if self.color_st:
+                    exec("subprocess.call(['/home/scexao/bin/scexaostatus', 'set', self.micname+'_st', self.param1[inddef][:16], self.param%d[inddef]])" % (self.nend,), globals(), locals())
+                else:
+                    subprocess.call(["/home/scexao/bin/scexaostatus", "set", self.micname+"_st", self.param1[inddef][:16]])
 
             elif "com" in args[0].lower():
                 self.open(self.micid)

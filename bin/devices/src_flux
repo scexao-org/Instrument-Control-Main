@@ -50,9 +50,11 @@ npos = len(defpos)
 extra_commands = [['default','default NDs (7.5)'],['min','minimum flux, max NDs'],
                   ['max','maximum flux, no NDs. CAUTION!'],['more','more flux by factor ~2'],
                   ['less','less flux by factor ~2'],['waymore','more flux by factor ~10'],
-                  ['wayless','less flux by factor ~10']]
+                  ['wayless','less flux by factor ~10'],
+                  ['charis','CHARIS default for H2RG'],
+                  ['charispup','CHARIS default for pupil cam']]
 
-if sys.argv[-1] in ['default','min','max','more','less','waymore','wayless']:
+if sys.argv[-1] in ['default','min','max','more','less','waymore','wayless','charis','charispup']:
     
     if sys.argv[-1] == 'max' :
         n2 = 0
@@ -62,6 +64,12 @@ if sys.argv[-1] in ['default','min','max','more','less','waymore','wayless']:
 
     elif sys.argv[-1] == 'default' :
         n2 = npos-6
+
+    elif sys.argv[-1] == 'charis' :
+        n2 = npos-11
+
+    elif sys.argv[-1] == 'charispup' :
+        n2 = 8
 
     elif sys.argv[-1] in ['more','less','waymore','wayless'] :
 
@@ -76,7 +84,7 @@ if sys.argv[-1] in ['default','min','max','more','less','waymore','wayless']:
             n2 = np.min([n+3,npos-1])
         elif sys.argv[-1] == 'waymore':
             n2 = np.max([n-3,0])
-
+    print (n2)
     thorlabswheel(devname, whids, whnames, args=['nd1', str(defpos[n2][0])], description=description)
     thorlabswheel(devname, whids, whnames, args=['nd2', str(defpos[n2][1])], description=description)
     thorlabswheel(devname, whids, whnames, args=['nd3', str(defpos[n2][2])], description=description)

@@ -1,2 +1,2 @@
-1;Vertical        ;0.0   ;0
-2;Horizontal      ;90.0  ;0
+1;Vertical        ;  0.000;0
+2;Horizontal      ; 90.000;0
