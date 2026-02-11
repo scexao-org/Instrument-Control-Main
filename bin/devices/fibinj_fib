@@ -33,7 +33,7 @@ zabernames = ["x", "y", "f"]
 
 description = "Fiber injection xyz stage"
 
-defpos = ["smi", "mmi", "pl19","pl3","reach"]
+defpos = ["smf", "6pmspl", "pl3","pl19","reach","glint"]
 
 # GENERIC CODE
 

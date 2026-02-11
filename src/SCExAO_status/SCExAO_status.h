@@ -46,8 +46,6 @@ typedef struct
   char photonics_pickoff_st[16];
   int photonics_pickoff_co;
   float photonics_pickoff;
-  char photonics_pickoff_type[16];
-  int photonics_pickoff_type_co;
   char photonics_compplate[16];
   int photonics_compplate_co;
   char PG1_pickoff[16];
@@ -107,9 +105,6 @@ typedef struct
   float apapane_pickoff;
   char palila_pup[16];
   int palila_pup_co;
-  char palila_pup_fcs_st[16];
-  int palila_pup_fcs_co;
-  float palila_pup_fcs;
   char irspectro_mode_st[16];
   int irspectro_mode_co;
   int irspectro_mode_x1;

@@ -1,6 +1,6 @@
-1;Palila focus    ; 17.900;290000;1
-2;Apapane focus   ;  9.700;500000;1
-3;Palila pupil    ; 23.800;200000;2
+1;Palila focus    ; 21.300; 50000;1
+2;Apapane focus   ; 13.600; 50000;1
+3;Palila pupil    ;  0.000;530000;2
 4;PIAACMC pupil   ; 22.500;200000;0
-5;DM              ; 22.000;200000;0
-6;Pupil wheel     ; 25.500;200000;0
+5;DM              ;  2.000;410000;0
+6;Pupil wheel     ;  0.000;530000;0

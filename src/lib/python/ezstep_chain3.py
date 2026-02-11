@@ -66,6 +66,7 @@ class ezstep_chain:
                 self.id  = os.path.split(dev)[1]
             try:
                 self.ser = serial.Serial(self.dev, brate, timeout=tout)
+                print("Connected")
             except:
                 self.ser = None
                 print("Device %s either not connected or not powered" % \
@@ -77,6 +78,7 @@ class ezstep_chain:
             self.ser.write('/1&R\r\n'.encode())
             time.sleep(delay)
             msg = self.ser.readline()
+            print(msg)
             
             if "EZStepper".encode() in msg:
                 self.idns = []
@@ -267,115 +269,12 @@ class ezstep_chain:
             print(resp)
         return(resp)
 
-    def init_combined(self, quiet=False):
-
-        ''' ------------------------------------------------------
-        This is the sequence to set the stepper circuit parameters
-        right so that the Newport tip-tilt stages actually move.
-        ------------------------------------------------------ '''
-        self.command("/1m100L100h10V30000P100D100R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/2m100L100h10V30000P100D100R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/3m100L100h10V30000P100D100R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/4m100L100h10V30000P100D100R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/1z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/1z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/2z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/2z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/3z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/3z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/4z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/4z1000000R", quiet=quiet)
-        time.sleep(delay)
-
-        ''' ------------------------------------------------------
-        This is the sequence to set the stepper circuit parameters
-        right so that the linear translation stages move properly.
-        ------------------------------------------------------ '''
-        # camera stage
-        self.command("/5F1j256V500000L500m50h05R", quiet=quiet)
-        time.sleep(delay)
-
-        # vampire's polarizer
-        self.command("/7F1V900000m25h05R", quiet=quiet)
-        time.sleep(delay)
-
-        # inverse piaa stage
-        self.command("/8F1j256V900000m25h05R", quiet=quiet)
-        time.sleep(delay)
-
     def init_smi (self, quiet=False):
         ''' ------------------------------------------------------
         This is the sequence to set the stepper circuit parameters
         for the single mode injection cariage device
         ------------------------------------------------------ '''
-        self.command("/3F1j256V500000L500m50h05R", quiet=quiet)
-        time.sleep(delay)
-
-    def init_tts(self, quiet=False):
-        ''' ------------------------------------------------------
-        This is the sequence to set the stepper circuit parameters
-        right so that the Newport tip-tilt stages actually move.
-        ------------------------------------------------------ '''
-        self.command("/1m100L100h30V30000P100D100R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/2m100L100h30V30000P100D100R", quiet=quiet)
-        time.sleep(delay)
-        """
-        self.command("/3m100L100h30V30000P100D100R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/4m100L100h30V30000P100D100R", quiet=quiet)
-        time.sleep(delay)
-        """
-        self.command("/1z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/1z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/2z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/2z1000000R", quiet=quiet)
-        time.sleep(delay)
-        """
-        self.command("/3z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/3z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/4z1000000R", quiet=quiet)
-        time.sleep(delay)
-        self.command("/4z1000000R", quiet=quiet)
-        time.sleep(delay)
-        """
-
-
-    def init_linear(self, quiet=False):
-        ''' ------------------------------------------------------
-        This is the sequence to set the stepper circuit parameters
-        right so that the linear translation stages move properly.
-        ------------------------------------------------------ '''
-        # camera stage
-        self.command("/5F1j256V500000L500m60h05R", quiet=quiet)
-        time.sleep(delay)
-
-        # dichroic linear stage
-        self.command("/6F1j256V500000L500m60h05R", quiet=quiet)
-        time.sleep(delay)
-
-        # vampire's polarizer
-        self.command("/7F1V900000m25h05R", quiet=quiet)
-        time.sleep(delay)
-
-        # inverse piaa stage
-        self.command("/8F1V900000m25h05R", quiet=quiet)
+        self.command("/1F1j256V500000L500m50h05R", quiet=quiet)
         time.sleep(delay)
 
     def close(self):

@@ -26,10 +26,6 @@ echo "Lyot mask x:"
 lyot x home
 echo "Lyot mask y:"
 lyot y home
-#echo "inverse PIAA theta:"
-#invpiaa theta home
-#echo "inverse PIAA phi:"
-#invpiaa phi home
 echo "IRCAM focus:"
 ircam_fcs f1 home
 echo "LOWFS focus:"
@@ -54,3 +50,5 @@ echo "PyWFS pupil x:"
 pywfs_pup x home
 echo "PyWFS pupil y:"
 pywfs_pup y home
+echo "IR Spectro x1:"
+irspectro_mode x1 home

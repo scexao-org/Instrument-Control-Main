@@ -28,6 +28,14 @@ SCEXAO_NPS_IP = {1: "133.40.162.194", 2: "133.40.162.195", 3: "133.40.162.198", 
 # =====================================================================
 # =====================================================================
 
+'''
+NPS factury function that calls the constructor of the appropriate class
+'''
+def NPS(npsname, npsid, portid, args=[], description="no description"):
+    klass = {1: OldNPS, 2: NewNPS, 3: OldNPS, 4: NewNPS}[npsid]
+
+    return klass(npsname, npsid, portid, args=args, description=description)
+
 
 class AbstractNPS:
     def __init__(self,
@@ -87,7 +95,7 @@ COMMAND:
         raise NotImplementedError()
 
 
-class NPS(AbstractNPS):
+class OldNPS(AbstractNPS):
     def _establish_conn(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((SCEXAO_NPS_IP[self.npsid], 23))

@@ -1,2 +1,2 @@
 1;Photonic Lant. ;  0.610;1
-2;K-band REACH   ; 24.970;0
+2;K-band REACH   ; 24.500;0

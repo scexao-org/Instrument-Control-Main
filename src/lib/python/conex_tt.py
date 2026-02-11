@@ -85,8 +85,12 @@ def move(x, y, devname = 'steering', address='http://localhost:50001', timeout=T
             
     except requests.ConnectionError:
         ret = ConexStatus(state='error: unable to connect')
+        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", "NOT CONNECTED", "0"])
+        sys.exit()
     except ValueError:
         ret = ConexStatus(state='error: malformed content "{}"'.format(r.text))
+        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", "NOT CONNECTED", "0"])
+        sys.exit()
     return ret
 
 def full_status(devname = 'steering', address='http://localhost:50001', timeout=TIMEOUT):
@@ -103,8 +107,12 @@ def full_status(devname = 'steering', address='http://localhost:50001', timeout=
     
     except requests.ConnectionError:
         ret = ConexStatus(state='error: unable to connect')
+        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", "NOT CONNECTED", "0"])
+        sys.exit()
     except ValueError:
         ret = ConexStatus(state='error: malformed content "{}"'.format(r.text))
+        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", "NOT CONNECTED", "0"])
+        sys.exit()
     return ret
 
 def status(devname = 'steering', address='http://localhost:50001', timeout=TIMEOUT):
@@ -124,8 +132,12 @@ def status(devname = 'steering', address='http://localhost:50001', timeout=TIMEO
             subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_phi", str(j['ypos'])])
     except requests.ConnectionError:
         ret = ConexStatus(state='error: unable to connect')
+        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", "NOT CONNECTED", "0"])
+        sys.exit()
     except ValueError:
         ret = ConexStatus(state='error: malformed content "{}"'.format(r.text))
+        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", "NOT CONNECTED", "0"])
+        sys.exit()
     return pos
 
 def stop(devname = 'steering', address='http://localhost:50001', timeout=TIMEOUT):
@@ -144,7 +156,11 @@ def stop(devname = 'steering', address='http://localhost:50001', timeout=TIMEOUT
 
     except requests.ConnectionError:
         ret = ConexStatus(state='error: unable to connect')
+        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", "NOT CONNECTED", "0"])
+        sys.exit()
     except ValueError:
         ret = ConexStatus(state='error: malformed content "{}"'.format(r.text))
+        subprocess.call(["/home/scexao/bin/scexaostatus", "set", devname+"_st", "NOT CONNECTED", "0"])
+        sys.exit()
     return ret
 

@@ -19,6 +19,7 @@ from picomotor import picomotor
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE
 
+picobench = "irbench"
 piconame = "dm_stage"
 
 picoids = [1, 2]
@@ -32,4 +33,4 @@ defpos = ["onaxis"]
 
 args = sys.argv[1:]
 
-picomotor(piconame, picoids, axesnames, args, description)#, defpos, color_st=True)
+picomotor(picobench, piconame, picoids, axesnames, args, description)#, defpos, color_st=True)

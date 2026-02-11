@@ -22,12 +22,12 @@ import numpy as np
 
 devname = "photonics_pickoff"
 
-conexids = ["usb-Newport_CONEX-AGP_A606QDFD-if00-port0"]
-conexnames = ["x"]
+conexids = ["usb-Newport_CONEX-AGP_A64ONQMP-if00-port0"]
+conexnames = ["wheel"]
 
 description = "Photonics modules pickoff mirror"
 
-defpos = ["in", "out"]
+defpos = ["open", "bs", "kreach"]
 
 # GENERIC CODE
 

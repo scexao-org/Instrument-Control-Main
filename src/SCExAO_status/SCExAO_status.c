@@ -440,10 +440,6 @@ int status_display()
     printw("PALILA Pupil    : ");
     print_status(SCExAO_status[0].palila_pup, SCExAO_status[0].palila_pup_co);
     printw("\n");
-    // PALILA Pupil Focus
-    printw("PALILA Pup Fcs  : ");
-    print_status(SCExAO_status[0].palila_pup_fcs_st, SCExAO_status[0].palila_pup_fcs_co);
-    printw(" (f: %6.2f mm)\n", SCExAO_status[0].palila_pup_fcs);
     // APAPANE Pickoff
     printw("'APAPANE Pickoff: ");
     print_status(SCExAO_status[0].apapane_pickoff_st, SCExAO_status[0].apapane_pickoff_co);
@@ -485,11 +481,7 @@ int status_display()
     // Photonics Pickoff
     printw("Photonics PO    : ");
     print_status(SCExAO_status[0].photonics_pickoff_st, SCExAO_status[0].photonics_pickoff_co);
-    printw(" (x: %6.2f mm)\n", SCExAO_status[0].photonics_pickoff);
-    // Photonics Pickoff Type
-    printw("Photonics PO typ: ");
-    print_status(SCExAO_status[0].photonics_pickoff_type, SCExAO_status[0].photonics_pickoff_type_co);
-    printw("\n");
+    printw(" (x: %6.2f deg)\n", SCExAO_status[0].photonics_pickoff);
     // Photonics Compensating Plate
     printw("Photonics Comppl: ");
     print_status(SCExAO_status[0].photonics_compplate, SCExAO_status[0].photonics_compplate_co);
@@ -1073,11 +1065,6 @@ int main(int argc, char **argv)
     {
       SCExAO_status[0].photonics_pickoff = atof(value);
     }
-    else if (strcmp(status_item, "photonics_pickoff_type") == 0)
-    {
-      strncpy(SCExAO_status[0].photonics_pickoff_type, value, 15);
-      SCExAO_status[0].photonics_pickoff_type_co = atoi(color);
-    }
     else if (strcmp(status_item, "photonics_compplate") == 0)
     {
       strncpy(SCExAO_status[0].photonics_compplate, value, 15);
@@ -1309,15 +1296,6 @@ int main(int argc, char **argv)
     {
       strncpy(SCExAO_status[0].palila_pup, value, 15);
       SCExAO_status[0].palila_pup_co = atoi(color);
-    }
-    else if (strcmp(status_item, "palila_pup_fcs_st") == 0)
-    {
-      strncpy(SCExAO_status[0].palila_pup_fcs_st, value, 15);
-      SCExAO_status[0].palila_pup_fcs_co = atoi(color);
-    }
-    else if (strcmp(status_item, "palila_pup_fcs") == 0)
-    {
-      SCExAO_status[0].palila_pup_fcs = atof(value);
     }
     else if (strcmp(status_item, "irspectro_mode_st") == 0)
     {

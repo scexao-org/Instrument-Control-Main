@@ -21,7 +21,7 @@ import os
 import numpy as np
 import subprocess
 import asyncio
-from newfocus8742.usb import NewFocus8742USB as USB
+from newfocus8742.tcp import NewFocus8742TCP as TCP
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
@@ -38,10 +38,13 @@ import logit #Custom logging library
 
 class picomotor:
 
-    def __init__(self, piconame, picoids, axesnames, args=[], description="no description"):
+    def __init__(self, picobench, piconame, picoids, axesnames, args=[], description="no description"):
         
         filename = home+"/bin/devices/conf/conf_"+piconame+".txt"
+        filename2 = home+"/bin/devices/conf/path_pico_"+picobench+".txt"
         self.piconame = piconame
+        filep = open(filename2, 'r')
+        self.picopath = filep.read().rstrip('\n')
         self.description = description
 
         if args != [] and "--help1" in args[0]:
@@ -50,10 +53,9 @@ class picomotor:
 
         loop = asyncio.get_event_loop()
         loop.set_debug(False)
-
         self.picoids = picoids
         self.axesnames = axesnames
-
+        
         slots = [line.rstrip('\n') for line in open(filename)]
         self.nslots = len(slots)
         nparam = len(slots[0].split(';'))
@@ -172,7 +174,7 @@ CONTENT:""")
     
     # -----------------------------------------------------------------
     async def status(self):
-        dev = await USB.connect()
+        dev = await TCP.connect(self.picopath)
         print(dev)
         pos = await dev.get_position(self.picoid)
         print(pos)
@@ -180,7 +182,7 @@ CONTENT:""")
 
     """
     async def goto(self,pos):
-        dev = await USB.connect()
+        dev = await TCP.connect(self.picopath)
         dev.set_position(self.picoid,pos)
         pos = await dev.get_position(self.picoid)
         print(pos)
@@ -188,7 +190,7 @@ CONTENT:""")
     """
 
     async def push(self,motion):
-        dev = await USB.connect()
+        dev = await TCP.connect(self.picopath)
         dev.set_relative(self.picoid,motion)
         pos = await dev.get_position(self.picoid)
         print(pos)
@@ -199,7 +201,7 @@ CONTENT:""")
             d = locals()
             exec("pos = self.param%d[slot-1]" %(self.col,), globals(), d)
             pos = d['pos']
-            dev = await USB.connect()
+            dev = await TCP.connect(self.picopath)
             dev.set_position(self.picoid,int(pos))
             pos = await dev.get_position(self.picoid)
             print(pos)

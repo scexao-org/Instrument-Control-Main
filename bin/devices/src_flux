@@ -63,10 +63,10 @@ if sys.argv[-1] in ['default','min','max','more','less','waymore','wayless','cha
         n2 = npos-1
 
     elif sys.argv[-1] == 'default' :
-        n2 = npos-6
+        n2 = npos-7
 
     elif sys.argv[-1] == 'charis' :
-        n2 = npos-11
+        n2 = npos-10
 
     elif sys.argv[-1] == 'charispup' :
         n2 = 8

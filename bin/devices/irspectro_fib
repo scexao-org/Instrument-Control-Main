@@ -26,7 +26,7 @@ axesnames = ["x", "y"]
 
 description = "IR spectrometer fiber stage"
 
-defpos = ["array","smf","mmf","vg1","glint","vg3"]
+defpos = ["vgsmf28","vgofs","pl19","vg1","glint","vg3"]
 
 # GENERIC CODE
 

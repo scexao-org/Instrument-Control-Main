@@ -420,7 +420,7 @@ while true; do
 			manualfpmalign=0;;
 		    10) echo "moving FPM sideways"
 			((yf2=${yf[$confnb1]}-30000))
-			((xf2=${xf[$confnb1]}+6000))
+			((xf2=${xf[$confnb1]}+12000))
 			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm y goto $yf2" C-m
 			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm x goto $yf2" C-m
 			sleep 0.1
@@ -898,12 +898,12 @@ while true; do
 		    -) ;;
   		    0) state="menuconf_fpmamp";;
 		    1) 
-			((yf[$confnb1]-=2*$fpmamp))
+			((yf[$confnb1]-=$fpmamp))
 			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm y goto ${yf[$confnb1]}" C-m
 			sleep 0.1
 			state="menuconf_fpmalign";;
 		    2) 
-			((yf[$confnb1]+=2*$fpmamp))
+			((yf[$confnb1]+=$fpmamp))
 			tmux send-keys -t coronagraph_setup "/home/scexao/bin/devices/fpm y goto ${yf[$confnb1]}" C-m
 			sleep 0.1
 			state="menuconf_fpmalign";;
@@ -1308,7 +1308,7 @@ while true; do
 	rm $filep1
 	for i in $(seq 1 $nlp1)
 	do
-	    printf '%s;%s;%s;%-6s;%-6s;%s\n' ${np1[$i]} ${dp1[$i]} ${ap1[$i]} ${xp1[$i]} ${yp1[$i]} ${cp1[$i]} >> $filep1
+	    printf '%s;%s;%7.3f;%6d;%6d;%s\n' ${np1[$i]} ${dp1[$i]} ${ap1[$i]} ${xp1[$i]} ${yp1[$i]} ${cp1[$i]} >> $filep1
 	done
 	    
 	echo "saving PIAA1 position"
@@ -1326,7 +1326,7 @@ while true; do
 	rm $filep2
 	for i in $(seq 1 $nlp2)
 	do
-	    printf '%s;%s;%s;%-6s;%-6s;%-6s;%s\n' ${np2[$i]} ${dp2[$i]} ${ap2[$i]} ${xp2[$i]} ${yp2[$i]} ${fp2[$i]} ${cp2[$i]} >> $filep2
+	    printf '%s;%s;%7.3f;%6d;%6d;%6d;%s\n' ${np2[$i]} ${dp2[$i]} ${ap2[$i]} ${xp2[$i]} ${yp2[$i]} ${fp2[$i]} ${cp2[$i]} >> $filep2
 	done
 
 	echo "saving PIAA2 position"
@@ -1344,7 +1344,7 @@ while true; do
 	rm $filep
 	for i in $(seq 1 $nlp)
 	do
-	    printf '%s;%s;%s;%-6s;%-6s;%s\n' ${np[$i]} ${dp[$i]} ${ap[$i]} ${xp[$i]} ${yp[$i]} ${cp[$i]} >> $filep
+	    printf '%s;%s;%7.3f;%6d;%6d;%s\n' ${np[$i]} ${dp[$i]} ${ap[$i]} ${xp[$i]} ${yp[$i]} ${cp[$i]} >> $filep
 	done
 
 	echo "saving pupil position"
@@ -1362,7 +1362,7 @@ while true; do
 	rm $filel
 	for i in $(seq 1 $nll)
 	do
-	    printf '%s;%s;%s;%-6s;%-6s;%s\n' ${nl[$i]} ${dl[$i]} ${al[$i]} ${xl[$i]} ${yl[$i]} ${cl[$i]} >> $filel
+	    printf '%s;%s;%7.3f;%6d;%6d;%s\n' ${nl[$i]} ${dl[$i]} ${al[$i]} ${xl[$i]} ${yl[$i]} ${cl[$i]} >> $filel
 	done
 
 	echo "saving Lyot positions"
@@ -1380,7 +1380,7 @@ while true; do
 	rm $filef
 	for i in $(seq 1 $nlf)
 	do
-	    printf '%s;%s;%s;%-6s;%-6s;%-6s;%s;%s;%s\n' ${nf[$i]} ${df[$i]} ${af[$i]} ${xf[$i]} ${yf[$i]} ${zf[$i]} ${mf[$i]} ${lf[$i]} ${cf[$i]} >> $filef
+	    printf '%s;%s;%7.3f;%6d;%6d;%6d;%s;%s;%s\n' ${nf[$i]} ${df[$i]} ${af[$i]} ${xf[$i]} ${yf[$i]} ${zf[$i]} ${mf[$i]} ${lf[$i]} ${cf[$i]} >> $filef
 	done
 
 	echo "saving FPM position"
@@ -1441,7 +1441,7 @@ while true; do
 	rm $fileip
 	for i in $(seq 1 $nlip)
 	do
-	    printf '%s;%s;%s;%s;%-6s;%-6s;%s\n' ${nip[$i]} ${dip[$i]} ${xip[$i]} ${yip[$i]} ${tip[$i]} ${pip[$i]} ${cp1[$i]} >> $fileip
+	    printf '%s;%s;%7.3f;%7.3f;%6d;%6d;%s\n' ${nip[$i]} ${dip[$i]} ${xip[$i]} ${yip[$i]} ${tip[$i]} ${pip[$i]} ${cp1[$i]} >> $fileip
 	done
 	    
 	echo "saving Inverse PIAA position"

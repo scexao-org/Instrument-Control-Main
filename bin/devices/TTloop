@@ -38,7 +38,7 @@ from pyMilk.interfacing.isio_shmlib import SHM as shm
 # ------------------------------------------------------------------
 def RDB_pull(rdb):
 
-    fits_keys_to_pull = {'X_PHOPKO'}
+    fits_keys_to_pull = {'X_PHOTYP'}
     # Now Getting the keys
     with rdb.pipeline() as pipe:
         for key in fits_keys_to_pull:
@@ -47,7 +47,7 @@ def RDB_pull(rdb):
         values = pipe.execute()
     status = {k: v for k,v in zip(values[::2], values[1::2])}
 
-    gpin = status['X_PHOPKO'].strip() == 'IN'
+    gpin = status['X_PHOTYP'].strip() == '90:10 BS'
 
     return(gpin)
 

@@ -4,14 +4,7 @@ echo "Calibration source fiber:"
 src_fib in &
 sleep 0.1
 echo "Calibration source selection:"
-src_select 3
-sleep 2
-echo "Calibration source flux:"
-src_flux irnd 6
-sleep 0.1
-src_flux optnd 5
-sleep 0.1
-src_flux filter 1
+src_select sks
 sleep 0.1
 echo "Integrating sphere pickoff:"
 intsphere
@@ -55,13 +48,6 @@ sleep 0.1
 echo "Focal plane mask:"
 fpm 10
 sleep 0.1
-#echo "Inverse PIAA:"
-#invpiaa x 2
-#sleep 1
-#invpiaa y 2
-#sleep 1
-#invpiaa 1 &
-#sleep 0.1
 echo "Lyot mask:"
 lyot x 3
 sleep 1
@@ -69,18 +55,10 @@ lyot y 3
 sleep 1
 lyot 1 &
 sleep 0.1
-#echo "Inverse PIAA:"
-#invpiaa 1 &
-#sleep 1
 echo "Pt Grey 1 pickoff:"
 PG1_pickoff
 sleep 0.1
 PG1_pickoff
-sleep 0.1
-echo "QWP:"
-ircam_qwp
-sleep 0.1
-ircam_qwp
 sleep 0.1
 echo "OAP4:"
 oap4 onaxis &
@@ -101,11 +79,6 @@ echo "IR cams FLC:"
 ircam_flc out &
 echo "IR cams pupil:"
 ircam_pupil out &
-echo "IR cams HWP:"
-ircam_hwp
-sleep 0.1
-ircam_hwp
-sleep 0.1
 echo "IR cams Wollaston:"
 ircam_wollaston
 sleep 0.1
@@ -157,9 +130,15 @@ sleep 0.1
 echo "IR spectro mode:"
 irspectro_mode out &
 sleep 0.1
-echo "Photonics pickoff:"
-photonics_pickoff out &
+echo "IR spectro col:"
+irspectro_col array &
 sleep 0.1
+echo "IR spectro fib:"
+irspectro_fib array &
+sleep 0.1
+#echo "Photonics pickoff:"
+#photonics_pickoff out &
+#sleep 0.1
 echo "Photonics pickoff type:"
 photonics_pickoff_type
 sleep 0.1
@@ -204,11 +183,9 @@ echo "PyWFS pup x:"
 pywfs_pup x 1
 echo "PyWFS pup y:"
 pywfs_pup y 1
-echo "VAMPIRES Field stop:"
-vampires_fieldstop x goto 13.5 &
-vampires_fieldstop y goto 13.5 &
+#echo "VAMPIRES Field stop:"
+#vampires_fieldstop x goto 13.5 &
+#vampires_fieldstop y goto 13.5 &
 echo "FIRST pickoff:"
 first_pickoff 1 &
 sleep 0.1
-echo "RHEA pickoff:"
-rhea_pickoff out &

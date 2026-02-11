@@ -28,11 +28,13 @@ sys.path.append(home+'/src/lib/python/')
 import ezstep_chain3 as ezstep_chain
 import logit #Custom logging library
 
-ttmdev  = "/dev/serial/by-path/"
-ttmdev += "pci-0000:00:1d.0-usb-0:1.8.4.4.4.3:1.0-port0" # all steppers
+ttmdev  = "/dev/serial/by-id/"
+ttmdev += "usb-Prolific_Technology_Inc._USB-Serial_Controller_D-if00-port0"
+#ttmdev  = "/dev/serial/by-path/"
+#ttmdev += "pci-0000:00:1d.0-usb-0:1.4.1:1.0-port0"
 
 stagename = "fibinj_car"
-idn=3
+idn=1
 
 def usage():
     print("""---------------------------------------

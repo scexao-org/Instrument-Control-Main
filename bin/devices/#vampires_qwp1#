@@ -1,0 +1,10 @@
+#!/usr/bin/env python
+
+import elliptec
+serial_address = "/dev/serial/by-id/..."
+controller = elliptec.Controller(serial_address)
+# the mount which is labeled "1" has address "1", mount "2" has address "2"
+rotator = elliptec.Rotator(controller, address="1")
+# home
+rotator.home()
+

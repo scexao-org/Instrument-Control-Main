@@ -110,6 +110,50 @@ class devices:
         if args == []:
             self.usage()
 
+        elif ("save" in args[0].lower() and args[1].lower() in defpos):
+            subprocess.call(["cp",filename,filename2])
+            inddef = defpos.index(args[1].lower())
+            print('OLD POSITION: '+slots[inddef])
+            sparam = slots[inddef].split(';')
+            self.col = 2
+            pos = np.zeros(self.nbdev)
+            paramf = np.zeros(self.nbdev)
+            found = False
+            if conexnames != []:
+                for i in range(len(conexnames)):
+                    if self.nbdev == 1:
+                        self.devnamec = devname
+                    else:
+                        self.devnamec = devname+'_'+conexnames[i]
+                    self.conexid = "/dev/serial/by-id/"+conexids[i]
+                    opened = self.con.open(self.conexid)
+                    if not opened:
+                        subprocess.call([home+'/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
+                        sys.exit()
+                    sparam[self.col] = '%7.3f'%self.con.status(self.devnamec)
+                    self.con.close()
+                    self.col += 1
+            if zabernames != []:
+                for i in range(len(zabernames)):
+                    if int(sparam[self.col]) != 0:
+                        if self.nbdev == 1:
+                            self.devnameZ = devname
+                        else:
+                            self.devnamez = devname+'_'+zabernames[i]
+                        self.zaberid = zaberids[i]
+                        self.zab.open(self.zaberchain)
+                        sparam[self.col] = '%6d'%self.zab.status(self.zaberid, self.devnamez)
+                        self.zab.close()
+                        self.col += 1
+            slots[inddef] = ';'.join(sparam)
+            print('NEW POSITION: '+slots[inddef])
+            with open(filename, 'w') as file:
+                file.writelines(line+'\n' for line in slots)
+            if self.color_st:
+                exec("subprocess.call([home+'/bin/scexaostatus', 'set', self.devname+'_st', self.param1[inddef][:16], self.param%d[inddef]])" % (self.nend,), globals(), locals())
+            else:
+                subprocess.call([home+"/bin/scexaostatus", "set", self.devname+"_st", self.param1[inddef][:16]])
+
         elif (args[0].lower() in conexnames) or (conu == 0) and args[0].lower() not in defpos:
             if na > conu:
                 if conu == 0:
@@ -239,46 +283,7 @@ class devices:
                     found = True
             if not found:
                 print("Device is not in a defined position. Try homing.")
-                subprocess.call([home+'/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])
-
-        elif ("save" in args[0].lower() and conu*zabu == 1 and args[1].lower() in defpos):
-            subprocess.call(["cp",filename,filename2])
-            inddef = defpos.index(args[1].lower())
-            print('OLD POSITION: '+slots[inddef])
-            sparam = slots[inddef].split(';')
-            self.col = 2
-            pos = np.zeros(self.nbdev)
-            paramf = np.zeros(self.nbdev)
-            found = False
-            if conexnames != []:
-                for i in range(len(conexnames)):
-                    self.devnamec = devname+'_'+conexnames[i]
-                    self.conexid = "/dev/serial/by-id/"+conexids[i]
-                    opened = self.con.open(self.conexid)
-                    if not opened:
-                        subprocess.call([home+'/bin/scexaostatus', 'set', self.devname+'_st', 'NOT CONNECTED', '0'])
-                        sys.exit()
-                    sparam[self.col] = '%7.3f'%self.con.status(self.devnamec)
-                    self.con.close()
-                    self.col += 1
-            if zabernames != []:
-                for i in range(len(zabernames)):
-                    if int(sparam[self.col]) != 0:
-                        self.devnamez = devname+'_'+zabernames[i]
-                        self.zaberid = zaberids[i]
-                        self.zab.open(self.zaberchain)
-                        sparam[self.col] = '%6d'%self.zab.status(self.zaberid, self.devnamez)
-                        self.zab.close()
-                    self.col += 1
-            slots[inddef] = ';'.join(sparam)
-            print('NEW POSITION: '+slots[inddef])
-            with open(filename, 'w') as file:
-                file.writelines(line+'\n' for line in slots)
-            if self.color_st:
-                exec("subprocess.call([home+'/bin/scexaostatus', 'set', self.devname+'_st', self.param1[inddef][:16], self.param%d[inddef]])" % (self.nend,), globals(), locals())
-            else:
-                subprocess.call([home+"/bin/scexaostatus", "set", self.devname+"_st", self.param1[inddef][:16]])
-                
+                subprocess.call([home+'/bin/scexaostatus', 'set', self.devname+'_st', 'UNKNOWN', '3'])                
 
         else:
             self.usage()

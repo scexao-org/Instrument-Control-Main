@@ -14,6 +14,7 @@ import sys
 
 home = os.getenv('HOME')
 sys.path.append(home+'/src/lib/python/')
+print("Adding to sys.path:", home+'/src/lib/python/')
 from devices import devices
 
 # SPECIFIC PARAMETERS FOR THIS DEVICE

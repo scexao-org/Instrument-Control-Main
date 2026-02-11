@@ -1,13 +1,16 @@
 #!/bin/bash
 
 echo "Calibration source fiber x:"
-src_fib x home &
+src_fib x home
+src_fib x 1 &
 sleep 1
 echo "Calibration source fiber y:"
 src_fib y home &
 sleep 1
 echo "Calibration source selection:"
-src_select home &
+src_select theta1 home &
+sleep 1
+src_select theta2 home &
 sleep 1
 echo "OAP1 theta:"
 oap1 theta home &
@@ -27,9 +30,9 @@ sleep 1
 echo "PIAA lenses #2:"
 piaa2 wheel home &
 sleep 1
-echo "Photonics pickoff:"
-photonics_pickoff home &
-sleep 1
+#echo "Photonics pickoff:"
+#photonics_pickoff home &
+#sleep 1
 echo "Fiber injection pickoff:"
 fibinj_pickoff home &
 sleep 1
@@ -42,12 +45,6 @@ sleep 1
 echo "Lyot mask:"
 lyot wheel home &
 sleep 1
-#echo "inverse PIAA x:"
-#invpiaa x home &
-#sleep 1
-#echo "inverse PIAA y:"
-#invpiaa y home &
-#sleep 1
 echo "REACH Pickoff:"
 reach_pickoff home &
 echo "REACH OAP:"
@@ -100,21 +97,18 @@ sleep 1
 echo "PyWFS pickoff:"
 pywfs_pickoff home &
 sleep 1
-#echo "RHEA pickoff:"
-#rhea_pickoff home &
-#sleep 1
 echo "PyWFS fieldstop x:"
 pywfs_fieldstop x home &
 sleep 1
 echo "PyWFS fieldstop y:"
 pywfs_fieldstop y home &
 sleep 1
-echo "VAMPIRES fieldstop x:"
-vampires_fieldstop x home &
-sleep 1
-echo "VAMPIRES fieldstop y:"
-vampires_fieldstop y home &
-sleep 1
+#echo "VAMPIRES fieldstop x:"
+#vampires_fieldstop x home &
+#sleep 1
+#echo "VAMPIRES fieldstop y:"
+#vampires_fieldstop y home &
+#sleep 1
 echo "IR Spectro mode:"
 irspectro_mode x2 home &
 sleep 1

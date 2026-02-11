@@ -1,23 +1,26 @@
 #!/bin/bash
 
 
-echo "status of NPS1"
-nps 1 status
-echo "status of NPS2"
-nps 2 status
-echo "status of NPS3"
-nps 3 status
+#echo "status of NPS1"
+#nps 1 status
+#echo "status of NPS2"
+#nps 2 status
+#echo "status of NPS3"
+#nps 3 status
 echo "Calibration source fiber:"
 src_fib status
 sleep 0.1
 echo "Calibration source type:"
 src_select status
 sleep 0.1
-echo "Calibration source IRND:"
-src_flux irnd status
+echo "Calibration source ND1:"
+src_flux nd1 status
 sleep 0.1
-echo "Calibration source OPTND:"
-src_flux optnd status
+echo "Calibration source ND2:"
+src_flux nd2 status
+sleep 0.1
+echo "Calibration source ND3:"
+src_flux nd3 status
 sleep 0.1
 echo "Calibration source FILTER:"
 src_flux filter status
@@ -49,9 +52,6 @@ sleep 0.1
 echo "Lyot mask:"
 lyot status
 sleep 0.1
-#echo "Inverse PIAA:"
-#invpiaa status
-#sleep 0.1
 echo "Pt Grey 1 pickoff:"
 PG1_pickoff status
 sleep 0.1
@@ -108,20 +108,12 @@ sleep 0.1
 echo "IR cams FLC:"
 ircam_flc status
 sleep 0.1
-#echo "IR cams QWP:"
-#ircam_qwp status
-#sleep 0.1
-#echo "IR cams HWP:"
-#ircam_hwp status
-#sleep 0.1
-#ircam_hwp_theta status
-#sleep 0.1
 echo "IR cams Wollaston:"
 ircam_wollaston status
 sleep 0.1
-echo "Photonics pickoff:"
-photonics_pickoff status
-sleep 0.1
+#echo "Photonics pickoff:"
+#photonics_pickoff status
+#sleep 0.1
 echo "Photonics pickoff type:"
 photonics_pickoff_type status
 sleep 0.1
@@ -188,11 +180,6 @@ sleep 0.1
 echo "FIRST injection:"
 first_inj status
 sleep 0.1
-#echo "FIRST cal source:"
-#first_src status
-#sleep 0.1
 echo "FIRST photometry:"
 first_photometry status
 sleep 0.1
-#echo "RHEA pickoff:"
-#rhea_pickoff status

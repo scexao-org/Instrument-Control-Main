@@ -23,7 +23,7 @@ sys.path.append(home+'/src/lib/python/')
 import zaber_chain3 as zaber
 
 zab = zaber.zaber()
-zab.open("irfront")
+zab.open("irback")
 
 '''
 At this point, you have an instance of zaber chain object.

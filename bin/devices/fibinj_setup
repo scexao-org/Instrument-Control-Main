@@ -953,7 +953,7 @@ while true; do
 	rm $filep1
 	for i in $(seq 1 $nlp1)
 	do
-	    printf '%s;%s;%s;%-6s;%-6s;%s\n' ${np1[$i]} ${dp1[$i]} ${ap1[$i]} ${xp1[$i]} ${yp1[$i]} ${cp1[$i]} >> $filep1
+	    printf '%s;%s;%7.3f;%6d;%6d;%s\n' ${np1[$i]} ${dp1[$i]} ${ap1[$i]} ${xp1[$i]} ${yp1[$i]} ${cp1[$i]} >> $filep1
 	done
 	
 	echo "saving PIAA1 position"
@@ -971,7 +971,7 @@ while true; do
 	rm $filep2
 	for i in $(seq 1 $nlp2)
 	do
-	    printf '%s;%s;%s;%-6s;%-6s;%-6s;%s\n' ${np2[$i]} ${dp2[$i]} ${ap2[$i]} ${xp2[$i]} ${yp2[$i]} ${fp2[$i]} ${cp2[$i]} >> $filep2
+	    printf '%s;%s;%7.3f;%6d;%6d;%6d;%s\n' ${np2[$i]} ${dp2[$i]} ${ap2[$i]} ${xp2[$i]} ${yp2[$i]} ${fp2[$i]} ${cp2[$i]} >> $filep2
 	done
 	
 	echo "saving PIAA2 position"
@@ -989,7 +989,7 @@ while true; do
 	rm $files
 	for i in $(seq 1 $nls)
 	do
-	    printf '%s;%s;%-6s;%-6s;%-6s;%s;%s\n' ${ns[$i]} ${ds[$i]} ${xs[$i]} ${ys[$i]} ${fs[$i]} ${ss[$i]} ${cs[$i]} >> $files
+	    printf '%s;%s;%6d;%6d;%6d;%s;%s\n' ${ns[$i]} ${ds[$i]} ${xs[$i]} ${ys[$i]} ${fs[$i]} ${ss[$i]} ${cs[$i]} >> $files
 	done
 
 	echo "saving fiber position"
@@ -1007,7 +1007,7 @@ while true; do
 	rm $filec
 	for i in $(seq 1 $nlc)
 	do
-	    printf '%s;%s;%-8s\n' ${nc[$i]} ${dc[$i]} ${fc[$i]} >> $filec
+	    printf '%s;%s;%8s\n' ${nc[$i]} ${dc[$i]} ${fc[$i]} >> $filec
 	done
 
 	echo "saving cariage position"
@@ -1025,14 +1025,14 @@ while true; do
 	rm $filei
 	for i in $(seq 1 $nli)
 	do
-	    printf '%s;%s;%-6s;%-6s;%s\n' ${ni[$i]} ${di[$i]} ${xi[$i]} ${yi[$i]} ${ci[$i]} >> $filei
+	    printf '%s;%s;%7.3f;%7.3f;%s\n' ${ni[$i]} ${di[$i]} ${xi[$i]} ${yi[$i]} ${ci[$i]} >> $filei
 	done
 
 	cp $filej /home/scexao/bin/devices/conf/archive/
 	rm $filej
 	for i in $(seq 1 $nlj)
 	do
-	    printf '%s;%s;%-4s;%s\n' ${nj[$i]} ${dj[$i]} ${fj[$i]} ${cj[$i]} >> $filej
+	    printf '%s;%s;%7.3f;%s\n' ${nj[$i]} ${dj[$i]} ${fj[$i]} ${cj[$i]} >> $filej
 	done
 
 	echo "saving IR spectro fiber position"
