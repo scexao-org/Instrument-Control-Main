@@ -100,7 +100,7 @@ param0 = np.zeros(6)
 # ================================================================================
 while True: # the main game loop
     
-    param = ircam_synchro.get_data().astype(np.int)[0]
+    param = ircam_synchro.get_data().astype(int)
     # check if a new command is requested
     if param[0] != param0[0] and param[0]:
         if param[1]:
